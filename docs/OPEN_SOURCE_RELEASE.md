@@ -46,6 +46,7 @@ verify-mvp: OK
 - Review public repository name and description.
 - Review all Chinese product documents for content that should remain public.
 - Confirm no customer data, private endpoints, credentials, tokens, or internal-only notes are present.
+- Run `docs/PRIVACY_RELEASE_REVIEW.md` and resolve all true positives.
 - Confirm `data/geo-pulse-state.json` is not committed.
 - Confirm `.DS_Store` and local environment files are not committed.
 - Run `npm run check`.
@@ -77,6 +78,12 @@ Do not publish until the owner has reviewed the pre-publish checklist.
 - Require `npm run check` or equivalent CI before merging.
 - Add repository topics: `geo`, `seo`, `agent`, `content-automation`, `nodejs`, `mvp`.
 - Use GitHub license detection to confirm GPLv3.
+
+## Privacy Incident Handling
+
+If local paths, credentials, customer data, or internal notes were pushed before release review, follow `docs/PRIVACY_RELEASE_REVIEW.md`.
+
+For a new repository with no external contributors, prefer replacing the public branch with a privacy-reviewed single-commit history using `git push --force-with-lease origin main`. For established repositories, coordinate the rewrite with maintainers and contributors before changing public history.
 
 ## Release Notes Draft
 

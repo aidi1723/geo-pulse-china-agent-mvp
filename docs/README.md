@@ -9,6 +9,7 @@ This directory contains the maintainer-facing documentation for GEO Pulse China 
 - [API Reference](API_REFERENCE.md): current mock API groups, route behavior, mutation requirements, and response shape.
 - [Extension Guide](EXTENDING.md): how to add providers, connectors, source adapters, UI pages, tests, and static preview data.
 - [Maintenance Guide](MAINTENANCE.md): routine maintenance, release gate, runtime state, security defaults, and production backlog.
+- [Privacy Release Review](PRIVACY_RELEASE_REVIEW.md): public-branch privacy scans, cleanup rules, and history-rewrite guidance.
 - [Roadmap](ROADMAP.md): what is done, what remains mock-first, and what belongs to productionization.
 - [Open Source Release Checklist](OPEN_SOURCE_RELEASE.md): publication readiness, GitHub settings, and release-note draft.
 

@@ -131,6 +131,7 @@ npm run check
 - API 参考：[docs/API_REFERENCE.md](docs/API_REFERENCE.md)
 - 扩展指南：[docs/EXTENDING.md](docs/EXTENDING.md)
 - 维护指南：[docs/MAINTENANCE.md](docs/MAINTENANCE.md)
+- 隐私发布审查：[docs/PRIVACY_RELEASE_REVIEW.md](docs/PRIVACY_RELEASE_REVIEW.md)
 - 路线图：[docs/ROADMAP.md](docs/ROADMAP.md)
 - 开源发布检查清单：[docs/OPEN_SOURCE_RELEASE.md](docs/OPEN_SOURCE_RELEASE.md)
 - 贡献说明：[CONTRIBUTING.md](CONTRIBUTING.md)

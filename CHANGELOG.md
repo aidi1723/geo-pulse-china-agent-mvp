@@ -14,6 +14,7 @@ Initial open-source-ready MVP snapshot.
 - Security hardening for mutation API keys, remote access guard, CORS/CSP basics, request size limits, rate limits, SSRF checks, and CSV formula neutralization.
 - GPLv3 license, contribution guide, security policy, development guide, maintenance guide, and open-source release checklist.
 - Maintainer documentation for architecture, API reference, extension workflow, documentation index, and roadmap.
+- Privacy release review process for public-branch scans, cleanup rules, and history-rewrite handling.
 
 ### Verification
 

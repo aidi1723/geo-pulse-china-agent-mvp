@@ -23,6 +23,12 @@ Current safeguards include:
 - Remote provider endpoint restrictions against loopback, private, and link-local targets.
 - Request body size limits and mutation rate limits.
 
+## Public Repository Privacy Review
+
+Before public release or after major documentation updates, maintainers should run the checklist in `docs/PRIVACY_RELEASE_REVIEW.md`.
+
+If private content is pushed to a public branch, a follow-up cleanup commit does not remove it from Git history. For early releases, maintainers may replace the public branch with a privacy-reviewed history using `git push --force-with-lease`; for established repositories, coordinate first.
+
 ## Not Production Hardened
 
 This is a mock-first MVP. Before public multi-user or internet-facing deployment, add a production authentication layer, database-backed persistence, backup policy, monitoring, dependency review, and incident response ownership.

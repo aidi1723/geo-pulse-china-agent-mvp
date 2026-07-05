@@ -21,6 +21,7 @@ Weekly or before a release:
 - Review `CHANGELOG.md` for user-visible changes.
 - Run `npm run check`.
 - Confirm `.gitignore` still excludes local state, credentials, generated build output, and logs.
+- Run the privacy release review in `docs/PRIVACY_RELEASE_REVIEW.md`.
 - Review `reports/security-hardening-log.md` after security-related changes.
 - Confirm no raw secrets appear in audit logs, provider configs, connector configs, static preview data, or docs.
 
@@ -52,6 +53,14 @@ Keep these defaults intact unless there is a documented replacement:
 - CSV export neutralizes spreadsheet formula prefixes.
 - Provider endpoint SSRF guard remains active.
 - Connector permission checks remain active before external collection or campaign actions.
+
+## Privacy Release Review
+
+Before publishing or after major documentation updates, follow [Privacy Release Review](PRIVACY_RELEASE_REVIEW.md).
+
+Key rule: if private content was already pushed to a public branch, a normal cleanup commit is not enough because the old content remains in Git history. For an early public release, clean the tree, verify it, create a privacy-reviewed single-commit history, and update the public branch with `git push --force-with-lease origin main`.
+
+Do this only when the repository owner accepts history rewriting. For established repositories with external contributors, coordinate first.
 
 ## Productionization Backlog
 
