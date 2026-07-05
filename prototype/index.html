@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GEO Pulse China Agent MVP</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script src="./preview-static-global.js?v=20260417-5"></script>
+    <script nonce="__GEO_CSP_NONCE__">
+      (function () {
+        if (window.location.protocol !== "file:" || typeof window.fetch !== "function") {
+          return;
+        }
+
+        var staticRoutes = window.__GEO_STATIC_ROUTE_RESPONSES__ || {};
+        var nativeFetch = window.fetch.bind(window);
+
+        function jsonResponse(status, payload) {
+          return new Response(JSON.stringify(payload), {
+            status: status,
+            headers: {
+              "Content-Type": "application/json"
+            }
+          });
+        }
+
+        function clone(value) {
+          return JSON.parse(JSON.stringify(value));
+        }
+
+        function extractPathname(value) {
+          if (!value) return "";
+          if (value.charAt(0) === "/") return value.split("?")[0];
+          try {
+            return new URL(value, window.location.href).pathname;
+          } catch (error) {
+            return "";
+          }
+        }
+
+        window.fetch = function (input, init) {
+          var requestUrl = typeof input === "string" ? input : (input && input.url) || "";
+          var pathname = extractPathname(requestUrl);
+          var method =
+            (init && init.method) ||
+            (typeof Request !== "undefined" && input instanceof Request ? input.method : "GET") ||
+            "GET";
+
+          if (!pathname || pathname.indexOf("/api/v1/") !== 0) {
+            return nativeFetch(input, init);
+          }
+
+          var route = pathname.replace(/^\/api\/v1/, "") || "/";
+          if (String(method).toUpperCase() !== "GET") {
+            return Promise.resolve(
+              jsonResponse(405, {
+                success: false,
+                error: {
+                  code: "STATIC_PREVIEW_READ_ONLY",
+                  message:
+                    "当前是静态预览模式，只支持只读浏览。若需保存、生成或发布，请先运行 npm start 并打开 http://localhost:3000/。"
+                }
+              })
+            );
+          }
+
+          if (!Object.prototype.hasOwnProperty.call(staticRoutes, route)) {
+            return Promise.resolve(
+              jsonResponse(404, {
+                success: false,
+                error: {
+                  code: "STATIC_PREVIEW_NOT_FOUND",
+                  message: "Static preview route not found: " + route
+                }
+              })
+            );
+          }
+
+          return Promise.resolve(
+            jsonResponse(200, {
+              success: true,
+              data: clone(staticRoutes[route])
+            })
+          );
+        };
+      })();
+    </script>
+    <script type="module" src="./preview-fetch.js?v=20260417-5"></script>
+    <script type="module" src="./app.js?v=20260417-5"></script>
+  </body>
+</html>

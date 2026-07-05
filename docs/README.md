@@ -1,0 +1,37 @@
+# Documentation Index
+
+This directory contains the maintainer-facing documentation for GEO Pulse China Agent MVP.
+
+## Start Here
+
+- [Development Guide](DEVELOPMENT.md): local setup, test gate, environment variables, UI rules, and contribution workflow.
+- [Architecture Guide](ARCHITECTURE.md): runtime structure, module boundaries, data flow, security model, and extension points.
+- [API Reference](API_REFERENCE.md): current mock API groups, route behavior, mutation requirements, and response shape.
+- [Extension Guide](EXTENDING.md): how to add providers, connectors, source adapters, UI pages, tests, and static preview data.
+- [Maintenance Guide](MAINTENANCE.md): routine maintenance, release gate, runtime state, security defaults, and production backlog.
+- [Roadmap](ROADMAP.md): what is done, what remains mock-first, and what belongs to productionization.
+- [Open Source Release Checklist](OPEN_SOURCE_RELEASE.md): publication readiness, GitHub settings, and release-note draft.
+
+## Root-Level Documents
+
+- [README](../README.md): project overview, run commands, completed capabilities, and API list.
+- [DESIGN](../DESIGN.md): UI design source of truth.
+- [CONTRIBUTING](../CONTRIBUTING.md): contribution workflow and PR checklist.
+- [SECURITY](../SECURITY.md): vulnerability reporting and security boundaries.
+- [CHANGELOG](../CHANGELOG.md): release history.
+- [LICENSE](../LICENSE): GPLv3 license text.
+
+## Product And Research References
+
+The root-level Chinese product documents are retained as product context:
+
+- `中国智能体GEO平台-落地计划.md`
+- `中国智能体GEO平台-后台一期可开发稿.md`
+- `中国智能体GEO平台-一期接口与数据表设计.md`
+- `中国智能体GEO平台-核心页面低保真与交互说明.md`
+- `中国智能体GEO平台-关键词引擎升级方案.md`
+- `中国智能体GEO平台-监测系统与插件参考架构.md`
+- `AgentCoreOS-GEO-Suite-产品拆解方案.md`
+- `AgentCoreOS-GEO-网站优化与内容方案.md`
+
+The `reports/` directory contains audit, benchmark, and security hardening notes used during MVP preparation.

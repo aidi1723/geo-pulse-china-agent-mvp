@@ -1,0 +1,19 @@
+{
+  "name": "geo-pulse-china-agent-mvp",
+  "version": "0.1.0",
+  "description": "Zero-dependency mock-first GEO operations MVP for China agent content workflows.",
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "keywords": [
+    "geo",
+    "seo",
+    "agent",
+    "content-automation",
+    "mvp"
+  ],
+  "scripts": {
+    "start": "node server.mjs",
+    "check": "node verify-mvp.mjs",
+    "verify": "node verify-mvp.mjs"
+  }
+}
