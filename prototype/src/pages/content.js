@@ -139,8 +139,8 @@ export function renderContent(store) {
         </div>
         <div class="toolbar-right">
           <button class="ghost-btn" data-action="reset-content-filters">重置筛选</button>
-          <button class="ghost-btn" disabled title="导出能力即将开放">导出</button>
-          <button class="primary-btn" disabled title="新建能力即将开放">${tab === "articles" ? "新建内容" : "新建选题"}</button>
+          <button class="ghost-btn" data-action="export-artifact" data-export-type="${tab === "articles" ? "content_articles" : tab === "templates" ? "content_templates" : "content_topics"}">导出</button>
+          <button class="primary-btn" data-action="${tab === "articles" ? "create-manual-article" : tab === "templates" ? "create-content-template" : "create-manual-topic"}">${tab === "articles" ? "新建内容" : tab === "templates" ? "新增模板" : "新建选题"}</button>
         </div>
       </div>
     </section>
@@ -199,8 +199,8 @@ function renderTopics(store, topics) {
               </div>
               <div class="drawer-section">
                 <div class="actions-row">
-                  <button class="secondary-btn" disabled title="选题编辑即将开放">编辑选题</button>
-                  <button class="secondary-btn" disabled title="自动大纲即将开放">生成大纲</button>
+                  <button class="secondary-btn" data-action="edit-topic" data-topic-id="${escapeHtml(selected.id)}">编辑选题</button>
+                  <button class="secondary-btn" data-action="generate-outline" data-topic-id="${escapeHtml(selected.id)}">生成大纲</button>
                   <button class="primary-btn" data-action="generate-article" data-topic-id="${escapeHtml(selected.id)}">生成草稿</button>
                 </div>
               </div>
@@ -381,7 +381,7 @@ function renderReviews(store, pending) {
               <div class="drawer-section">
                 <div class="actions-row">
                   <button class="danger-btn" data-action="review-article" data-review-action="reject" data-article-id="${escapeHtml(selected.id)}">驳回修改</button>
-                  <button class="secondary-btn" disabled title="复审流转即将开放">指派复审</button>
+                  <button class="secondary-btn" data-action="assign-review" data-article-id="${escapeHtml(selected.id)}">指派复审</button>
                   <button class="primary-btn" data-action="review-article" data-review-action="pass" data-article-id="${escapeHtml(selected.id)}">审核通过</button>
                 </div>
               </div>
@@ -401,7 +401,7 @@ function renderTemplates(templates) {
           <h3 class="panel-title">模板库</h3>
           <div class="panel-note">第一期只保留四种固定模板</div>
         </div>
-        <button class="primary-btn" disabled title="模板管理即将开放">新增模板</button>
+        <button class="primary-btn" data-action="create-content-template">新增模板</button>
       </div>
       ${tableMarkup(
         ["模板名称", "模板类型", "适用分类", "状态"],

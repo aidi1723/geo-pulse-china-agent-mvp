@@ -10,7 +10,7 @@ export function renderBilling(data) {
           <h3 class="panel-title">当前套餐</h3>
           <div class="panel-note">${escapeHtml(summary.plan_name || "专业版")} / 月付</div>
         </div>
-        <button class="primary-btn" disabled title="套餐升级能力即将开放">升级套餐</button>
+        <button class="primary-btn" data-action="upgrade-plan" data-plan-id="single_user_pro">升级套餐</button>
       </div>
         <div class="grid-cards" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
           ${[

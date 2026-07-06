@@ -9,13 +9,19 @@ process.env.GEO_ENABLE_PERSISTENCE = process.env.GEO_ENABLE_PERSISTENCE || "1";
 const {
   approvePublishTaskAction,
   cancelPublishTaskAction,
+  createArticleAction,
   createChannelAction,
+  createContentTemplateAction,
+  createExportJobAction,
   createMediaSourceAction,
   createPublishTaskAction,
   createModelConfigAction,
   createKeywordCrawlJobAction,
+  createTopicIdeaAction,
   createArticleFromTopicAction,
   createTopicIdeasFromKeywords,
+  generateInternationalGeoArtifactsAction,
+  generateTopicOutlineAction,
   getArticle,
   getAutomationConnector,
   getAutomationProviderConfig,
@@ -28,6 +34,8 @@ const {
   getContentAnalytics,
   getContentFunnel,
   getCurrentWorkspace,
+  getExportJobDownload,
+  getInternationalGeoState,
   getDashboardSummary,
   getKeyword,
   getKeywordAnalytics,
@@ -40,6 +48,7 @@ const {
   getTopKeywords,
   getTopicIdea,
   getVisibilityAnalytics,
+  getWorkspaceInput,
   listAudienceSegments,
   listArticles,
   listAuditEvents,
@@ -65,6 +74,7 @@ const {
   listTopicIdeas,
   listUsageRecords,
   reviewArticleAction,
+  runInternationalGeoAuditAction,
   reconnectChannelAction,
   recordAuditEventAction,
   runSourceStrategyAction,
@@ -73,17 +83,22 @@ const {
   retryAutomationRunAction,
   saveBrandProfileAction,
   saveChannelAction,
+  saveInternationalGeoInputAction,
   saveMediaSourceAction,
   saveModelConfigAction,
   saveAutomationProviderAction,
   saveSourceStrategyAction,
+  saveWorkspaceInputAction,
   testAutomationProviderAction,
   retryPublishTaskFailedAction,
   startPublishTaskAction,
   submitArticleReviewAction,
   takeoverPublishTaskItemAction,
+  updateBillingPlanAction,
   updateKeywordAction,
+  updateTopicIdeaAction,
   updateArticleAction,
+  logoutSessionAction,
   getPersistenceStatus,
   getRuntimeStatus,
   resetRuntimeState
@@ -724,6 +739,21 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && pathname === "/workspace-input") {
+    sendJson(res, 200, ok(getWorkspaceInput()));
+    return;
+  }
+
+  if (req.method === "PUT" && pathname === "/workspace-input") {
+    const body = await parseBody(req).catch(() => null);
+    if (!body) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    sendJson(res, 200, ok(saveWorkspaceInputAction(body)));
+    return;
+  }
+
   if (req.method === "GET" && pathname === "/members") {
     sendJson(res, 200, ok(listMembers(query)));
     return;
@@ -1123,6 +1153,16 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "POST" && pathname === "/topic-ideas") {
+    const body = await parseBody(req).catch(() => null);
+    if (!body?.title) {
+      sendJson(res, 400, error("VALIDATION_ERROR", "title is required").body);
+      return;
+    }
+    sendJson(res, 201, ok(createTopicIdeaAction(body)));
+    return;
+  }
+
   if (req.method === "POST" && pathname === "/topic-ideas/from-keywords") {
     const body = await parseBody(req).catch(() => null);
     if (!body?.keyword_ids?.length) {
@@ -1130,6 +1170,33 @@ async function handleApi(req, res, url) {
       return;
     }
     sendJson(res, 201, ok(await createTopicIdeasFromKeywords(body.keyword_ids, body.template_type)));
+    return;
+  }
+
+  if (req.method === "PUT" && pathname.match(/^\/topic-ideas\/[^/]+$/)) {
+    const id = pathname.split("/")[2];
+    const body = await parseBody(req).catch(() => null);
+    if (!body) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    const topic = updateTopicIdeaAction(id, body);
+    if (!topic) {
+      sendJson(res, 404, error("NOT_FOUND", "Topic idea not found", 404).body);
+      return;
+    }
+    sendJson(res, 200, ok(topic));
+    return;
+  }
+
+  if (req.method === "POST" && pathname.match(/^\/topic-ideas\/[^/]+\/outline$/)) {
+    const id = pathname.split("/")[2];
+    const topic = generateTopicOutlineAction(id);
+    if (!topic) {
+      sendJson(res, 404, error("NOT_FOUND", "Topic idea not found", 404).body);
+      return;
+    }
+    sendJson(res, 200, ok(topic));
     return;
   }
 
@@ -1149,8 +1216,28 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "POST" && pathname === "/content-templates") {
+    const body = await parseBody(req).catch(() => null);
+    if (!body?.name) {
+      sendJson(res, 400, error("VALIDATION_ERROR", "name is required").body);
+      return;
+    }
+    sendJson(res, 201, ok(createContentTemplateAction(body)));
+    return;
+  }
+
   if (req.method === "GET" && pathname === "/articles") {
     sendJson(res, 200, ok(listArticles(query)));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/articles") {
+    const body = await parseBody(req).catch(() => null);
+    if (!body?.title) {
+      sendJson(res, 400, error("VALIDATION_ERROR", "title is required").body);
+      return;
+    }
+    sendJson(res, 201, ok(createArticleAction(body)));
     return;
   }
 
@@ -1404,8 +1491,57 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "POST" && pathname === "/exports") {
+    const body = await parseBody(req).catch(() => ({}));
+    sendJson(res, 201, ok(createExportJobAction(body || {})));
+    return;
+  }
+
+  if (req.method === "GET" && pathname.match(/^\/exports\/[^/]+\/download$/)) {
+    const id = pathname.split("/")[2];
+    const job = getExportJobDownload(id);
+    if (!job) {
+      sendJson(res, 404, error("NOT_FOUND", "Export job not found", 404).body);
+      return;
+    }
+    res.setHeader("Content-Disposition", `attachment; filename="${job.file_name}"`);
+    sendText(res, 200, job.content, job.content_type);
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/international-geo") {
+    sendJson(res, 200, ok(getInternationalGeoState()));
+    return;
+  }
+
+  if (req.method === "PUT" && pathname === "/international-geo/input") {
+    const body = await parseBody(req).catch(() => null);
+    if (!body) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    sendJson(res, 200, ok(saveInternationalGeoInputAction(body)));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/international-geo/audit") {
+    sendJson(res, 200, ok(runInternationalGeoAuditAction()));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/international-geo/artifacts") {
+    sendJson(res, 200, ok(generateInternationalGeoArtifactsAction()));
+    return;
+  }
+
   if (req.method === "GET" && pathname === "/billing/summary") {
     sendJson(res, 200, ok(getBillingSummary()));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/billing/plan") {
+    const body = await parseBody(req).catch(() => ({}));
+    sendJson(res, 200, ok(updateBillingPlanAction(body || {})));
     return;
   }
 
@@ -1416,6 +1552,12 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && pathname === "/billing/invoices") {
     sendJson(res, 200, ok(listInvoices(query)));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/session/logout") {
+    const body = await parseBody(req).catch(() => ({}));
+    sendJson(res, 200, ok(logoutSessionAction(body || {})));
     return;
   }
 

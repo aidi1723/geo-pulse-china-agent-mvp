@@ -597,8 +597,8 @@ export function renderInternationalGeo(data = internationalGeo) {
         <div class="panel-note">Generative Engine Optimization / AI SEO visibility workspace for global markets.</div>
       </div>
       <div class="actions-row">
-        <button class="ghost-btn" disabled>Read-only MVP</button>
-        <button class="secondary-btn" disabled>AI Readiness Audit</button>
+        <button class="ghost-btn" data-action="international-artifacts">生成 llms.txt / JSON-LD</button>
+        <button class="secondary-btn" data-action="international-audit">AI Readiness Audit</button>
       </div>
     </section>
 

@@ -5,21 +5,30 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import {
+  createArticleAction,
   createArticleFromTopicAction,
   createChannelAction,
+  createContentTemplateAction,
+  createExportJobAction,
   createMediaSourceAction,
   createModelConfigAction,
   createPublishTaskAction,
   createKeywordCrawlJobAction,
+  createTopicIdeaAction,
   createTopicIdeasFromKeywords,
   evaluateConnectorPermission,
+  generateInternationalGeoArtifactsAction,
+  generateTopicOutlineAction,
   getArticle,
   getAutomationConnector,
   getAutomationRun,
   getAutomationProviderConfig,
   getBrandProfile,
+  getBillingSummary,
   getDashboardSummary,
+  getExportJobDownload,
   getCampaignAnalytics,
+  getInternationalGeoState,
   getKeyword,
   getPromptTemplate,
   getPublishTask,
@@ -29,10 +38,13 @@ import {
   getTopicIdea,
   getVisibilityAnalytics,
   getConnectorPermissionMatrix,
+  getWorkspaceInput,
   listAutomationConnectors,
   listAutomationProviders,
   listAuditEvents,
   listAutomationRuns,
+  listArticles,
+  listContentTemplates,
   listMediaSources,
   listProviderInvocations,
   listSourceAdapterContracts,
@@ -41,10 +53,13 @@ import {
   listMarketingCampaigns,
   listPromptTemplates,
   listSourceStrategies,
+  listTopicIdeas,
+  logoutSessionAction,
   reconnectChannelAction,
   resetRuntimeState,
   reviewArticleAction,
   approvePublishTaskAction,
+  runInternationalGeoAuditAction,
   retryAutomationRunAction,
   runVisibilityCollectionAction,
   runSourceStrategyAction,
@@ -52,14 +67,18 @@ import {
   saveAutomationProviderAction,
   saveBrandProfileAction,
   saveChannelAction,
+  saveInternationalGeoInputAction,
   saveMediaSourceAction,
   saveModelConfigAction,
   saveSourceStrategyAction,
+  saveWorkspaceInputAction,
   startPublishTaskAction,
   submitArticleReviewAction,
   takeoverPublishTaskItemAction,
   testAutomationProviderAction,
+  updateBillingPlanAction,
   updateArticleAction,
+  updateTopicIdeaAction,
   updateKeywordAction
 } from "./mock-data.mjs";
 import {
@@ -75,6 +94,8 @@ import {
 import { applyRouteState, serializeRouteState } from "./prototype/src/route-state.js";
 import { navigation } from "./prototype/src/config.js";
 import { renderAnalytics } from "./prototype/src/pages/analytics.js";
+import { renderBilling } from "./prototype/src/pages/billing.js";
+import { renderContent } from "./prototype/src/pages/content.js";
 import { renderDistribution } from "./prototype/src/pages/distribution.js";
 import { renderInternationalGeo } from "./prototype/src/pages/international.js";
 import { renderKeywords } from "./prototype/src/pages/keywords.js";
@@ -871,6 +892,131 @@ async function runMockDataChecks() {
     resetAuditEvents[0]?.resource_type,
     "runtime",
     "Runtime reset audit event should identify the runtime resource"
+  );
+}
+
+async function runSingleUserCompleteChecks() {
+  const savedInput = saveWorkspaceInputAction({
+    website_url: "https://example.com",
+    product_name: "AgentCore GEO",
+    industry: "AI search operations",
+    target_markets: ["US", "EU"],
+    audience: "B2B SaaS marketing teams",
+    language: "en",
+    competitors: ["Profound", "AthenaHQ", "Semrush AI"],
+    differentiators: ["single-user workflow", "local-first GEO operations"]
+  });
+  assert.equal(savedInput.product_name, "AgentCore GEO", "Workspace input should save product name");
+  assert.equal(getWorkspaceInput().website_url, "https://example.com", "Workspace input should be readable");
+
+  const manualTopic = createTopicIdeaAction({
+    title: "How should B2B SaaS teams prepare for AI search?",
+    keyword: "AI search readiness for B2B SaaS",
+    template_type: "how_to",
+    priority: 1,
+    core_messages: ["Answer upfront", "Show evidence", "Publish llms.txt"],
+    required_terms: ["llms.txt", "JSON-LD", "AI Overviews"]
+  });
+  assert.ok(manualTopic.id, "Manual topic should be creatable");
+
+  const updatedTopic = updateTopicIdeaAction(manualTopic.id, {
+    title: "How B2B SaaS teams prepare for AI search recommendations",
+    priority: 2
+  });
+  assert.equal(updatedTopic.priority, 2, "Manual topic should be editable");
+  assert.ok(
+    listTopicIdeas().items.some((item) => item.id === manualTopic.id),
+    "Manual topic should appear in topic list"
+  );
+
+  const outlineResult = generateTopicOutlineAction(manualTopic.id);
+  assert.ok(outlineResult.outline_json.length >= 4, "Topic outline generation should create outline sections");
+
+  const manualArticle = createArticleAction({
+    topic_idea_id: manualTopic.id,
+    title: "AI Search Readiness Checklist for B2B SaaS",
+    content_markdown: "Direct answer: B2B SaaS teams need structured facts, citations, llms.txt, and JSON-LD.",
+    target_channel_types: ["website_blog", "linkedin"]
+  });
+  assert.ok(manualArticle.id, "Manual article should be creatable");
+  assert.ok(
+    listArticles().items.some((item) => item.id === manualArticle.id),
+    "Manual article should appear in article list"
+  );
+
+  const createdTemplate = createContentTemplateAction({
+    name: "AI search direct-answer article",
+    template_type: "how_to",
+    applicable_categories: ["how_to", "comparison"],
+    structure: ["Direct answer", "Evidence table", "FAQ", "CTA"]
+  });
+  assert.ok(createdTemplate.id, "Content template should be creatable");
+  assert.ok(
+    listContentTemplates().items.some((item) => item.id === createdTemplate.id),
+    "Content template should appear in template list"
+  );
+
+  const exportJob = createExportJobAction({
+    artifact_type: "content_articles",
+    format: "csv",
+    scope: "single_user_acceptance"
+  });
+  assert.ok(exportJob.id, "Export job should be creatable");
+  const exportDownload = getExportJobDownload(exportJob.id);
+  assert.match(exportDownload.content, /AI Search Readiness|title/i, "Export download should include article content");
+
+  const internationalInput = saveInternationalGeoInputAction({
+    website_url: "https://example.com",
+    product_name: "AgentCore GEO",
+    target_market: "United States",
+    target_language: "English",
+    primary_query: "best GEO platform for AI search",
+    competitors: ["Profound", "AthenaHQ", "Semrush AI"]
+  });
+  assert.equal(internationalInput.product_name, "AgentCore GEO", "International GEO input should save");
+
+  const audit = runInternationalGeoAuditAction();
+  assert.ok(audit.summary.ai_ready_score >= 1, "International GEO audit should produce score");
+  assert.ok(
+    audit.engineVisibility.some((item) => /ChatGPT|Gemini|Claude|Copilot/.test(item.engine)),
+    "International GEO audit should cover major AI engines"
+  );
+
+  const artifacts = generateInternationalGeoArtifactsAction();
+  assert.match(artifacts.llms_txt, /AgentCore GEO/, "International artifacts should generate llms.txt text");
+  assert.match(artifacts.json_ld, /application\/ld\+json|@context/, "International artifacts should generate JSON-LD");
+  assert.ok(getInternationalGeoState().artifacts.llms_txt, "International GEO artifacts should persist");
+
+  const upgradedPlan = updateBillingPlanAction({
+    plan_id: "single_user_pro",
+    billing_cycle: "monthly"
+  });
+  assert.equal(upgradedPlan.plan_id, "single_user_pro", "Billing plan should update locally");
+  assert.equal(getBillingSummary().current_plan, "single_user_pro", "Billing summary should reflect local plan");
+
+  const logout = logoutSessionAction({ reason: "single_user_manual" });
+  assert.equal(logout.success, true, "Single-user logout should return safe success");
+
+  const uiStore = {
+    tabs: { content: "topics" },
+    filters: { content: { query: "", status: "all" } },
+    selectedIds: {},
+    data: {
+      keywords: [],
+      topics: listTopicIdeas().items,
+      articles: listArticles().items,
+      templates: listContentTemplates().items,
+      brandProfile: getBrandProfile(),
+      articleDetails: {}
+    }
+  };
+  const contentHtml = renderContent(uiStore);
+  const internationalHtml = renderInternationalGeo(getInternationalGeoState());
+  const billingHtml = renderBilling({ billingSummary: getBillingSummary(), invoices: [] });
+  assert.doesNotMatch(
+    `${contentHtml}\n${internationalHtml}\n${billingHtml}`,
+    /即将开放|Read-only MVP/,
+    "Core single-user UI should not show coming-soon or read-only dead ends"
   );
 }
 
@@ -2623,6 +2769,131 @@ async function runHttpSecurityChecks() {
   }
 }
 
+async function runSingleUserHttpChecks() {
+  const port = 3800 + Math.floor(Math.random() * 500);
+  const child = spawn(process.execPath, ["server.mjs"], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      PORT: String(port),
+      GEO_ENABLE_PERSISTENCE: "0",
+      GEO_MUTATION_RATE_LIMIT_PER_MINUTE: "80"
+    },
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  try {
+    await waitForServerReady(child, port);
+    const clientConfig = await httpRequest(port, "/api/v1/system/client-config");
+    const mutationHeaders = {
+      "Content-Type": "application/json",
+      "X-GEO-API-Key": clientConfig.body.data.mutation_api_key
+    };
+
+    const workspace = await httpRequest(port, "/api/v1/workspace-input", {
+      method: "PUT",
+      headers: mutationHeaders,
+      body: JSON.stringify({
+        website_url: "https://example.com",
+        product_name: "AgentCore GEO",
+        target_markets: ["US"]
+      })
+    });
+    assert.equal(workspace.status, 200, "Workspace input should be mutable over HTTP");
+    assert.equal(workspace.body?.data?.product_name, "AgentCore GEO", "Workspace input API should return saved product");
+
+    const topic = await httpRequest(port, "/api/v1/topic-ideas", {
+      method: "POST",
+      headers: mutationHeaders,
+      body: JSON.stringify({
+        title: "AI search readiness HTTP topic",
+        keyword: "AI search readiness",
+        template_type: "how_to"
+      })
+    });
+    assert.equal(topic.status, 201, "Manual topic should be creatable over HTTP");
+
+    const outline = await httpRequest(port, `/api/v1/topic-ideas/${topic.body.data.id}/outline`, {
+      method: "POST",
+      headers: mutationHeaders,
+      body: "{}"
+    });
+    assert.equal(outline.status, 200, "Topic outline should be generatable over HTTP");
+    assert.ok(outline.body?.data?.outline_json?.length >= 4, "Topic outline API should return sections");
+
+    const article = await httpRequest(port, "/api/v1/articles", {
+      method: "POST",
+      headers: mutationHeaders,
+      body: JSON.stringify({
+        topic_idea_id: topic.body.data.id,
+        title: "AI Search Readiness HTTP Article",
+        content_markdown: "Direct answer: structure your facts for AI engines."
+      })
+    });
+    assert.equal(article.status, 201, "Manual article should be creatable over HTTP");
+
+    const exportJob = await httpRequest(port, "/api/v1/exports", {
+      method: "POST",
+      headers: mutationHeaders,
+      body: JSON.stringify({
+        artifact_type: "content_articles",
+        format: "csv"
+      })
+    });
+    assert.equal(exportJob.status, 201, "Export job should be creatable over HTTP");
+    const exportDownload = await httpRequest(port, `/api/v1/exports/${exportJob.body.data.id}/download`);
+    assert.equal(exportDownload.status, 200, "Export download should be available over HTTP");
+    assert.match(String(exportDownload.body), /AI Search Readiness HTTP Article|title/, "Export download should contain exported data");
+
+    const internationalInput = await httpRequest(port, "/api/v1/international-geo/input", {
+      method: "PUT",
+      headers: mutationHeaders,
+      body: JSON.stringify({
+        website_url: "https://example.com",
+        product_name: "AgentCore GEO",
+        target_market: "United States"
+      })
+    });
+    assert.equal(internationalInput.status, 200, "International GEO input should save over HTTP");
+
+    const internationalAudit = await httpRequest(port, "/api/v1/international-geo/audit", {
+      method: "POST",
+      headers: mutationHeaders,
+      body: "{}"
+    });
+    assert.equal(internationalAudit.status, 200, "International GEO audit should run over HTTP");
+    assert.ok(
+      internationalAudit.body?.data?.engineVisibility?.some((item) => item.engine === "Gemini"),
+      "International GEO HTTP audit should include Gemini"
+    );
+
+    const internationalArtifacts = await httpRequest(port, "/api/v1/international-geo/artifacts", {
+      method: "POST",
+      headers: mutationHeaders,
+      body: "{}"
+    });
+    assert.equal(internationalArtifacts.status, 200, "International GEO artifacts should generate over HTTP");
+    assert.match(internationalArtifacts.body?.data?.llms_txt || "", /AgentCore GEO/, "Artifacts API should return llms.txt");
+
+    const billingPlan = await httpRequest(port, "/api/v1/billing/plan", {
+      method: "POST",
+      headers: mutationHeaders,
+      body: JSON.stringify({ plan_id: "single_user_pro", billing_cycle: "monthly" })
+    });
+    assert.equal(billingPlan.status, 200, "Billing plan should update over HTTP");
+
+    const logout = await httpRequest(port, "/api/v1/session/logout", {
+      method: "POST",
+      headers: mutationHeaders,
+      body: JSON.stringify({ reason: "http_acceptance" })
+    });
+    assert.equal(logout.status, 200, "Single-user logout should be available over HTTP");
+    assert.equal(logout.body?.data?.success, true, "Logout API should return success");
+  } finally {
+    child.kill();
+  }
+}
+
 async function runSchedulerAuditChecks() {
   const port = 3600 + Math.floor(Math.random() * 300);
   const child = spawn(process.execPath, ["server.mjs"], {
@@ -2851,6 +3122,7 @@ async function runRemoteAccessSecurityChecks() {
 try {
   runSyntaxChecks();
   await runMockDataChecks();
+  await runSingleUserCompleteChecks();
   runRouteStateChecks();
   runExperienceChecks();
   runSettingsAuditUiChecks();
@@ -2865,6 +3137,7 @@ try {
   runPersistenceChecks();
   runProductionStartupChecks();
   await runHttpSecurityChecks();
+  await runSingleUserHttpChecks();
   await runSchedulerAuditChecks();
   await runAuditCsvSpreadsheetSafetyChecks();
   await runRemoteAccessSecurityChecks();

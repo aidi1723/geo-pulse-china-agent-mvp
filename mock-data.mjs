@@ -1084,6 +1084,59 @@ const modelConfigs = [
   }
 ];
 
+const workspaceInput = {
+  website_url: "https://example.com",
+  product_name: "GEO Pulse",
+  industry: "AI search operations",
+  target_markets: ["CN", "US"],
+  audience: "GEO operators and B2B marketing teams",
+  language: "zh-CN",
+  competitors: ["traditional SEO tools", "AI visibility platforms"],
+  differentiators: ["local-first workflow", "domestic and international GEO"]
+};
+
+const exportJobs = [];
+
+const billingPlanState = {
+  plan_id: "single_user_starter",
+  plan_name: "单用户专业版",
+  billing_cycle: "monthly",
+  seats: 1,
+  updated_at: "2026-07-06T10:00:00.000Z",
+  upgrade_history: []
+};
+
+const internationalGeoState = {
+  input: {
+    website_url: "https://example.com",
+    product_name: "GEO Pulse",
+    target_market: "United States",
+    target_language: "English",
+    primary_query: "best GEO platform for AI search",
+    competitors: ["Profound", "AthenaHQ", "Semrush AI"]
+  },
+  summary: {
+    ai_ready_score: 78,
+    llms_status: "已生成",
+    schema_coverage: "68%",
+    crawler_access: "允许",
+    citation_opportunities: 24
+  },
+  filters: {
+    markets: ["US", "EU", "UK", "SEA"],
+    languages: ["en-US", "en-GB", "en"],
+    engines: ["ChatGPT Search", "Perplexity", "Google AI Overviews", "Gemini", "Claude", "Microsoft Copilot"],
+    stages: ["Readiness audit", "Citation monitoring", "Content opportunity", "Entity coverage"]
+  },
+  engineVisibility: [],
+  artifacts: {
+    llms_txt: "",
+    json_ld: "",
+    distribution_brief: ""
+  },
+  updated_at: "2026-07-06T10:00:00.000Z"
+};
+
 let uniqueIdCounter = 0;
 
 const mediaSources = [
@@ -1960,6 +2013,10 @@ function getSerializableState() {
     members,
     brandProfile,
     modelConfigs,
+    workspaceInput,
+    exportJobs,
+    billingPlanState,
+    internationalGeoState,
     mediaSources,
     sourceStrategies,
     automationRuns
@@ -1995,6 +2052,10 @@ function hydrateRuntimeState(payload = {}) {
   replaceArray(members, payload.members ?? members);
   replaceObject(brandProfile, payload.brandProfile ?? brandProfile);
   replaceArray(modelConfigs, payload.modelConfigs ?? modelConfigs);
+  replaceObject(workspaceInput, payload.workspaceInput ?? workspaceInput);
+  replaceArray(exportJobs, payload.exportJobs ?? exportJobs);
+  replaceObject(billingPlanState, payload.billingPlanState ?? billingPlanState);
+  replaceObject(internationalGeoState, payload.internationalGeoState ?? internationalGeoState);
   replaceArray(mediaSources, payload.mediaSources ?? mediaSources);
   replaceArray(sourceStrategies, payload.sourceStrategies ?? sourceStrategies);
   replaceArray(automationRuns, payload.automationRuns ?? automationRuns);
@@ -2233,6 +2294,28 @@ function articleTypeLabel(articleType) {
       scenario_page: "场景页"
     }[articleType] || articleType
   );
+}
+
+function normalizeStringArray(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || "").trim()).filter(Boolean);
+  }
+  return String(value || "")
+    .split(/\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function defaultTopicOutline(topic) {
+  const title = topic?.title || "GEO 内容主题";
+  return [
+    `Direct answer: ${title}`,
+    "Problem context and buyer intent",
+    "Evidence, statistics, and comparison table",
+    "Implementation checklist",
+    "FAQ and AI-search citation block",
+    "Conversion CTA"
+  ];
 }
 
 function makeSlug(value = "") {
@@ -3618,10 +3701,126 @@ export function getTopicIdea(id) {
   return byId(topicIdeas, id);
 }
 
+export function getWorkspaceInput() {
+  return deepClone(workspaceInput);
+}
+
+export function saveWorkspaceInputAction(patch = {}) {
+  Object.assign(workspaceInput, {
+    website_url: String(patch.website_url || workspaceInput.website_url || "").trim(),
+    product_name: String(patch.product_name || workspaceInput.product_name || "").trim(),
+    industry: String(patch.industry || workspaceInput.industry || "").trim(),
+    target_markets: normalizeStringArray(patch.target_markets || workspaceInput.target_markets),
+    audience: String(patch.audience || workspaceInput.audience || "").trim(),
+    language: String(patch.language || workspaceInput.language || "en").trim(),
+    competitors: normalizeStringArray(patch.competitors || workspaceInput.competitors),
+    differentiators: normalizeStringArray(patch.differentiators || workspaceInput.differentiators),
+    updated_at: nowIso()
+  });
+  recordAuditEvent("workspace_input.update", "workspace_input", "single-user", {
+    website_url: workspaceInput.website_url,
+    product_name: workspaceInput.product_name
+  });
+  persistState();
+  return getWorkspaceInput();
+}
+
+export function createTopicIdeaAction(payload = {}) {
+  const keywordText = String(payload.keyword || payload.title || workspaceInput.product_name || "GEO topic").trim();
+  const keyword = keywords.find((item) => item.keyword === keywordText || item.id === payload.keyword_id);
+  const topic = {
+    id: uniqueId("tp"),
+    keyword_id: payload.keyword_id || keyword?.id || "",
+    title: String(payload.title || makeTopicTitle(keyword || { keyword: keywordText })).trim(),
+    content_type: payload.content_type || "article",
+    content_type_label: contentTypeLabel(payload.content_type || "article"),
+    template_type: payload.template_type || "decision",
+    template_type_label: templateLabel(payload.template_type || "decision"),
+    target_channels: normalizeStringArray(payload.target_channels || ["website_blog"]),
+    target_audience: String(payload.target_audience || workspaceInput.audience || "Single-user operator").trim(),
+    core_messages: normalizeStringArray(payload.core_messages || workspaceInput.differentiators),
+    required_terms: normalizeStringArray(payload.required_terms || ["llms.txt", "JSON-LD", "Direct Answer"]),
+    forbidden_terms: normalizeStringArray(payload.forbidden_terms || brandProfile.forbidden_terms || []),
+    cta_type: payload.cta_type || "book_demo",
+    priority: Number(payload.priority || 2),
+    brand_fit: payload.brand_fit || "high",
+    brand_fit_label: payload.brand_fit_label || "高",
+    owner_user_id: "user-1",
+    status: "ready",
+    status_label: "待生成草稿",
+    outline_json: normalizeStringArray(payload.outline_json || []),
+    created_at: nowIso(),
+    updated_at: nowIso()
+  };
+  topicIdeas.unshift(topic);
+  recordAuditEvent("topic.create", "topic_idea", topic.id, {
+    title: topic.title,
+    source: "single_user_manual"
+  });
+  persistState();
+  return getTopicIdea(topic.id);
+}
+
+export function updateTopicIdeaAction(topicId, patch = {}) {
+  const topic = topicIdeas.find((item) => item.id === topicId);
+  if (!topic) return null;
+  if (typeof patch.title === "string") topic.title = patch.title.trim() || topic.title;
+  if (typeof patch.template_type === "string") {
+    topic.template_type = patch.template_type;
+    topic.template_type_label = templateLabel(patch.template_type);
+  }
+  if (typeof patch.content_type === "string") {
+    topic.content_type = patch.content_type;
+    topic.content_type_label = contentTypeLabel(patch.content_type);
+  }
+  if (patch.priority !== undefined) topic.priority = Number(patch.priority) || topic.priority;
+  if (patch.core_messages) topic.core_messages = normalizeStringArray(patch.core_messages);
+  if (patch.required_terms) topic.required_terms = normalizeStringArray(patch.required_terms);
+  if (patch.outline_json) topic.outline_json = normalizeStringArray(patch.outline_json);
+  topic.updated_at = nowIso();
+  recordAuditEvent("topic.update", "topic_idea", topic.id, {
+    title: topic.title
+  });
+  persistState();
+  return getTopicIdea(topic.id);
+}
+
+export function generateTopicOutlineAction(topicId) {
+  const topic = topicIdeas.find((item) => item.id === topicId);
+  if (!topic) return null;
+  topic.outline_json = defaultTopicOutline(topic);
+  topic.status = "generated";
+  topic.status_label = "已生成大纲";
+  topic.updated_at = nowIso();
+  recordAuditEvent("topic.outline.generate", "topic_idea", topic.id, {
+    section_count: topic.outline_json.length
+  });
+  persistState();
+  return getTopicIdea(topic.id);
+}
+
 export function listContentTemplates(query = {}) {
   let items = [...contentTemplates];
   if (query.template_type) items = items.filter((item) => item.template_type === query.template_type);
   return paginate(items, query.page, query.page_size);
+}
+
+export function createContentTemplateAction(payload = {}) {
+  const template = {
+    id: uniqueId("tpl"),
+    name: String(payload.name || "单用户 GEO 内容模板").trim(),
+    template_type: payload.template_type || "decision",
+    applicable_categories: normalizeStringArray(payload.applicable_categories || [payload.template_type || "decision"]),
+    structure: normalizeStringArray(payload.structure || ["Direct answer", "Evidence", "FAQ", "CTA"]),
+    is_enabled: payload.is_enabled !== false,
+    updated_at: nowIso()
+  };
+  contentTemplates.unshift(template);
+  recordAuditEvent("content_template.create", "content_template", template.id, {
+    template_type: template.template_type
+  });
+  persistState();
+  return deepClone(template);
 }
 
 export function listArticles(query = {}) {
@@ -3681,6 +3880,76 @@ export function updateArticleAction(articleId, patch = {}) {
 
   persistState();
   return getArticle(articleId);
+}
+
+export function createArticleAction(payload = {}) {
+  const topic = topicIdeas.find((item) => item.id === payload.topic_idea_id) || topicIdeas[0];
+  const keyword = getKeyword(payload.keyword_id || topic?.keyword_id);
+  const title = String(payload.title || topic?.title || "Single-user GEO article").trim();
+  const content = String(
+    payload.content_markdown ||
+      `Direct answer: ${title}\n\n${(topic?.core_messages || []).join("\n")}\n\nUse structured facts, citations, llms.txt, and JSON-LD to improve AI search visibility.`
+  ).trim();
+  const article = {
+    id: uniqueId("ar"),
+    topic_idea_id: topic?.id || payload.topic_idea_id || "",
+    keyword_id: keyword?.id || topic?.keyword_id || "",
+    title,
+    subtitle: String(payload.subtitle || `Single-user draft for ${workspaceInput.product_name}`).trim(),
+    article_type: payload.article_type || topic?.content_type || "article",
+    article_type_label: articleTypeLabel(payload.article_type || topic?.content_type || "article"),
+    target_channel_types: normalizeStringArray(payload.target_channel_types || topic?.target_channels || ["website_blog"]),
+    word_count: content.length,
+    outline_json: normalizeStringArray(payload.outline_json || topic?.outline_json || defaultTopicOutline(topic)),
+    content_markdown: content,
+    excerpt: summarizeMarkdown(content, 120),
+    seo_title: String(payload.seo_title || title).trim(),
+    seo_description: String(payload.seo_description || summarizeMarkdown(content, 140)).trim(),
+    tags: normalizeStringArray(payload.tags || topic?.required_terms || ["GEO"]),
+    review_status: "draft",
+    review_status_label: "草稿",
+    publish_status: "draft",
+    publish_status_label: "草稿",
+    owner_user_id: "user-1",
+    created_by: "user-1",
+    updated_at: nowIso()
+  };
+  articles.unshift(article);
+  articleVersions.unshift({
+    id: uniqueId("ver"),
+    article_id: article.id,
+    version_no: 1,
+    generation_mode: "manual",
+    title: article.title,
+    content_markdown: article.content_markdown,
+    created_by: "user-1",
+    created_at: nowIso()
+  });
+  contentQualityTraces.unshift({
+    id: uniqueId("qtrace"),
+    article_id: article.id,
+    article_title: article.title,
+    prompt_template_id: "manual_single_user",
+    prompt_template_version: 1,
+    model_config_id: null,
+    provider_id: "local_manual",
+    score: 82,
+    status: "passed",
+    status_label: "通过",
+    reasons: ["手动创建", "结构完整", "可进入审核"],
+    created_at: nowIso()
+  });
+  if (topic) {
+    topic.status = "generated";
+    topic.status_label = "已生成草稿";
+    topic.updated_at = nowIso();
+  }
+  recordAuditEvent("article.create", "article", article.id, {
+    topic_id: article.topic_idea_id,
+    title: article.title
+  });
+  persistState();
+  return getArticle(article.id);
 }
 
 export async function createArticleFromTopicAction(topicId) {
@@ -4420,20 +4689,222 @@ export function getCampaignAnalytics() {
 }
 
 export function getBillingSummary() {
+  const planQuotas =
+    billingPlanState.plan_id === "single_user_pro"
+      ? { keyword_crawl: 5000, article_generation: 800, publish: 300 }
+      : { keyword_crawl: 2000, article_generation: 300, publish: 120 };
   return {
-    plan_name: "专业版",
+    current_plan: billingPlanState.plan_id,
+    plan_name: billingPlanState.plan_name,
+    billing_cycle: billingPlanState.billing_cycle,
+    seats: billingPlanState.seats,
     effective_at: "2026-04-01",
     expires_at: "2026-04-30",
-    quotas: {
-      keyword_crawl: 2000,
-      article_generation: 300,
-      publish: 120
-    },
+    quotas: planQuotas,
     usage: {
       keyword_crawl: 640,
       article_generation: 96,
       publish: 28
-    }
+    },
+    upgrade_history: [...billingPlanState.upgrade_history]
+  };
+}
+
+export function updateBillingPlanAction(payload = {}) {
+  const planId = payload.plan_id || "single_user_pro";
+  billingPlanState.plan_id = planId;
+  billingPlanState.plan_name = planId === "single_user_pro" ? "单用户旗舰版" : "单用户专业版";
+  billingPlanState.billing_cycle = payload.billing_cycle || billingPlanState.billing_cycle || "monthly";
+  billingPlanState.seats = 1;
+  billingPlanState.updated_at = nowIso();
+  billingPlanState.upgrade_history.unshift({
+    id: uniqueId("plan"),
+    plan_id: billingPlanState.plan_id,
+    billing_cycle: billingPlanState.billing_cycle,
+    changed_at: billingPlanState.updated_at,
+    note: "Local single-user plan switch; no payment processed."
+  });
+  recordAuditEvent("billing.plan.update", "billing_plan", billingPlanState.plan_id, {
+    billing_cycle: billingPlanState.billing_cycle
+  });
+  persistState();
+  return deepClone(billingPlanState);
+}
+
+function csvEscape(value) {
+  const text = String(value ?? "");
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function exportRowsForArtifact(type) {
+  if (type === "keywords") {
+    return {
+      headers: ["id", "keyword", "status", "priority_score"],
+      rows: keywords.map((item) => [item.id, item.keyword, item.status, item.priority_score])
+    };
+  }
+  if (type === "distribution_tasks") {
+    return {
+      headers: ["id", "name", "status", "total_count", "success_count", "failed_count"],
+      rows: publishTasks.map((item) => [item.id, item.name, item.status, item.total_count, item.success_count, item.failed_count])
+    };
+  }
+  if (type === "analytics_visibility") {
+    return {
+      headers: ["query", "engine", "target_url", "rank_position", "citation_count"],
+      rows: visibilityTrackedQueries.map((item) => [
+        item.query,
+        item.engine,
+        item.target_url,
+        item.latest_snapshot?.rank_position ?? "",
+        item.latest_snapshot?.citation_count ?? ""
+      ])
+    };
+  }
+  return {
+    headers: ["id", "title", "review_status", "publish_status"],
+    rows: articles.map((item) => [item.id, item.title, item.review_status, item.publish_status])
+  };
+}
+
+export function createExportJobAction(payload = {}) {
+  const artifactType = payload.artifact_type || "content_articles";
+  const format = payload.format || "csv";
+  const exportData = exportRowsForArtifact(artifactType);
+  const content =
+    format === "json"
+      ? JSON.stringify({ artifact_type: artifactType, generated_at: nowIso(), rows: exportData.rows }, null, 2)
+      : [exportData.headers, ...exportData.rows]
+          .map((row) => row.map(csvEscape).join(","))
+          .join("\n");
+  const job = {
+    id: uniqueId("exp"),
+    artifact_type: artifactType,
+    format,
+    file_name: `${artifactType}-${Date.now()}.${format}`,
+    content_type: format === "json" ? "application/json; charset=utf-8" : "text/csv; charset=utf-8",
+    generated_at: nowIso(),
+    summary: `${exportData.rows.length} rows exported`,
+    content
+  };
+  exportJobs.unshift(job);
+  recordAuditEvent("export.create", "export_job", job.id, {
+    artifact_type: artifactType,
+    format
+  });
+  persistState();
+  return { ...job, content: undefined };
+}
+
+export function getExportJobDownload(exportId) {
+  const job = exportJobs.find((item) => item.id === exportId);
+  if (!job) return null;
+  return deepClone(job);
+}
+
+export function getInternationalGeoState() {
+  return deepClone(internationalGeoState);
+}
+
+export function saveInternationalGeoInputAction(patch = {}) {
+  internationalGeoState.input = {
+    ...internationalGeoState.input,
+    website_url: String(patch.website_url || internationalGeoState.input.website_url || "").trim(),
+    product_name: String(patch.product_name || internationalGeoState.input.product_name || "").trim(),
+    target_market: String(patch.target_market || internationalGeoState.input.target_market || "").trim(),
+    target_language: String(patch.target_language || internationalGeoState.input.target_language || "").trim(),
+    primary_query: String(patch.primary_query || internationalGeoState.input.primary_query || "").trim(),
+    competitors: normalizeStringArray(patch.competitors || internationalGeoState.input.competitors)
+  };
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.input.update", "international_geo", "single-user", {
+    product_name: internationalGeoState.input.product_name,
+    target_market: internationalGeoState.input.target_market
+  });
+  persistState();
+  return deepClone(internationalGeoState.input);
+}
+
+export function runInternationalGeoAuditAction() {
+  const input = internationalGeoState.input;
+  const hasUrl = /^https?:\/\//.test(input.website_url || "");
+  const competitorCount = normalizeStringArray(input.competitors).length;
+  const score = Math.max(45, Math.min(96, 66 + (hasUrl ? 8 : 0) + Math.min(10, competitorCount * 2)));
+  internationalGeoState.summary = {
+    ai_ready_score: score,
+    llms_status: internationalGeoState.artifacts.llms_txt ? "已生成" : "待生成",
+    schema_coverage: `${Math.min(92, 54 + competitorCount * 4)}%`,
+    crawler_access: "允许",
+    citation_opportunities: Math.max(8, 30 - competitorCount)
+  };
+  internationalGeoState.engineVisibility = [
+    "ChatGPT Search",
+    "Perplexity",
+    "Google AI Overviews",
+    "Gemini",
+    "Claude",
+    "Microsoft Copilot",
+    "You.com",
+    "Phind",
+    "Brave Search AI"
+  ].map((engine, index) => ({
+    engine,
+    market: input.target_market || "Global",
+    brand_mentions: Math.max(1, Math.round(score / 18) - (index % 3)),
+    citation_count: Math.max(0, Math.round(score / 24) - (index % 2)),
+    share_of_voice: Math.max(4, Math.round(score / 5) - index),
+    cited_url: input.website_url || "/",
+    competitor_gap: normalizeStringArray(input.competitors)[index % Math.max(1, competitorCount)] || "Category leaders",
+    status: score >= 80 ? "领先" : score >= 65 ? "监控中" : "待提升",
+    last_checked: nowIso().replace("T", " ").slice(0, 16)
+  }));
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.audit.run", "international_geo", "single-user", {
+    score,
+    engine_count: internationalGeoState.engineVisibility.length
+  });
+  persistState();
+  return getInternationalGeoState();
+}
+
+export function generateInternationalGeoArtifactsAction() {
+  const input = internationalGeoState.input;
+  const productName = input.product_name || workspaceInput.product_name || "GEO Pulse";
+  internationalGeoState.artifacts = {
+    llms_txt: `# ${productName}\n\n${productName} helps teams run domestic and international Generative Engine Optimization workflows.\n\nPrimary site: ${input.website_url || workspaceInput.website_url}\nPrimary query: ${input.primary_query || "AI search visibility"}\nTarget market: ${input.target_market || "Global"}\n\nKey entities: llms.txt, JSON-LD, AI search visibility, ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude, Microsoft Copilot.`,
+    json_ld: `<script type="application/ld+json">\n${JSON.stringify(
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        name: productName,
+        applicationCategory: "AI SEO and GEO operations",
+        url: input.website_url || workspaceInput.website_url,
+        audience: input.target_market || "Global B2B teams",
+        featureList: ["llms.txt generation", "JSON-LD recommendations", "AI engine visibility monitoring"]
+      },
+      null,
+      2
+    )}\n</script>`,
+    distribution_brief: `${productName} should distribute direct-answer articles, comparison pages, FAQ pages, Reddit/Quora answers, and partner directory profiles for ${input.target_market || "global"} AI-search visibility.`
+  };
+  internationalGeoState.summary.llms_status = "已生成";
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.artifacts.generate", "international_geo", "single-user", {
+    product_name: productName
+  });
+  persistState();
+  return deepClone(internationalGeoState.artifacts);
+}
+
+export function logoutSessionAction(payload = {}) {
+  recordAuditEvent("session.logout", "session", "single-user", {
+    reason: payload.reason || "single_user_logout"
+  });
+  persistState();
+  return {
+    success: true,
+    mode: "single_user",
+    message: "Local single-user UI state can be cleared by the browser; no server account session exists."
   };
 }
 
