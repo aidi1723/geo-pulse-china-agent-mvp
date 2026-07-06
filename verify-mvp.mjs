@@ -46,6 +46,7 @@ import {
   listArticles,
   listContentTemplates,
   listConnectorHealthChecks,
+  listConnectorDiagnostics,
   listMediaSources,
   listProviderInvocations,
   listSourceAdapterContracts,
@@ -65,6 +66,7 @@ import {
   runVisibilityCollectionAction,
   runSourceStrategyAction,
   runMarketingCampaignAction,
+  runConnectorDiagnosticAction,
   saveAutomationProviderAction,
   saveAutomationConnectorAction,
   saveBrandProfileAction,
@@ -354,6 +356,60 @@ async function runMockDataChecks() {
       (item) => item.connector_id === "firecrawl_source"
     ),
     "Runtime status should include latest connector health checks"
+  );
+  const connectorDiagnostic = runConnectorDiagnosticAction("firecrawl_source");
+  assert.equal(
+    connectorDiagnostic?.connector_id,
+    "firecrawl_source",
+    "Connector diagnostic should identify the connector"
+  );
+  assert.ok(
+    connectorDiagnostic.readiness_score >= 80,
+    "Healthy mock connector diagnostic should return a strong readiness score"
+  );
+  assert.ok(
+    connectorDiagnostic.checks.some((item) => item.check_id === "latest_health" && item.status === "passed"),
+    "Connector diagnostic should include latest health status"
+  );
+  assert.ok(
+    connectorDiagnostic.permission_decisions.some((item) => item.action === "source:crawl" && item.allowed),
+    "Connector diagnostic should include allowed permission decisions"
+  );
+  assert.ok(
+    connectorDiagnostic.permission_decisions.some((item) => item.action === "source:delete" && !item.allowed),
+    "Connector diagnostic should include denied dangerous action decisions"
+  );
+  assert.ok(
+    connectorDiagnostic.recent_audit_events.some((item) => item.action === "automation_connector.test"),
+    "Connector diagnostic should include recent connector audit events"
+  );
+  assert.ok(
+    connectorDiagnostic.recent_run_steps.some((item) => item.connector_id === "firecrawl_source"),
+    "Connector diagnostic should include recent run steps for the connector"
+  );
+  assert.ok(
+    connectorDiagnostic.recommended_actions.length >= 1,
+    "Connector diagnostic should include operator recommendations"
+  );
+  assert.equal(
+    getAutomationConnector("firecrawl_source")?.last_diagnostic?.id,
+    connectorDiagnostic.id,
+    "Connector detail should expose the latest diagnostic"
+  );
+  assert.ok(
+    listConnectorDiagnostics().items.some((item) => item.id === connectorDiagnostic.id),
+    "Connector diagnostics should be listable"
+  );
+  assert.doesNotMatch(
+    JSON.stringify(connectorDiagnostic),
+    /connector-secret-key|firecrawl-demo-key/,
+    "Connector diagnostic output should not leak raw connector secrets"
+  );
+  assert.ok(
+    listAuditEvents({ action: "automation_connector.diagnose" }).items.some(
+      (item) => item.resource_id === "firecrawl_source"
+    ),
+    "Connector diagnostics should be recorded in the audit log"
   );
   const visibilityAnalytics = getVisibilityAnalytics();
   assert.ok(
@@ -1844,6 +1900,49 @@ function runSettingsConnectorUiChecks() {
             endpoint: "mock://source-crawl",
             schema_valid: true,
             error_message: ""
+          },
+          last_diagnostic: {
+            id: "diag-ui",
+            readiness_score: 92,
+            status: "ready",
+            status_label: "可上线",
+            severity: "info",
+            checks: [
+              {
+                check_id: "latest_health",
+                label: "最近健康检查",
+                status: "passed",
+                status_label: "通过",
+                detail: "mock://source-crawl 测试通过"
+              },
+              {
+                check_id: "permission_boundary",
+                label: "权限边界",
+                status: "passed",
+                status_label: "通过",
+                detail: "危险动作已被拒绝"
+              }
+            ],
+            recommended_actions: ["保持 mock 连接器可用，接真实服务前复核密钥权限。"],
+            recent_run_steps: [
+              {
+                id: "step-ui",
+                run_id: "run-ui",
+                step_label: "内容源抓取",
+                status_label: "已完成",
+                connector_id: "firecrawl_source",
+                latency_ms: 128,
+                finished_at: "2026-07-05T10:11:00.000Z"
+              }
+            ],
+            recent_audit_events: [
+              {
+                id: "aud-ui",
+                action: "automation_connector.test",
+                created_at: "2026-07-05T10:10:00.000Z"
+              }
+            ],
+            created_at: "2026-07-05T10:12:00.000Z"
           }
         },
         {
@@ -1922,7 +2021,12 @@ function runSettingsConnectorUiChecks() {
   assert.match(html, /data-connector-field="endpoint"/, "Connector drawer should expose endpoint editing");
   assert.match(html, /data-action="save-connector-config"/, "Connector drawer should expose save action");
   assert.match(html, /data-action="test-connector-config"/, "Connector drawer should expose test action");
+  assert.match(html, /data-action="run-connector-diagnostic"/, "Connector drawer should expose diagnostic action");
   assert.match(html, /最近健康检查/, "Connector drawer should render recent health checks");
+  assert.match(html, /最近诊断/, "Connector drawer should render latest diagnostic");
+  assert.match(html, /92/, "Connector drawer should render diagnostic readiness score");
+  assert.match(html, /内容源抓取/, "Connector diagnostic should render recent run steps");
+  assert.match(html, /automation_connector\.test/, "Connector diagnostic should render audit context");
   assert.doesNotMatch(html, /firecrawl-demo-key|postiz-demo-key/, "Connector registry should not expose raw connector secrets");
 }
 
@@ -3046,6 +3150,34 @@ async function runSingleUserHttpChecks() {
     assert.ok(
       connectorHealth.body?.data?.items?.some((item) => item.connector_id === "firecrawl_source"),
       "Connector health API should include recent connector tests"
+    );
+
+    const connectorDiagnostic = await httpRequest(port, "/api/v1/automation-connectors/firecrawl_source/diagnose", {
+      method: "POST",
+      headers: mutationHeaders,
+      body: "{}"
+    });
+    assert.equal(connectorDiagnostic.status, 200, "Connector diagnostic should run over HTTP");
+    assert.equal(
+      connectorDiagnostic.body?.data?.connector_id,
+      "firecrawl_source",
+      "Connector diagnostic API should identify the connector"
+    );
+    assert.ok(
+      connectorDiagnostic.body?.data?.readiness_score >= 80,
+      "Connector diagnostic API should expose readiness score"
+    );
+    assert.doesNotMatch(
+      JSON.stringify(connectorDiagnostic.body?.data || {}),
+      /http-connector-secret-key/,
+      "Connector diagnostic API should not expose raw secrets"
+    );
+
+    const connectorDiagnostics = await httpRequest(port, "/api/v1/connector-diagnostics");
+    assert.equal(connectorDiagnostics.status, 200, "Connector diagnostics should be queryable over HTTP");
+    assert.ok(
+      connectorDiagnostics.body?.data?.items?.some((item) => item.connector_id === "firecrawl_source"),
+      "Connector diagnostics API should include recent diagnostics"
     );
 
     const unsafeConnector = await httpRequest(port, "/api/v1/automation-connectors/firecrawl_source", {

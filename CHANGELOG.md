@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.5.0 - 2026-07-06
+
+Single-user connector diagnostics snapshot.
+
+### Added
+
+- Connector diagnostics that combine endpoint safety, credential status, latest health check, permission decisions, recent audit events, and related run steps.
+- Diagnostic readiness scores, status labels, recommended operator actions, and latest diagnostic output on connector details.
+- API routes for running and listing connector diagnostics.
+- Settings UI diagnostic action and compact diagnostic panel for connector run visibility.
+- Audit events for connector diagnostic runs.
+
+### Changed
+
+- Project status is now documented as v0.5 single-user launch-readiness with connector diagnostics.
+- Seed automation run steps now reference the real `firecrawl_source` connector instead of an older mock connector placeholder.
+
+### Boundaries
+
+- v0.5 still does not add real OAuth, real external publishing, production credential vaults, background queues, or multi-tenant SaaS isolation.
+
+### Verification
+
+- `npm run check`
+
 ## 0.4.0 - 2026-07-06
 
 Single-user integration-readiness snapshot.

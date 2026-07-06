@@ -2,14 +2,14 @@
 
 ## Overview
 
-GEO Pulse China Agent v0.3 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes a single-user complete workflow, a single-tenant deployment profile, production startup guardrails, health checks, and GEO/SEO static files for controlled server use.
+GEO Pulse China Agent v0.5 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes a single-user complete workflow, connector configuration, connector testing, connector diagnostics, a single-tenant deployment profile, production startup guardrails, health checks, and GEO/SEO static files for controlled server use.
 
 ## Runtime Components
 
 | Area | File or Directory | Responsibility |
 | --- | --- | --- |
 | HTTP server | `server.mjs` | Serves the prototype, exposes `/api/v1/*`, applies security headers, mutation authorization, CORS, rate limiting, body limits, SSRF checks, scheduler controls, health checks, and static GEO/SEO routes. |
-| Mock domain data | `mock-data.mjs` | Stores seed data, local state mutation actions, API read models, persistence hydration, audit events, provider invocation logs, connector permissions, source adapter contracts, and workflow actions. |
+| Mock domain data | `mock-data.mjs` | Stores seed data, local state mutation actions, API read models, persistence hydration, audit events, provider invocation logs, connector permissions, connector diagnostics, source adapter contracts, and workflow actions. |
 | Provider registry | `automation-providers.mjs` | Defines keyword discovery, topic planning, and article generation provider contracts, local fallback behavior, remote execution validation, masking, and provider config persistence helpers. |
 | Prototype shell | `prototype/` | Browser admin prototype with hash routing, state store, API client, static preview mode, UI pages, and shared utilities. |
 | Regression gate | `verify-mvp.mjs` | Full local verification suite for syntax, data actions, UI rendering, HTTP behavior, security checks, persistence, scheduler, audit, publishing, connectors, and source adapters. |
@@ -30,7 +30,7 @@ GEO Pulse China Agent v0.3 is a zero-dependency Node.js application with a brows
 | Keywords and source ingestion | Keywords, media sources, crawl jobs, source strategies, source adapter contracts, source evidence, dedupe and quality summaries. | `mock-data.mjs`, `prototype/src/pages/keywords.js` |
 | Content production | Topic ideas, articles, reviews, prompt templates, content quality traces. | `mock-data.mjs`, `prototype/src/pages/content.js`, `prototype/src/pages/settings.js` |
 | Publishing | Channels, publish tasks, task items, calendar metadata, variants, readiness checks, approval guard, records. | `mock-data.mjs`, `prototype/src/pages/distribution.js` |
-| Automation operations | Provider registry, connector registry, permission matrix, automation run steps, scheduler tick, retries. | `automation-providers.mjs`, `mock-data.mjs`, `prototype/src/pages/settings.js` |
+| Automation operations | Provider registry, connector registry, permission matrix, connector health checks, connector diagnostics, automation run steps, scheduler tick, retries. | `automation-providers.mjs`, `mock-data.mjs`, `prototype/src/pages/settings.js` |
 | Analytics | Visibility tracking, SERP snapshots, competitor domains, audience segments, campaign runs. | `mock-data.mjs`, `prototype/src/pages/analytics.js` |
 | International GEO | Overseas AI search readiness, article and distribution planning, engine visibility, community citation surfaces. | `prototype/src/pages/international.js` |
 | Single-user completion | Workspace input, manual topics, outlines, manual articles, templates, exports, local billing plan switch, and logout action. | `mock-data.mjs`, `server.mjs`, `prototype/src/main.js` |
@@ -47,7 +47,7 @@ Persistence is local JSON, not a production database.
 
 ## Security Model
 
-v0.3 uses local-first safeguards plus production startup guardrails:
+v0.5 uses local-first safeguards plus production startup guardrails:
 
 - Remote access is disabled unless `GEO_ALLOW_REMOTE_ACCESS=1`.
 - Remote access requires a fixed `GEO_INTERNAL_API_KEY`.
@@ -57,6 +57,7 @@ v0.3 uses local-first safeguards plus production startup guardrails:
 - Provider endpoints are restricted to `mock://` and `https://`, with loopback/private/link-local targets blocked.
 - CSV audit export neutralizes spreadsheet formula prefixes.
 - Connector actions are evaluated against scoped permission metadata before visibility collection or campaign execution.
+- Connector diagnostics summarize endpoint safety, credential status, health checks, permission decisions, audit context, and recent run steps without exposing raw secrets.
 
 These safeguards are not a replacement for built-in user login, RBAC, database controls, monitoring, incident response, or an external access layer.
 

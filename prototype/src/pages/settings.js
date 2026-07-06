@@ -597,6 +597,7 @@ function renderProviders(store) {
   const providerSummary = store.data.runtimeStatus?.providers?.invocation_summary || {};
   const connectorSummary = store.data.runtimeStatus?.connectors?.counts || {};
   const connectorHealth = selectedConnector?.last_health_check || null;
+  const connectorDiagnostic = selectedConnector?.last_diagnostic || null;
   const protocol = selected?.protocol || null;
 
   return `
@@ -727,6 +728,7 @@ function renderProviders(store) {
                 <div class="actions-row">
                   <button class="secondary-btn" data-action="save-connector-config">保存连接器</button>
                   <button class="secondary-btn" data-action="test-connector-config">连接器测试</button>
+                  <button class="secondary-btn" data-action="run-connector-diagnostic">运行诊断</button>
                 </div>
               </div>
               <div class="drawer-section">
@@ -757,6 +759,87 @@ function renderProviders(store) {
                       }
                     `
                     : `<div class="cell-sub">当前连接器还没有健康检查记录。</div>`
+                }
+              </div>
+              <div class="drawer-section">
+                <h4>最近诊断</h4>
+                ${
+                  connectorDiagnostic
+                    ? `
+                      <div class="info-list">
+                        <div class="info-row"><span>诊断时间</span><strong>${escapeHtml(formatDateTime(connectorDiagnostic.created_at))}</strong></div>
+                        <div class="info-row"><span>就绪得分</span><strong>${escapeHtml(connectorDiagnostic.readiness_score ?? 0)}</strong></div>
+                        <div class="info-row"><span>状态</span><strong>${escapeHtml(connectorDiagnostic.status_label || connectorDiagnostic.status || "-")}</strong></div>
+                      </div>
+                      <div class="stack" style="margin-top:14px">
+                        ${
+                          (connectorDiagnostic.checks || []).map(
+                            (check) => `
+                              <div class="funnel-step">
+                                <div>
+                                  <strong style="font-size:15px">${escapeHtml(check.label || check.check_id || "-")}</strong>
+                                  <div class="cell-sub">${escapeHtml(check.detail || "-")}</div>
+                                </div>
+                                ${statusMarkup(check.status_label || check.status || "-")}
+                              </div>
+                            `
+                          ).join("")
+                        }
+                      </div>
+                      <div style="margin-top:16px">
+                        <h4>建议动作</h4>
+                        <div class="stack">
+                          ${
+                            (connectorDiagnostic.recommended_actions || []).length
+                              ? connectorDiagnostic.recommended_actions.map(
+                                  (item) => `<div class="cell-sub">${escapeHtml(item)}</div>`
+                                ).join("")
+                              : `<div class="cell-sub">暂无建议。</div>`
+                          }
+                        </div>
+                      </div>
+                      <div style="margin-top:16px">
+                        <h4>关联运行步骤</h4>
+                        <div class="stack">
+                          ${
+                            (connectorDiagnostic.recent_run_steps || []).length
+                              ? connectorDiagnostic.recent_run_steps.map(
+                                  (step) => `
+                                    <div class="funnel-step">
+                                      <div>
+                                        <strong style="font-size:15px">${escapeHtml(step.step_label || step.step_type || "-")}</strong>
+                                        <div class="cell-sub">${escapeHtml(step.run_id || "-")} / ${escapeHtml(step.connector_id || "-")} / ${escapeHtml(step.latency_ms || 0)} ms</div>
+                                      </div>
+                                      ${statusMarkup(step.status_label || step.status || "-")}
+                                    </div>
+                                  `
+                                ).join("")
+                              : `<div class="cell-sub">暂无关联运行步骤。</div>`
+                          }
+                        </div>
+                      </div>
+                      <div style="margin-top:16px">
+                        <h4>审计上下文</h4>
+                        <div class="stack">
+                          ${
+                            (connectorDiagnostic.recent_audit_events || []).length
+                              ? connectorDiagnostic.recent_audit_events.map(
+                                  (event) => `
+                                    <div class="funnel-step">
+                                      <div>
+                                        <strong style="font-size:15px">${escapeHtml(event.action || "-")}</strong>
+                                        <div class="cell-sub">${escapeHtml(formatDateTime(event.created_at))}</div>
+                                      </div>
+                                      ${statusMarkup("审计")}
+                                    </div>
+                                  `
+                                ).join("")
+                              : `<div class="cell-sub">暂无审计上下文。</div>`
+                          }
+                        </div>
+                      </div>
+                    `
+                    : `<div class="cell-sub">当前连接器还没有诊断记录。</div>`
                 }
               </div>
             `

@@ -255,6 +255,10 @@ export function testAutomationConnector(connectorId) {
   return requestJson(`/api/v1/automation-connectors/${connectorId}/test`, "POST", {});
 }
 
+export function runConnectorDiagnostic(connectorId) {
+  return requestJson(`/api/v1/automation-connectors/${connectorId}/diagnose`, "POST", {});
+}
+
 export function retryAutomationRun(runId) {
   return requestJson(`/api/v1/automation-runs/${runId}/retry`, "POST", {});
 }

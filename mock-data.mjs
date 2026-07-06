@@ -1616,7 +1616,7 @@ const automationRunSteps = [
     status: "succeeded",
     status_label: "已完成",
     provider_id: "local_question_expander",
-    connector_id: "mock-source-connector",
+    connector_id: "firecrawl_source",
     latency_ms: 0,
     input_preview: {
       source_scope: "owned_self_media"
@@ -1636,7 +1636,7 @@ const automationRunSteps = [
     status: "succeeded",
     status_label: "已完成",
     provider_id: "local_question_expander",
-    connector_id: "mock-source-connector",
+    connector_id: "firecrawl_source",
     latency_ms: 0,
     input_preview: {
       source_scope: "authority_media"
@@ -1829,6 +1829,7 @@ const automationConnectors = [
 
 const providerInvocations = [];
 const connectorHealthChecks = [];
+const connectorDiagnostics = [];
 const auditEvents = [];
 const maxAuditEvents = 500;
 
@@ -1862,7 +1863,8 @@ function sanitizeAutomationConnector(connector = {}) {
   return {
     ...deepClone(connector),
     config: sanitizeConnectorConfig(connector.config || {}),
-    last_health_check: connector.last_health_check ? deepClone(connector.last_health_check) : null
+    last_health_check: connector.last_health_check ? deepClone(connector.last_health_check) : null,
+    last_diagnostic: connector.last_diagnostic ? deepClone(connector.last_diagnostic) : null
   };
 }
 
@@ -1939,6 +1941,183 @@ function recordConnectorHealthCheck(connector, result = {}) {
     connectorHealthChecks.length = 200;
   }
   return deepClone(healthCheck);
+}
+
+function diagnosticStatus(score) {
+  if (score >= 80) {
+    return {
+      status: "ready",
+      status_label: "可上线",
+      severity: "info"
+    };
+  }
+  if (score >= 50) {
+    return {
+      status: "needs_review",
+      status_label: "需复核",
+      severity: "warn"
+    };
+  }
+  return {
+    status: "blocked",
+    status_label: "阻塞",
+    severity: "error"
+  };
+}
+
+function diagnosticCheck(checkId, label, passed, detail, points, earnedPoints = null) {
+  const earned = earnedPoints === null ? (passed ? points : 0) : earnedPoints;
+  return {
+    check_id: checkId,
+    label,
+    status: passed ? "passed" : "needs_review",
+    status_label: passed ? "通过" : "需处理",
+    detail,
+    points,
+    earned_points: earned
+  };
+}
+
+function connectorRecentAuditEvents(connectorId) {
+  return auditEvents
+    .filter(
+      (item) =>
+        item.resource_type === "automation_connector" &&
+        item.resource_id === connectorId &&
+        [
+          "automation_connector.update",
+          "automation_connector.test",
+          "automation_connector.diagnose",
+          "connector_permission.denied"
+        ].includes(item.action)
+    )
+    .slice(0, 6)
+    .map((item) => ({
+      id: item.id,
+      action: item.action,
+      resource_type: item.resource_type,
+      resource_id: item.resource_id,
+      details: sanitizeAuditDetails(item.details || {}),
+      created_at: item.created_at
+    }));
+}
+
+function connectorRecentRunSteps(connectorId) {
+  return automationRunSteps
+    .filter((step) => step.connector_id === connectorId)
+    .slice(0, 6)
+    .map((step) => ({
+      id: step.id,
+      run_id: step.run_id,
+      step_type: step.step_type,
+      step_label: step.step_label,
+      status: step.status,
+      status_label: step.status_label,
+      provider_id: step.provider_id || null,
+      connector_id: step.connector_id || null,
+      latency_ms: Number(step.latency_ms || 0),
+      error_message: step.error_message || "",
+      started_at: step.started_at,
+      finished_at: step.finished_at
+    }));
+}
+
+function representativeConnectorActions(connector) {
+  const allowed = connector.allowed_actions || [];
+  const dangerous = connector.dangerous_actions?.[0] || "";
+  return [...allowed, dangerous].filter(Boolean);
+}
+
+function buildConnectorDiagnostic(connector) {
+  const endpoint = String(connector.config?.endpoint || "").trim();
+  let endpointSafe = false;
+  let endpointDetail = "接口地址为空";
+  try {
+    validateProviderEndpoint(endpoint);
+    endpointSafe = Boolean(endpoint);
+    endpointDetail = endpointSafe ? `${endpoint} 已通过端点安全检查` : "接口地址为空";
+  } catch (error) {
+    endpointDetail = error instanceof Error ? error.message : String(error);
+  }
+
+  const keyOptionalTypes = new Set(["analytics_connector"]);
+  const credentialReady =
+    connector.credential_status === "configured" ||
+    Boolean(connector.config?.api_key) ||
+    keyOptionalTypes.has(connector.connector_type);
+  const latestHealth = connector.last_health_check || null;
+  const actions = representativeConnectorActions(connector);
+  const permissionDecisions = actions.map((action) => evaluateConnectorPermission(connector.id, action));
+  const allowedDecision = permissionDecisions.find((item) => item.allowed);
+  const dangerousDecision = permissionDecisions.find((item) => !item.allowed && connector.dangerous_actions?.includes(item.action));
+  const permissionReady = Boolean(allowedDecision && dangerousDecision);
+  const recentAuditEvents = connectorRecentAuditEvents(connector.id);
+  const recentRunSteps = connectorRecentRunSteps(connector.id);
+  const evidenceReady = recentAuditEvents.length > 0 || recentRunSteps.length > 0;
+
+  const checks = [
+    diagnosticCheck("endpoint_safety", "接口地址", endpointSafe, endpointDetail, 20),
+    diagnosticCheck(
+      "credential_status",
+      "凭据状态",
+      credentialReady,
+      credentialReady ? connector.credential_status_label || "已配置" : "凭据未配置",
+      20
+    ),
+    diagnosticCheck(
+      "latest_health",
+      "最近健康检查",
+      Boolean(latestHealth?.success),
+      latestHealth
+        ? `${latestHealth.success_label || (latestHealth.success ? "测试通过" : "测试失败")} / ${latestHealth.endpoint || "-"}`
+        : "尚未运行连接器测试",
+      25
+    ),
+    diagnosticCheck(
+      "permission_boundary",
+      "权限边界",
+      permissionReady,
+      permissionReady ? "允许动作可执行，危险动作已被拒绝" : "权限边界需要复核",
+      20
+    ),
+    diagnosticCheck(
+      "runtime_evidence",
+      "运行证据",
+      evidenceReady,
+      evidenceReady
+        ? `审计 ${recentAuditEvents.length} 条 / 运行步骤 ${recentRunSteps.length} 条`
+        : "暂无审计或运行步骤证据",
+      15
+    )
+  ];
+
+  const readinessScore = checks.reduce((sum, item) => sum + Number(item.earned_points || 0), 0);
+  const status = diagnosticStatus(readinessScore);
+  const recommendedActions = [];
+  if (!endpointSafe) recommendedActions.push("补齐公开 HTTPS 或 mock:// 接口地址，并避免内网/回环地址。");
+  if (!credentialReady) recommendedActions.push("配置最小权限 API key，保存后重新运行连接器测试。");
+  if (!latestHealth?.success) recommendedActions.push("先运行连接器测试，确认端点、凭据和返回结构可用。");
+  if (!permissionReady) recommendedActions.push("复核 allowed_actions 与 dangerous_actions，确保危险动作被拒绝。");
+  if (!evidenceReady) recommendedActions.push("运行一次相关工作流或连接器测试，为上线前排障留下证据。");
+  if (!recommendedActions.length) {
+    recommendedActions.push("保持当前配置，接入真实服务前复核生产密钥权限和回滚方式。");
+  }
+
+  return {
+    id: uniqueId("diag"),
+    connector_id: connector.id,
+    connector_label: connector.label,
+    connector_type: connector.connector_type,
+    connector_type_label: connector.connector_type_label,
+    readiness_score: readinessScore,
+    ...status,
+    checks,
+    permission_decisions: permissionDecisions,
+    recent_audit_events: recentAuditEvents,
+    recent_run_steps: recentRunSteps,
+    recommended_actions: recommendedActions,
+    created_at: nowIso()
+  };
 }
 
 function connectorPermissionRow(connector = {}) {
@@ -2088,6 +2267,7 @@ function getSerializableState() {
     providerInvocations,
     automationConnectors,
     connectorHealthChecks,
+    connectorDiagnostics,
     auditEvents,
     automationRunSteps,
     keywords,
@@ -2129,6 +2309,7 @@ function hydrateRuntimeState(payload = {}) {
   replaceArray(providerInvocations, payload.providerInvocations ?? providerInvocations);
   replaceArray(automationConnectors, payload.automationConnectors ?? automationConnectors);
   replaceArray(connectorHealthChecks, payload.connectorHealthChecks ?? connectorHealthChecks);
+  replaceArray(connectorDiagnostics, payload.connectorDiagnostics ?? connectorDiagnostics);
   replaceArray(auditEvents, payload.auditEvents ?? auditEvents);
   replaceArray(automationRunSteps, payload.automationRunSteps ?? automationRunSteps);
   replaceArray(keywords, payload.keywords ?? keywords);
@@ -3593,6 +3774,50 @@ export function listConnectorHealthChecks(query = {}) {
     const expected = String(query.success) === "true";
     items = items.filter((item) => item.success === expected);
   }
+  return paginate(items, query.page, query.page_size);
+}
+
+export function runConnectorDiagnosticAction(connectorId) {
+  const connector = byId(automationConnectors, connectorId);
+  if (!connector) {
+    return null;
+  }
+
+  const diagnostic = buildConnectorDiagnostic(connector);
+  connector.last_diagnostic = {
+    id: diagnostic.id,
+    readiness_score: diagnostic.readiness_score,
+    status: diagnostic.status,
+    status_label: diagnostic.status_label,
+    severity: diagnostic.severity,
+    checks: deepClone(diagnostic.checks),
+    recommended_actions: deepClone(diagnostic.recommended_actions),
+    recent_run_steps: deepClone(diagnostic.recent_run_steps),
+    recent_audit_events: deepClone(diagnostic.recent_audit_events),
+    created_at: diagnostic.created_at
+  };
+  connectorDiagnostics.unshift(diagnostic);
+  if (connectorDiagnostics.length > 200) {
+    connectorDiagnostics.length = 200;
+  }
+  recordAuditEvent("automation_connector.diagnose", "automation_connector", connector.id, {
+    connector_type: connector.connector_type,
+    readiness_score: diagnostic.readiness_score,
+    status: diagnostic.status,
+    checks: diagnostic.checks.map((item) => ({
+      check_id: item.check_id,
+      status: item.status
+    }))
+  });
+  persistState();
+  return deepClone(diagnostic);
+}
+
+export function listConnectorDiagnostics(query = {}) {
+  let items = connectorDiagnostics.map((item) => deepClone(item));
+  if (query.connector_id) items = items.filter((item) => item.connector_id === query.connector_id);
+  if (query.connector_type) items = items.filter((item) => item.connector_type === query.connector_type);
+  if (query.status) items = items.filter((item) => item.status === query.status);
   return paginate(items, query.page, query.page_size);
 }
 

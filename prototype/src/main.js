@@ -25,6 +25,7 @@ import {
   runSourceStrategy as runSourceStrategyApi,
   runMarketingCampaign as runMarketingCampaignApi,
   runSchedulerTick as runSchedulerTickApi,
+  runConnectorDiagnostic as runConnectorDiagnosticApi,
   runInternationalGeoAudit as runInternationalGeoAuditApi,
   runVisibilityCollection as runVisibilityCollectionApi,
   saveAutomationProvider as saveAutomationProviderApi,
@@ -935,6 +936,21 @@ const actions = {
       );
     } catch (error) {
       setError(error instanceof Error ? error.message : "连接器测试失败");
+      rerender();
+    }
+  },
+  async runConnectorDiagnostic() {
+    const connectorId = store.selectedIds.connector;
+    if (!connectorId) return;
+    try {
+      const result = await runConnectorDiagnosticApi(connectorId);
+      await refreshData();
+      store.page = "settings";
+      store.tabs.settings = "providers";
+      store.selectedIds.connector = connectorId;
+      showNotice(`连接器诊断完成，得分 ${result.readiness_score || 0}。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "运行连接器诊断失败");
       rerender();
     }
   },

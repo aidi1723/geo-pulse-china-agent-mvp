@@ -477,6 +477,11 @@ export function bindEvents(root, store, rerender, actions) {
       return;
     }
 
+    if (action === "run-connector-diagnostic") {
+      await actions.runConnectorDiagnostic();
+      return;
+    }
+
     if (action === "save-source-strategy") {
       await actions.saveSourceStrategy();
       return;

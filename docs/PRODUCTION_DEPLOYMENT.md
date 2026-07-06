@@ -1,8 +1,8 @@
 # Production Deployment Guide
 
-This guide covers the v0.3 single-user, single-tenant deployment profile for GEO Pulse.
+This guide covers the v0.5 single-user, single-tenant deployment profile for GEO Pulse.
 
-For stage-level scope and closing language, see [v0.3 Stage Closeout](STAGE_V0_3_CLOSEOUT.md).
+For stage-level scope and closing language, see [v0.5 Stage Closeout](STAGE_V0_5_CLOSEOUT.md).
 
 ## Scope
 
@@ -104,7 +104,7 @@ curl -f http://localhost:3000/favicon.ico
 
 ## Backup And Restore
 
-The v0.3 deployment stores state in a local JSON file.
+The v0.5 deployment stores state in a local JSON file.
 
 Backup:
 
@@ -139,12 +139,12 @@ curl -f http://localhost:3000/favicon.ico
 If Docker is available:
 
 ```bash
-docker build -t geo-pulse:v0.3 .
+docker build -t geo-pulse:v0.5 .
 ```
 
 ## Stage Closeout Language
 
-GEO Pulse v0.3 is ready for controlled single-user, single-tenant deployment. It includes complete local workflows, production startup guardrails, health checks, GEO/SEO static files, Docker packaging, and documentation for backup and rollback. It must still be protected by an external access layer and should not be presented as a complete SaaS platform until built-in multi-user login, RBAC, durable database storage, real integrations, monitoring, and multi-tenant controls are implemented.
+GEO Pulse v0.5 is ready for controlled single-user, single-tenant deployment. It includes complete local workflows, connector configuration, connector testing, connector diagnostics, production startup guardrails, health checks, GEO/SEO static files, Docker packaging, and documentation for backup and rollback. It must still be protected by an external access layer and should not be presented as a complete SaaS platform until built-in multi-user login, RBAC, durable database storage, real integrations, monitoring, and multi-tenant controls are implemented.
 
 ## Rollback
 

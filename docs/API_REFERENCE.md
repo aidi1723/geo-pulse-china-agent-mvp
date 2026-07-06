@@ -108,12 +108,16 @@ Provider configs mask secrets. Remote providers use guarded endpoint validation 
 - `GET /automation-connectors/:id`
 - `PUT /automation-connectors/:id`
 - `POST /automation-connectors/:id/test`
+- `POST /automation-connectors/:id/diagnose`
 - `GET /connector-health-checks`
+- `GET /connector-diagnostics`
 - `GET /connector-permissions`
 
-Connector outputs include masked config, latest health check, and permission metadata. Permission rows include credential status, allowed actions, dangerous actions, permission boundary, and latest audit result.
+Connector outputs include masked config, latest health check, latest diagnostic, and permission metadata. Permission rows include credential status, allowed actions, dangerous actions, permission boundary, and latest audit result.
 
 Connector mutation accepts local single-user configuration fields: `is_enabled`, `status`, `endpoint`, `api_key`, `timeout_ms`, `retry_count`, and `notes`. Raw API keys are never returned. Endpoint validation allows `mock://` simulation endpoints and public `https://` endpoints, while rejecting loopback/private hosts.
+
+Connector diagnostics produce readiness scores, check rows, permission decisions, recent audit context, recent run steps, and recommended operator actions. Diagnostic output omits raw secrets.
 
 ### Source Strategies And Runs
 

@@ -55,6 +55,7 @@ const {
   listAutomationProviders,
   listAutomationConnectors,
   listConnectorHealthChecks,
+  listConnectorDiagnostics,
   listChannels,
   listContentTemplates,
   listInvoices,
@@ -80,6 +81,7 @@ const {
   recordAuditEventAction,
   runSourceStrategyAction,
   runMarketingCampaignAction,
+  runConnectorDiagnosticAction,
   runVisibilityCollectionAction,
   retryAutomationRunAction,
   saveBrandProfileAction,
@@ -858,8 +860,24 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "POST" && pathname.match(/^\/automation-connectors\/[^/]+\/diagnose$/)) {
+    const id = pathname.split("/")[2];
+    const result = runConnectorDiagnosticAction(id);
+    if (!result) {
+      sendJson(res, 404, error("NOT_FOUND", "Automation connector not found", 404).body);
+      return;
+    }
+    sendJson(res, 200, ok(result));
+    return;
+  }
+
   if (req.method === "GET" && pathname === "/connector-health-checks") {
     sendJson(res, 200, ok(listConnectorHealthChecks(query)));
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/connector-diagnostics") {
+    sendJson(res, 200, ok(listConnectorDiagnostics(query)));
     return;
   }
 
