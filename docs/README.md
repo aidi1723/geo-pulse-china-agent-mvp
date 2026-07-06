@@ -1,6 +1,6 @@
 # Documentation Index
 
-This directory contains the maintainer-facing documentation for GEO Pulse China Agent v0.9.
+This directory contains the maintainer-facing documentation for GEO Pulse China Agent v0.9.1.
 
 ## Start Here
 
@@ -21,6 +21,7 @@ This directory contains the maintainer-facing documentation for GEO Pulse China 
 - [Privacy Release Review](PRIVACY_RELEASE_REVIEW.md): public-branch privacy scans, cleanup rules, and history-rewrite guidance.
 - [Roadmap](ROADMAP.md): what is done, what remains local-first, and what belongs to post-v0.9 production hardening.
 - [Open Source Release Checklist](OPEN_SOURCE_RELEASE.md): publication readiness, GitHub settings, and release-note draft.
+- [Minimal CI Plan](superpowers/plans/2026-07-06-minimal-ci.md): GitHub Actions quality gate plan for `npm run check`.
 
 ## Root-Level Documents
 

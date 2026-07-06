@@ -2,7 +2,7 @@
 
 License: GPL-3.0-only
 
-Status: v0.9 one-organization team-access workspace with built-in login, RBAC, launch preflight, and controlled deployment docs.
+Status: v0.9.1 one-organization team-access workspace with built-in login, RBAC, launch preflight, controlled deployment docs, and minimal GitHub CI.
 
 这个仓库现在包含两部分内容：
 
@@ -143,6 +143,8 @@ npm run check
 - mock 数据层的核心动作验收，包括问题裂变、问题状态更新、选题生成、文章保存与审核、品牌知识保存
 - 前端路由状态验收，包括内容中心、分发中心、设置页的 hash 状态序列化与恢复
 
+GitHub Actions 会在 push 和 pull request 进入 `main` 时运行同一个 `npm run check` 门禁。仓库设置中可把 `check / verify` 设为必需状态检查后再合并。
+
 ## 开源维护文档
 
 - 文档索引：[docs/README.md](docs/README.md)
@@ -204,6 +206,7 @@ npm run check
 - v0.7 备份导入恢复，包括导入校验、导入已下载备份 JSON、源备份 ID 保留和导入审计
 - v0.8 上线预检，包括持久化、鉴权、远程访问、备份恢复、连接器、GEO 静态入口和调度器检查
 - v0.9 多用户访问，包括用户名/密码登录、HTTP-only session、owner/admin/editor/viewer 权限、用户管理和访问审计
+- v0.9.1 最小 CI 门禁，包括 GitHub Actions 在 push / pull request 自动运行 `npm run check`
 
 ## 当前 API 范围
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.1 - 2026-07-06
+
+Minimal CI gate for GitHub-hosted development.
+
+### Added
+
+- GitHub Actions workflow that runs `npm run check` on pushes and pull requests targeting `main`.
+- Development and roadmap documentation for the CI quality gate.
+
+### Verification
+
+- `npm run check`
+
 ## 0.9.0 - 2026-07-06
 
 Built-in multi-user access for one-organization team deployment.

@@ -28,12 +28,14 @@ Out of scope by default:
 4. Add or update tests in `verify-mvp.mjs` for behavior changes.
 5. Keep edits small and focused.
 6. Run `npm run check` again before submitting.
+7. After pushing, confirm the GitHub `check` workflow passes for the branch or pull request.
 
 ## Pull Request Checklist
 
 - The change has a clear user or maintainer benefit.
 - No secrets, tokens, local state files, or private customer data are included.
 - `npm run check` passes.
+- GitHub Actions `check` passes when the branch is pushed.
 - Public docs are updated if behavior, commands, APIs, or release steps changed.
 - GPLv3 licensing remains intact.
 

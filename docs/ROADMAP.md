@@ -2,7 +2,7 @@
 
 ## Current State
 
-The project is a v0.9 one-organization team-access workspace with built-in login, RBAC, connector diagnostics, local backup import/restore, and launch preflight.
+The project is a v0.9.1 one-organization team-access workspace with built-in login, RBAC, connector diagnostics, local backup import/restore, launch preflight, and minimal GitHub CI.
 
 Completed mock-first product areas:
 
@@ -21,6 +21,7 @@ Completed mock-first product areas:
 - Local runtime backup import/restore: create, list, download, validate, import downloaded artifacts, restore, runtime backup summary, and audit events.
 - Launch preflight: persistence, mutation auth, remote access, backup recovery, connectors, GEO static routes, and scheduler readiness.
 - Multi-user access: owner/admin/editor/viewer roles, HTTP-only sessions, user management, login/logout audit events, and permission enforcement.
+- Minimal CI: GitHub Actions runs `npm run check` on pushes and pull requests targeting `main`.
 - Open-source release docs and GPLv3 licensing.
 
 ## Near-Term Maintenance
@@ -46,9 +47,6 @@ These can be built mock-first before real integrations:
 
 3. Prompt regression dataset.
    - Store sample inputs, expected criteria, generated outputs, and quality score history.
-
-4. Minimal CI.
-   - Run `npm run check` on pull requests.
 
 ## Post-v0.9 Production Hardening
 
@@ -78,7 +76,7 @@ These are required before using the project as a real SaaS or broadly exposed ho
 
 ## Release Versioning
 
-Current public snapshot: `0.9.0`.
+Current public snapshot: `0.9.1`.
 
 Suggested version policy:
 

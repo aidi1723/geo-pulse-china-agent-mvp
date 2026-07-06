@@ -2,7 +2,7 @@
 
 ## Project Shape
 
-GEO Pulse China Agent v0.9 is intentionally small:
+GEO Pulse China Agent v0.9.1 is intentionally small:
 
 - Runtime: Node.js ESM.
 - Dependencies: none.
@@ -75,6 +75,20 @@ This checks:
 
 For behavior changes, add focused assertions to `verify-mvp.mjs` before changing implementation.
 
+## GitHub CI
+
+The repository includes `.github/workflows/check.yml`.
+
+It runs on pushes and pull requests targeting `main`:
+
+```text
+actions/checkout@v4
+actions/setup-node@v4 with Node.js 20
+npm run check
+```
+
+Keep CI aligned with the local gate. If `npm run check` changes, update this guide and the workflow in the same change.
+
 ## UI Rules
 
 Follow `DESIGN.md`:
@@ -89,6 +103,7 @@ Follow `DESIGN.md`:
 Before committing or publishing:
 
 - Run `npm run check`.
+- Confirm the GitHub `check` workflow passes after pushing.
 - Confirm `data/`, `.env`, local logs, and credentials are not included.
 - Keep `LICENSE`, `README.md`, `SECURITY.md`, `CONTRIBUTING.md`, and `CHANGELOG.md` current.
 - Do not commit real third-party API keys or production endpoints.
