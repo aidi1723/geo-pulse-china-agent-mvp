@@ -356,6 +356,22 @@ export function saveInternationalGeoInput(payload) {
   return requestJson("/api/v1/international-geo/input", "PUT", payload);
 }
 
+export function listInternationalGeoSiteAudits() {
+  return request("/api/v1/international-geo/site-audits");
+}
+
+export function getInternationalGeoSiteAudit(auditId) {
+  return request(`/api/v1/international-geo/site-audits/${auditId}`);
+}
+
+export function createInternationalGeoSiteAudit(payload) {
+  return requestJson("/api/v1/international-geo/site-audits", "POST", payload);
+}
+
+export function generateInternationalGeoSiteAuditAssets(auditId) {
+  return requestJson(`/api/v1/international-geo/site-audits/${auditId}/assets`, "POST", {});
+}
+
 export function runInternationalGeoAudit() {
   return requestJson("/api/v1/international-geo/audit", "POST", {});
 }

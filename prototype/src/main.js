@@ -8,6 +8,7 @@ import {
   createManualArticle as createManualArticleApi,
   createManualTopic as createManualTopicApi,
   createChannel as createChannelApi,
+  createInternationalGeoSiteAudit as createInternationalGeoSiteAuditApi,
   createMediaSource as createMediaSourceApi,
   createModelConfig as createModelConfigApi,
   createRuntimeBackup as createRuntimeBackupApi,
@@ -18,6 +19,7 @@ import {
   createTopicsFromKeywords,
   exportDownloadUrl,
   generateInternationalGeoArtifacts as generateInternationalGeoArtifactsApi,
+  generateInternationalGeoSiteAuditAssets as generateInternationalGeoSiteAuditAssetsApi,
   generateTopicOutline as generateTopicOutlineApi,
   getArticleDetail,
   getCurrentSession as getCurrentSessionApi,
@@ -140,6 +142,34 @@ function parseLineArray(value) {
     .split(/\n+/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function getInternationalSiteAuditPayload() {
+  const container = root.querySelector('[data-international-panel="site-audit"]');
+  if (!container) {
+    return null;
+  }
+
+  return {
+    website_url:
+      container.querySelector('[data-international-audit-field="website_url"]')?.value?.trim() ||
+      "",
+    product_name:
+      container.querySelector('[data-international-audit-field="product_name"]')?.value?.trim() ||
+      "",
+    target_market:
+      container.querySelector('[data-international-audit-field="target_market"]')?.value?.trim() ||
+      "",
+    target_language:
+      container.querySelector('[data-international-audit-field="target_language"]')?.value?.trim() ||
+      "",
+    primary_query:
+      container.querySelector('[data-international-audit-field="primary_query"]')?.value?.trim() ||
+      "",
+    competitors: parseLineArray(
+      container.querySelector('[data-international-audit-field="competitors"]')?.value || ""
+    )
+  };
 }
 
 function getBrandProfilePayload() {
@@ -1270,6 +1300,40 @@ const actions = {
       showNotice(`国际 GEO 审计完成，AI-ready score ${result.summary?.ai_ready_score || "-"}。`);
     } catch (error) {
       setError(error instanceof Error ? error.message : "国际 GEO 审计失败");
+      rerender();
+    }
+  },
+  async runInternationalSiteAudit() {
+    const payload = getInternationalSiteAuditPayload();
+    if (!payload) return;
+    try {
+      const audit = await createInternationalGeoSiteAuditApi(payload);
+      await refreshData();
+      store.page = "international";
+      showNotice(`站点 GEO 审计完成，score ${audit.score ?? "-"}，状态 ${audit.status || "-"}。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "站点 GEO 审计失败");
+      rerender();
+    }
+  },
+  async generateInternationalSiteAssets() {
+    const auditId =
+      store.data.internationalGeo?.site_audits?.latest?.id ||
+      store.data.internationalGeo?.site_audits?.items?.[0]?.id ||
+      "";
+    if (!auditId) {
+      setError("请先运行站点 GEO 审计");
+      rerender();
+      return;
+    }
+
+    try {
+      const assets = await generateInternationalGeoSiteAuditAssetsApi(auditId);
+      await refreshData();
+      store.page = "international";
+      showNotice(`GEO 资产已生成 ${assets.items?.length || 0} 项。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "生成 GEO 资产失败");
       rerender();
     }
   },

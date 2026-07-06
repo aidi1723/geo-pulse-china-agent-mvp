@@ -418,6 +418,16 @@ export function bindEvents(root, store, rerender, actions) {
       return;
     }
 
+    if (action === "international-site-audit") {
+      await actions.runInternationalSiteAudit();
+      return;
+    }
+
+    if (action === "international-site-assets") {
+      await actions.generateInternationalSiteAssets();
+      return;
+    }
+
     if (action === "international-artifacts") {
       await actions.generateInternationalArtifacts();
       return;
