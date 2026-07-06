@@ -5836,6 +5836,14 @@ function jsonLdAsset(type, data) {
   return JSON.stringify({ "@context": "https://schema.org", "@type": type, ...data }, null, 2);
 }
 
+function internationalGeoLegacyAuditPayload() {
+  return {
+    ...internationalGeoState.input,
+    website_url: internationalGeoState.input?.website_url || workspaceInput.website_url,
+    product_name: internationalGeoState.input?.product_name || workspaceInput.product_name
+  };
+}
+
 export function listInternationalGeoSiteAudits(query = {}) {
   ensureInternationalGeoStateShape();
   const items = [...internationalGeoState.site_audits.items].sort((left, right) =>
@@ -5852,18 +5860,15 @@ export function getInternationalGeoSiteAudit(auditId) {
 
 export function createInternationalGeoSiteAuditAction(payload = {}) {
   ensureInternationalGeoStateShape();
-  const websiteUrl = normalizeSiteAuditUrl(
-    payload.website_url || internationalGeoState.input?.website_url || workspaceInput.website_url
-  );
+  const directPayload = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+  const websiteUrl = normalizeSiteAuditUrl(directPayload.website_url);
   if (!websiteUrl) {
     const error = new Error("INVALID_SITE_URL");
     error.code = "INVALID_SITE_URL";
     throw error;
   }
 
-  const productName = String(
-    payload.product_name || internationalGeoState.input?.product_name || workspaceInput.product_name || ""
-  ).trim();
+  const productName = String(directPayload.product_name || "").trim();
   if (!productName) {
     const error = new Error("PRODUCT_NAME_REQUIRED");
     error.code = "PRODUCT_NAME_REQUIRED";
@@ -5873,10 +5878,10 @@ export function createInternationalGeoSiteAuditAction(payload = {}) {
   const input = {
     website_url: websiteUrl,
     product_name: productName,
-    target_market: String(payload.target_market || internationalGeoState.input?.target_market || "Global").trim(),
-    target_language: String(payload.target_language || internationalGeoState.input?.target_language || "en").trim(),
-    primary_query: String(payload.primary_query || internationalGeoState.input?.primary_query || "").trim(),
-    competitors: normalizeStringArray(payload.competitors || internationalGeoState.input?.competitors || [])
+    target_market: String(directPayload.target_market || internationalGeoState.input?.target_market || "Global").trim(),
+    target_language: String(directPayload.target_language || internationalGeoState.input?.target_language || "en").trim(),
+    primary_query: String(directPayload.primary_query || internationalGeoState.input?.primary_query || "").trim(),
+    competitors: normalizeStringArray(directPayload.competitors || internationalGeoState.input?.competitors || [])
   };
   const checks = buildSiteAuditChecks(input);
   const score = siteAuditScore(checks);
@@ -6059,7 +6064,7 @@ export function saveInternationalGeoInputAction(patch = {}) {
 }
 
 export function runInternationalGeoAuditAction() {
-  createInternationalGeoSiteAuditAction(internationalGeoState.input);
+  createInternationalGeoSiteAuditAction(internationalGeoLegacyAuditPayload());
   const input = internationalGeoState.input;
   const hasUrl = /^https?:\/\//.test(input.website_url || "");
   const competitorCount = normalizeStringArray(input.competitors).length;
@@ -6104,7 +6109,9 @@ export function runInternationalGeoAuditAction() {
 export function generateInternationalGeoArtifactsAction() {
   ensureInternationalGeoStateShape();
   const latestAudit =
-    internationalGeoState.site_audits.latest || internationalGeoState.site_audits.items[0] || createInternationalGeoSiteAuditAction(internationalGeoState.input);
+    internationalGeoState.site_audits.latest ||
+    internationalGeoState.site_audits.items[0] ||
+    createInternationalGeoSiteAuditAction(internationalGeoLegacyAuditPayload());
   generateInternationalGeoSiteAuditAssetsAction(latestAudit.id);
   return deepClone(internationalGeoState.artifacts);
 }
