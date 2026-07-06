@@ -433,6 +433,11 @@ export function bindEvents(root, store, rerender, actions) {
       return;
     }
 
+    if (action === "international-visibility-run") {
+      await actions.runInternationalGeoVisibilityMeasurement();
+      return;
+    }
+
     if (action === "international-artifacts") {
       await actions.generateInternationalArtifacts();
       return;

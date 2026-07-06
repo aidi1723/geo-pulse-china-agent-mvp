@@ -458,6 +458,14 @@ function evidenceStatusLabel(value) {
   return labels[value] || value || "规则生成";
 }
 
+function dataStatusLabel(value) {
+  return ({ measured: "measured", simulated: "simulated", unavailable: "unavailable" }[value] || "unavailable");
+}
+
+function nullableMetric(value) {
+  return value === null || value === undefined || value === "" ? "-" : String(value);
+}
+
 function resourceStatus(resource = {}) {
   if (!resource) return "-";
   if (resource.ok) return `HTTP ${resource.status_code || 200}`;
@@ -637,6 +645,115 @@ function renderEntityCoverageTable(items = []) {
       `
     )
   );
+}
+
+function renderVisibilityMeasurementPanel(visibility = {}) {
+  const summary = visibility.summary || {};
+  const snapshots = visibility.snapshots || [];
+  const promptSets = visibility.prompt_sets || [];
+  const readiness = visibility.provider_readiness || [];
+  const latestRun = visibility.latest_run || visibility.runs?.[0] || {};
+  const countSnapshots = (status) => snapshots.filter((item) => dataStatusLabel(item.data_status) === status).length;
+
+  return `
+    <section class="surface panel" data-international-panel="ai-visibility-measurement">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">AI 可见度测量</h3>
+          <div class="panel-note">按 Prompt、引擎和数据源状态记录测量基础，不把 unavailable 标记为 measured。</div>
+        </div>
+        <div class="actions-row">
+          <button class="secondary-btn" data-action="international-visibility-run">运行测量</button>
+        </div>
+      </div>
+      <div class="info-grid">
+        <div class="info-row"><span>Prompt count</span><strong>${escapeHtml(nullableMetric(summary.prompt_count ?? promptSets.length))}</strong></div>
+        <div class="info-row"><span>Engine count</span><strong>${escapeHtml(nullableMetric(summary.engine_count ?? readiness.length))}</strong></div>
+        <div class="info-row"><span>measured</span><strong>${escapeHtml(nullableMetric(summary.measured_snapshots ?? countSnapshots("measured")))}</strong></div>
+        <div class="info-row"><span>simulated</span><strong>${escapeHtml(nullableMetric(summary.simulated_snapshots ?? countSnapshots("simulated")))}</strong></div>
+        <div class="info-row"><span>unavailable</span><strong>${escapeHtml(nullableMetric(summary.unavailable_snapshots ?? countSnapshots("unavailable")))}</strong></div>
+        <div class="info-row"><span>Latest run</span><strong>${escapeHtml(nullableMetric(summary.latest_run_status || latestRun.status || "not_run"))}</strong></div>
+      </div>
+    </section>
+  `;
+}
+
+function renderProviderReadinessTable(readiness = []) {
+  const rows = readiness.length
+    ? readiness.map(
+        (item) => `
+          <tr>
+            <td>
+              <div class="cell-title">${escapeHtml(nullableMetric(item.engine_label || item.engine))}</div>
+              <div class="cell-sub">${escapeHtml(nullableMetric(item.engine_id))}</div>
+            </td>
+            <td>${statusMarkup(dataStatusLabel(item.data_status))}</td>
+            <td>
+              <div class="cell-title">${escapeHtml(nullableMetric(item.provider_id))}</div>
+              <div class="cell-sub">${escapeHtml(nullableMetric(item.connector_id))}</div>
+            </td>
+            <td>${statusMarkup(nullableMetric(item.permission_status))}</td>
+            <td>
+              <div class="cell-title">${escapeHtml(nullableMetric(item.last_measured_at))}</div>
+              <div class="cell-sub">${escapeHtml(nullableMetric(item.diagnostics?.[0] || item.diagnostic))}</div>
+            </td>
+          </tr>
+        `
+      )
+    : [`<tr><td colspan="5"><div class="empty-state">暂无引擎数据源状态。</div></td></tr>`];
+
+  return tableMarkup(["引擎", "Data status", "Provider / Connector", "Permission", "Last measured / Diagnostic"], rows);
+}
+
+function renderPromptSnapshotTable(snapshots = []) {
+  const rows = snapshots.length
+    ? snapshots.map(
+        (item) => `
+          <tr>
+            <td>
+              <div class="cell-title">${escapeHtml(nullableMetric(item.prompt_set_id))}</div>
+              <div class="cell-sub">${escapeHtml(nullableMetric(item.captured_at))}</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml(nullableMetric(item.engine_label || item.engine))}</div>
+              <div class="cell-sub">${escapeHtml(nullableMetric(item.engine_id))}</div>
+            </td>
+            <td>${statusMarkup(dataStatusLabel(item.data_status))}</td>
+            <td>${escapeHtml(nullableMetric(typeof item.brand_mentioned === "boolean" ? (item.brand_mentioned ? "是" : "否") : item.brand_mentioned))}</td>
+            <td>${escapeHtml(nullableMetric(item.owned_citation_count ?? item.citation_count))}</td>
+            <td>${escapeHtml(nullableMetric(item.recommendation_rank))}</td>
+            <td>
+              <div class="cell-title">${escapeHtml(nullableMetric(item.confidence))}</div>
+              <div class="cell-sub">${escapeHtml(nullableMetric(item.diagnostics?.[0] || item.diagnostic))}</div>
+            </td>
+          </tr>
+        `
+      )
+    : [`<tr><td colspan="7"><div class="empty-state">暂无 Prompt 测量快照。</div></td></tr>`];
+
+  return tableMarkup(["Prompt / Captured", "Engine", "Data status", "Brand mention", "Citations", "Rank", "Confidence / Diagnostic"], rows);
+}
+
+function renderVisibilityRunTable(runs = []) {
+  const rows = runs.length
+    ? runs.map(
+        (item) => `
+          <tr>
+            <td>
+              <div class="cell-title">${escapeHtml(nullableMetric(item.trigger))}</div>
+              <div class="cell-sub">${escapeHtml(nullableMetric(item.id))}</div>
+            </td>
+            <td>${statusMarkup(nullableMetric(item.status))}</td>
+            <td>${statusMarkup(dataStatusLabel(item.data_source_type))}</td>
+            <td>${escapeHtml(nullableMetric(item.snapshots_created))}</td>
+            <td>${escapeHtml(nullableMetric(item.started_at))}</td>
+            <td>${escapeHtml(nullableMetric(item.finished_at))}</td>
+          </tr>
+        `
+      )
+    : [`<tr><td colspan="6"><div class="empty-state">暂无测量运行记录。</div></td></tr>`];
+
+  return tableMarkup(["Trigger / ID", "Status", "Data source type", "Snapshots", "Started", "Finished"], rows);
 }
 
 function renderSiteAuditPanel(data = {}) {
@@ -894,6 +1011,7 @@ function renderGeoAssetPreviews(assets = []) {
 export function renderInternationalGeo(data = internationalGeo) {
   const summary = data.summary || {};
   const latestAudit = data.site_audits?.latest || data.site_audits?.items?.[0] || {};
+  const visibility = data.visibility || {};
 
   return `
     <section class="surface toolbar">
@@ -935,6 +1053,38 @@ export function renderInternationalGeo(data = internationalGeo) {
           <strong>${escapeHtml(summary.crawler_access || "-")}</strong>
         </div>
       </div>
+    </section>
+
+    ${renderVisibilityMeasurementPanel(visibility)}
+
+    <section class="surface panel">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">引擎数据源状态</h3>
+          <div class="panel-note">按引擎展示 measured、simulated、unavailable 数据源状态和连接器权限。</div>
+        </div>
+      </div>
+      ${renderProviderReadinessTable(visibility.provider_readiness || [])}
+    </section>
+
+    <section class="surface panel">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">Prompt 测量快照</h3>
+          <div class="panel-note">每条快照保留 Prompt、引擎、数据状态、品牌提及、引用数和排名诊断。</div>
+        </div>
+      </div>
+      ${renderPromptSnapshotTable(visibility.snapshots || [])}
+    </section>
+
+    <section class="surface panel">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">测量运行记录</h3>
+          <div class="panel-note">记录触发来源、运行状态、数据源类型、快照数量和起止时间。</div>
+        </div>
+      </div>
+      ${renderVisibilityRunTable(visibility.runs || [])}
     </section>
 
     <section class="surface panel">

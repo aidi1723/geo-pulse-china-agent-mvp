@@ -170,7 +170,10 @@ function runSyntaxChecks() {
 
 function runSingleUserSourceChecks() {
   const sourceFiles = [
+    "prototype/src/api.js",
     "prototype/src/components.js",
+    "prototype/src/events.js",
+    "prototype/src/main.js",
     "prototype/src/pages/analytics.js",
     "prototype/src/pages/billing.js",
     "prototype/src/pages/content.js",
@@ -183,6 +186,26 @@ function runSingleUserSourceChecks() {
     combined,
     /即将开放|Read-only MVP/,
     "Single-user v0.3 source should not contain coming-soon or read-only workflow buttons"
+  );
+  assert.match(
+    combined,
+    /export function runInternationalGeoVisibilityMeasurement/,
+    "International GEO visibility run button should have a client API method"
+  );
+  assert.match(
+    combined,
+    /runInternationalGeoVisibilityMeasurementApi/,
+    "International GEO visibility run should be imported into the browser action layer"
+  );
+  assert.match(
+    combined,
+    /runInternationalGeoVisibilityMeasurement\(\)/,
+    "International GEO visibility run should have a browser action handler"
+  );
+  assert.match(
+    combined,
+    /action === "international-visibility-run"/,
+    "International GEO visibility run data-action should be wired in the event dispatcher"
   );
 }
 
