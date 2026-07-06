@@ -1,0 +1,30 @@
+services:
+  geo-pulse:
+    build: .
+    image: geo-pulse:v0.2
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      GEO_HOST: 0.0.0.0
+      GEO_PUBLIC_SITE_URL: ${GEO_PUBLIC_SITE_URL:-http://localhost:3000}
+      GEO_ALLOW_REMOTE_ACCESS: ${GEO_ALLOW_REMOTE_ACCESS:-1}
+      GEO_INTERNAL_API_KEY: ${GEO_INTERNAL_API_KEY:?GEO_INTERNAL_API_KEY is required}
+      GEO_ENABLE_PERSISTENCE: ${GEO_ENABLE_PERSISTENCE:-1}
+      GEO_DATA_FILE: /app/data/geo-pulse-state.json
+      GEO_ENABLE_AUTOMATION_SCHEDULER: ${GEO_ENABLE_AUTOMATION_SCHEDULER:-0}
+      GEO_AUTOMATION_TICK_MS: ${GEO_AUTOMATION_TICK_MS:-15000}
+      GEO_AUTOMATION_MAX_RUNS_PER_TICK: ${GEO_AUTOMATION_MAX_RUNS_PER_TICK:-2}
+      GEO_DEFAULT_INDUSTRY_TOPIC: ${GEO_DEFAULT_INDUSTRY_TOPIC:-中国智能体}
+      GEO_MAX_BODY_BYTES: ${GEO_MAX_BODY_BYTES:-1048576}
+      GEO_MUTATION_RATE_LIMIT_PER_MINUTE: ${GEO_MUTATION_RATE_LIMIT_PER_MINUTE:-120}
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

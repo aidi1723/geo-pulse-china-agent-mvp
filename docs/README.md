@@ -6,6 +6,7 @@ This directory contains the maintainer-facing documentation for GEO Pulse China 
 
 - [Development Guide](DEVELOPMENT.md): local setup, test gate, environment variables, UI rules, and contribution workflow.
 - [Architecture Guide](ARCHITECTURE.md): runtime structure, module boundaries, data flow, security model, and extension points.
+- [Production Deployment Guide](PRODUCTION_DEPLOYMENT.md): single-tenant v0.2 deployment, environment, Docker, health checks, backup, and rollback.
 - [API Reference](API_REFERENCE.md): current mock API groups, route behavior, mutation requirements, and response shape.
 - [Extension Guide](EXTENDING.md): how to add providers, connectors, source adapters, UI pages, tests, and static preview data.
 - [Maintenance Guide](MAINTENANCE.md): routine maintenance, release gate, runtime state, security defaults, and production backlog.

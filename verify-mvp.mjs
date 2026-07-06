@@ -85,6 +85,8 @@ const syntaxTargets = [
   "server.mjs",
   "mock-data.mjs",
   "prototype/app.js",
+  "prototype/robots.js",
+  "prototype/sitemap.js",
   "prototype/src/api.js",
   "prototype/src/components.js",
   "prototype/src/config.js",
@@ -2358,6 +2360,32 @@ function httpRequest(port, pathName, options = {}) {
   });
 }
 
+function runProductionStartupChecks() {
+  const missingSecret = spawnSync(process.execPath, ["server.mjs"], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      NODE_ENV: "production",
+      PORT: String(4300 + Math.floor(Math.random() * 300)),
+      GEO_ENABLE_PERSISTENCE: "0",
+      GEO_INTERNAL_API_KEY: ""
+    },
+    encoding: "utf8",
+    timeout: 2000
+  });
+
+  assert.notEqual(
+    missingSecret.status,
+    0,
+    "Production startup should fail without a fixed API key"
+  );
+  assert.match(
+    `${missingSecret.stdout}\n${missingSecret.stderr}`,
+    /GEO_INTERNAL_API_KEY/,
+    "Production startup failure should mention GEO_INTERNAL_API_KEY"
+  );
+}
+
 async function runHttpSecurityChecks() {
   const port = 3300 + Math.floor(Math.random() * 500);
   const child = spawn(process.execPath, ["server.mjs"], {
@@ -2374,6 +2402,26 @@ async function runHttpSecurityChecks() {
 
   try {
     await waitForServerReady(child, port);
+
+    const health = await httpRequest(port, "/healthz");
+    assert.equal(health.status, 200, "Health route should return 200");
+    assert.equal(health.body?.ok, true, "Health route should report ok");
+    assert.equal(Boolean(health.body?.internal_api_key), false, "Health route must not expose secrets");
+
+    const robots = await httpRequest(port, "/robots.txt");
+    assert.equal(robots.status, 200, "robots.txt should be served");
+    assert.match(String(robots.body), /Sitemap:/, "robots.txt should point to sitemap");
+
+    const sitemap = await httpRequest(port, "/sitemap.xml");
+    assert.equal(sitemap.status, 200, "sitemap.xml should be served");
+    assert.match(String(sitemap.body), /<urlset/, "sitemap should be XML urlset");
+
+    const llms = await httpRequest(port, "/llms.txt");
+    assert.equal(llms.status, 200, "llms.txt should be served");
+    assert.match(String(llms.body), /GEO Pulse/, "llms.txt should describe the product");
+
+    const favicon = await httpRequest(port, "/favicon.ico");
+    assert.equal(favicon.status, 200, "favicon should be served");
 
     const runtime = await httpRequest(port, "/api/v1/system/runtime", {
       headers: {
@@ -2815,6 +2863,7 @@ try {
   runAnalyticsCampaignUiChecks();
   runInternationalGeoUiChecks();
   runPersistenceChecks();
+  runProductionStartupChecks();
   await runHttpSecurityChecks();
   await runSchedulerAuditChecks();
   await runAuditCsvSpreadsheetSafetyChecks();

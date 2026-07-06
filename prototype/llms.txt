@@ -1,0 +1,18 @@
+# GEO Pulse
+
+GEO Pulse is a single-tenant admin prototype for Generative Engine Optimization and AI search visibility operations.
+
+## Core URLs
+
+- Admin shell: http://localhost:3000/
+- International GEO workspace: http://localhost:3000/#page=international
+
+## Product Scope
+
+- Keyword discovery and content opportunity management.
+- GEO content drafting, review, publishing task planning, and visibility analytics.
+- International GEO readiness for GPT, Gemini, Claude, Perplexity, and Copilot / Bing monitoring workflows.
+
+## Current Production Boundary
+
+This v0.2 deployment is single-tenant and should be protected by deployment-layer authentication such as a reverse proxy, VPN, or IP allowlist.

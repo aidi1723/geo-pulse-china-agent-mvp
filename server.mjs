@@ -90,9 +90,11 @@ const {
 } = await import("./mock-data.mjs");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const packageInfo = JSON.parse(await fs.readFile(path.join(__dirname, "package.json"), "utf8"));
 const staticDir = path.join(__dirname, "prototype");
 const port = Number(process.env.PORT || 3000);
 const host = process.env.GEO_HOST || "";
+const isProduction = process.env.NODE_ENV === "production";
 const schedulerEnabled = process.env.GEO_ENABLE_AUTOMATION_SCHEDULER === "1";
 const schedulerTickMs = Math.max(5000, Number(process.env.GEO_AUTOMATION_TICK_MS || 15000));
 const schedulerMaxRunsPerTick = Math.max(1, Number(process.env.GEO_AUTOMATION_MAX_RUNS_PER_TICK || 2));
@@ -105,6 +107,13 @@ const mutationRateLimitPerMinute = Math.max(
 const allowRemoteAccess = process.env.GEO_ALLOW_REMOTE_ACCESS === "1";
 const explicitInternalApiKey = process.env.GEO_INTERNAL_API_KEY || "";
 const internalApiKey = explicitInternalApiKey || crypto.randomBytes(24).toString("hex");
+const minProductionApiKeyLength = 24;
+const publicSiteUrl = (process.env.GEO_PUBLIC_SITE_URL || `http://${host || "localhost"}:${port}`).replace(/\/+$/, "");
+
+if (isProduction && explicitInternalApiKey.length < minProductionApiKeyLength) {
+  console.error("NODE_ENV=production requires GEO_INTERNAL_API_KEY with at least 24 characters.");
+  process.exit(1);
+}
 
 if (allowRemoteAccess && !explicitInternalApiKey) {
   console.error("GEO_ALLOW_REMOTE_ACCESS=1 requires a fixed GEO_INTERNAL_API_KEY.");
@@ -116,6 +125,9 @@ const contentTypes = {
   ".css": "text/css; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".ico": "image/x-icon",
+  ".txt": "text/plain; charset=utf-8",
+  ".xml": "application/xml; charset=utf-8",
   ".png": "image/png"
 };
 
@@ -151,6 +163,24 @@ function sendJson(res, status, payload) {
   res.end(JSON.stringify(payload, null, 2));
 }
 
+function sendText(res, status, content, contentType = "text/plain; charset=utf-8") {
+  res.writeHead(status, {
+    "Content-Type": contentType,
+    "X-Content-Type-Options": "nosniff",
+    "Cache-Control": "no-store"
+  });
+  res.end(content);
+}
+
+function sendBuffer(res, status, content, contentType) {
+  res.writeHead(status, {
+    "Content-Type": contentType,
+    "X-Content-Type-Options": "nosniff",
+    "Cache-Control": "public, max-age=86400"
+  });
+  res.end(content);
+}
+
 function sendCsv(res, filename, content) {
   res.writeHead(200, {
     "Content-Type": "text/csv; charset=utf-8",
@@ -160,6 +190,93 @@ function sendCsv(res, filename, content) {
   });
   res.end(content);
 }
+
+function healthPayload() {
+  const persistence = getPersistenceStatus();
+  return {
+    ok: true,
+    version: packageInfo.version,
+    environment: process.env.NODE_ENV || "development",
+    persistence: {
+      enabled: persistence.enabled,
+      file: persistence.enabled ? persistence.file : ""
+    },
+    scheduler: {
+      enabled: schedulerEnabled,
+      status: schedulerState.status
+    },
+    timestamp: new Date().toISOString()
+  };
+}
+
+function robotsTxt() {
+  return [
+    "User-agent: *",
+    "Allow: /",
+    "",
+    `Sitemap: ${publicSiteUrl}/sitemap.xml`,
+    "",
+    "User-agent: GPTBot",
+    "Allow: /",
+    "",
+    "User-agent: OAI-SearchBot",
+    "Allow: /",
+    "",
+    "User-agent: ClaudeBot",
+    "Allow: /",
+    "",
+    "User-agent: Claude-SearchBot",
+    "Allow: /",
+    "",
+    "User-agent: PerplexityBot",
+    "Allow: /"
+  ].join("\n");
+}
+
+function sitemapXml() {
+  const now = new Date().toISOString();
+  const routes = ["/"];
+  const urls = routes.map(
+    (route) => `
+  <url>
+    <loc>${publicSiteUrl}${route}</loc>
+    <lastmod>${now}</lastmod>
+  </url>`
+  );
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join("")}
+</urlset>
+`;
+}
+
+function llmsTxt() {
+  return [
+    "# GEO Pulse",
+    "",
+    "GEO Pulse is a single-tenant admin prototype for Generative Engine Optimization and AI search visibility operations.",
+    "",
+    "## Core URLs",
+    "",
+    `- Admin shell: ${publicSiteUrl}/`,
+    `- International GEO workspace: ${publicSiteUrl}/#page=international`,
+    `- API runtime status: ${publicSiteUrl}/api/v1/system/runtime`,
+    "",
+    "## Product Scope",
+    "",
+    "- Keyword discovery and content opportunity management.",
+    "- GEO content drafting, review, publishing task planning, and visibility analytics.",
+    "- International GEO readiness for GPT, Gemini, Claude, Perplexity, and Copilot / Bing monitoring workflows.",
+    "",
+    "## Current Production Boundary",
+    "",
+    "This v0.2 deployment is single-tenant and should be protected by deployment-layer authentication such as a reverse proxy, VPN, or IP allowlist."
+  ].join("\n");
+}
+
+const faviconIco = Buffer.from(
+  "AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////AP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////AP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP///wD///8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP///wD///8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8A////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8A////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8A////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8A////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8A////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8A////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8A////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8A////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8A////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8A////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8A////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8A////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8A////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8A////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP///wD///8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP///wD///8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+  "base64"
+);
 
 function csvCell(value) {
   const text = typeof value === "object" && value !== null
@@ -1310,6 +1427,31 @@ const server = http.createServer(async (req, res) => {
 
   if (!isRemoteAccessAllowed(req)) {
     sendJson(res, 403, error("FORBIDDEN", "Remote access is disabled by default", 403).body);
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/healthz") {
+    sendJson(res, 200, healthPayload());
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/robots.txt") {
+    sendText(res, 200, robotsTxt());
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/sitemap.xml") {
+    sendText(res, 200, sitemapXml(), "application/xml; charset=utf-8");
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/llms.txt") {
+    sendText(res, 200, llmsTxt());
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/favicon.ico") {
+    sendBuffer(res, 200, faviconIco, "image/x-icon");
     return;
   }
 

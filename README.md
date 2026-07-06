@@ -128,6 +128,7 @@ npm run check
 - 文档索引：[docs/README.md](docs/README.md)
 - 开发指南：[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
 - 架构说明：[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- 生产部署指南：[docs/PRODUCTION_DEPLOYMENT.md](docs/PRODUCTION_DEPLOYMENT.md)
 - API 参考：[docs/API_REFERENCE.md](docs/API_REFERENCE.md)
 - 扩展指南：[docs/EXTENDING.md](docs/EXTENDING.md)
 - 维护指南：[docs/MAINTENANCE.md](docs/MAINTENANCE.md)
