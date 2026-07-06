@@ -13,6 +13,7 @@ import {
   createMediaSourceAction,
   createModelConfigAction,
   createPublishTaskAction,
+  createRuntimeBackupAction,
   createKeywordCrawlJobAction,
   createTopicIdeaAction,
   createTopicIdeasFromKeywords,
@@ -32,6 +33,7 @@ import {
   getKeyword,
   getPromptTemplate,
   getPublishTask,
+  getRuntimeBackupDownload,
   getRuntimeStatus,
   getSourceStrategy,
   getSourceAdapterContract,
@@ -54,6 +56,7 @@ import {
   listAudienceSegments,
   listMarketingCampaigns,
   listPromptTemplates,
+  listRuntimeBackups,
   listSourceStrategies,
   listTopicIdeas,
   logoutSessionAction,
@@ -84,7 +87,9 @@ import {
   updateBillingPlanAction,
   updateArticleAction,
   updateTopicIdeaAction,
-  updateKeywordAction
+  updateKeywordAction,
+  validateRuntimeBackupAction,
+  restoreRuntimeBackupAction
 } from "./mock-data.mjs";
 import {
   applyPageSearch,
@@ -1050,6 +1055,53 @@ async function runMockDataChecks() {
     "runtime",
     "Runtime reset audit event should identify the runtime resource"
   );
+
+  const backup = createRuntimeBackupAction({ name: "验收备份" });
+  assert.match(backup.id, /^bkp-/, "Runtime backup should return a backup id");
+  assert.equal(backup.name, "验收备份", "Runtime backup should keep the operator label");
+  assert.ok(backup.checksum, "Runtime backup should include a checksum");
+  assert.ok(backup.counts?.keywords >= 1, "Runtime backup should include captured counts");
+
+  const backupList = listRuntimeBackups();
+  assert.ok(
+    backupList.items.some((item) => item.id === backup.id),
+    "Runtime backup list should include the created backup"
+  );
+
+  const backupDownload = getRuntimeBackupDownload(backup.id);
+  assert.equal(backupDownload.kind, "geo-pulse-runtime-backup", "Backup download should identify its artifact type");
+  assert.equal(backupDownload.backup.id, backup.id, "Backup download should include matching metadata");
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(backupDownload.snapshot, "runtimeBackups"),
+    false,
+    "Backup snapshot should exclude recursive backup history"
+  );
+
+  const validation = validateRuntimeBackupAction(backup.id);
+  assert.equal(validation.valid, true, "Created runtime backup should validate");
+  assert.equal(validation.checksum, backup.checksum, "Runtime backup validation should recalculate the checksum");
+
+  const backupBrandName = getBrandProfile().brand_name;
+  saveBrandProfileAction({ brand_name: "恢复前临时品牌" });
+  assert.equal(getBrandProfile().brand_name, "恢复前临时品牌", "Brand profile mutation should happen before restore");
+  const restore = restoreRuntimeBackupAction(backup.id);
+  assert.equal(restore.restored, true, "Runtime backup restore should report success");
+  assert.equal(getBrandProfile().brand_name, backupBrandName, "Runtime backup restore should hydrate captured state");
+
+  const backupAuditEvents = listAuditEvents({ page_size: 10 }).items;
+  assert.ok(
+    backupAuditEvents.some((item) => item.action === "runtime.backup.restore" && item.resource_id === backup.id),
+    "Runtime backup restore should be recorded in audit events"
+  );
+  assert.ok(
+    backupAuditEvents.some((item) => item.action === "runtime.backup.create" && item.resource_id === backup.id),
+    "Runtime backup creation should remain visible in audit events after restore"
+  );
+  assert.equal(
+    getRuntimeStatus().backups?.count >= 1,
+    true,
+    "Runtime status should include backup summary"
+  );
 }
 
 async function runSingleUserCompleteChecks() {
@@ -1641,6 +1693,28 @@ function runSettingsAuditUiChecks() {
           file: "/tmp/geo-pulse-state.json"
         },
         counts: {},
+        backups: {
+          count: 1,
+          latest: {
+            id: "bkp-ui",
+            name: "UI 验收备份",
+            checksum: "abc123",
+            created_at: "2026-07-05T10:03:00.000Z"
+          },
+          items: [
+            {
+              id: "bkp-ui",
+              name: "UI 验收备份",
+              checksum: "abc123",
+              created_at: "2026-07-05T10:03:00.000Z",
+              size_bytes: 2048,
+              counts: {
+                keywords: 5,
+                articles: 2
+              }
+            }
+          ]
+        },
         scheduler: {},
         providers: {}
       },
@@ -1679,6 +1753,12 @@ function runSettingsAuditUiChecks() {
   assert.match(html, /导出审计日志/, "Settings audit log should show an export action");
   assert.match(html, /\/api\/v1\/audit-events\/export\.csv/, "Settings audit export should link to the CSV endpoint");
   assert.doesNotMatch(html, /secret-token/, "Settings audit log should not expose secret token text");
+  assert.match(html, /本地备份/, "Settings runtime panel should show local backup controls");
+  assert.match(html, /UI 验收备份/, "Settings runtime panel should render backup rows");
+  assert.match(html, /data-action="create-runtime-backup"/, "Settings runtime panel should expose backup creation");
+  assert.match(html, /data-action="validate-runtime-backup"/, "Settings runtime panel should expose backup validation");
+  assert.match(html, /data-action="download-runtime-backup"/, "Settings runtime panel should expose backup download");
+  assert.match(html, /data-action="restore-runtime-backup"/, "Settings runtime panel should expose backup restore");
 
   const staticHtml = renderSettings({
     tabs: {
@@ -3178,6 +3258,78 @@ async function runSingleUserHttpChecks() {
     assert.ok(
       connectorDiagnostics.body?.data?.items?.some((item) => item.connector_id === "firecrawl_source"),
       "Connector diagnostics API should include recent diagnostics"
+    );
+
+    const backupBaselineBrand = await httpRequest(port, "/api/v1/brand-profile", {
+      method: "PUT",
+      headers: mutationHeaders,
+      body: JSON.stringify({
+        brand_name: "HTTP 备份品牌"
+      })
+    });
+    assert.equal(backupBaselineBrand.status, 200, "Brand profile should be mutable before backup");
+
+    const createdBackup = await httpRequest(port, "/api/v1/system/backups", {
+      method: "POST",
+      headers: mutationHeaders,
+      body: JSON.stringify({
+        name: "HTTP 验收备份"
+      })
+    });
+    assert.equal(createdBackup.status, 201, "Runtime backup should be creatable over HTTP");
+    assert.match(createdBackup.body?.data?.id || "", /^bkp-/, "Runtime backup API should return a backup id");
+
+    const backupList = await httpRequest(port, "/api/v1/system/backups");
+    assert.equal(backupList.status, 200, "Runtime backups should be listable over HTTP");
+    assert.ok(
+      backupList.body?.data?.items?.some((item) => item.id === createdBackup.body.data.id),
+      "Runtime backup list API should include the created backup"
+    );
+
+    const backupDownload = await httpRequest(port, `/api/v1/system/backups/${createdBackup.body.data.id}/download`);
+    assert.equal(backupDownload.status, 200, "Runtime backup download should be available over HTTP");
+    assert.equal(
+      backupDownload.body?.data?.kind,
+      "geo-pulse-runtime-backup",
+      "Runtime backup download API should return a backup artifact"
+    );
+    assert.equal(
+      Object.prototype.hasOwnProperty.call(backupDownload.body?.data?.snapshot || {}, "runtimeBackups"),
+      false,
+      "Runtime backup download API should not include recursive backup history"
+    );
+
+    const backupValidation = await httpRequest(port, `/api/v1/system/backups/${createdBackup.body.data.id}/validate`, {
+      method: "POST",
+      headers: mutationHeaders,
+      body: "{}"
+    });
+    assert.equal(backupValidation.status, 200, "Runtime backup validation should run over HTTP");
+    assert.equal(backupValidation.body?.data?.valid, true, "Runtime backup validation API should mark created backup valid");
+
+    const mutatedBrand = await httpRequest(port, "/api/v1/brand-profile", {
+      method: "PUT",
+      headers: mutationHeaders,
+      body: JSON.stringify({
+        brand_name: "HTTP 恢复前临时品牌"
+      })
+    });
+    assert.equal(mutatedBrand.status, 200, "Brand profile should be mutable after backup");
+
+    const restoredBackup = await httpRequest(port, `/api/v1/system/backups/${createdBackup.body.data.id}/restore`, {
+      method: "POST",
+      headers: mutationHeaders,
+      body: "{}"
+    });
+    assert.equal(restoredBackup.status, 200, "Runtime backup restore should run over HTTP");
+    assert.equal(restoredBackup.body?.data?.restored, true, "Runtime backup restore API should report success");
+
+    const restoredBrand = await httpRequest(port, "/api/v1/brand-profile");
+    assert.equal(restoredBrand.status, 200, "Brand profile should be readable after restore");
+    assert.equal(
+      restoredBrand.body?.data?.brand_name,
+      "HTTP 备份品牌",
+      "Runtime backup restore API should recover captured brand profile state"
     );
 
     const unsafeConnector = await httpRequest(port, "/api/v1/automation-connectors/firecrawl_source", {

@@ -394,6 +394,26 @@ export function getRuntimeStatus() {
   return request("/api/v1/system/runtime");
 }
 
+export function listRuntimeBackups() {
+  return request("/api/v1/system/backups");
+}
+
+export function createRuntimeBackup(payload = {}) {
+  return requestJson("/api/v1/system/backups", "POST", payload);
+}
+
+export function getRuntimeBackupDownload(backupId) {
+  return request(`/api/v1/system/backups/${backupId}/download`);
+}
+
+export function validateRuntimeBackup(backupId) {
+  return requestJson(`/api/v1/system/backups/${backupId}/validate`, "POST", {});
+}
+
+export function restoreRuntimeBackup(backupId) {
+  return requestJson(`/api/v1/system/backups/${backupId}/restore`, "POST", {});
+}
+
 export function runSchedulerTick(force = false) {
   return requestJson("/api/v1/system/runtime/scheduler/tick", "POST", {
     force

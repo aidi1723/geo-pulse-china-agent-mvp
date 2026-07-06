@@ -1,8 +1,8 @@
 # Production Deployment Guide
 
-This guide covers the v0.5 single-user, single-tenant deployment profile for GEO Pulse.
+This guide covers the v0.6 single-user, single-tenant deployment profile for GEO Pulse.
 
-For stage-level scope and closing language, see [v0.5 Stage Closeout](STAGE_V0_5_CLOSEOUT.md).
+For stage-level scope and closing language, see [v0.6 Stage Closeout](STAGE_V0_6_CLOSEOUT.md).
 
 ## Scope
 
@@ -12,6 +12,7 @@ Supported:
 
 - Fixed environment configuration.
 - Persistent local JSON state under `data/`.
+- Built-in local runtime backup, download, validation, and restore.
 - Health checks.
 - Mutation API-key guard.
 - Basic SEO/GEO files: `robots.txt`, `sitemap.xml`, `llms.txt`, and `favicon.ico`.
@@ -104,15 +105,33 @@ curl -f http://localhost:3000/favicon.ico
 
 ## Backup And Restore
 
-The v0.5 deployment stores state in a local JSON file.
+The v0.6 deployment stores state in a local JSON file and provides built-in local backup controls in Settings -> Brand Knowledge -> Runtime and Data.
 
-Backup:
+Preferred operator flow:
+
+1. Open the settings runtime panel.
+2. Create a local backup.
+3. Validate the backup.
+4. Download the JSON artifact and store it outside the application host.
+5. Restore from a listed backup when local state needs to roll back.
+
+The same flow is available through:
+
+```text
+POST /api/v1/system/backups
+GET /api/v1/system/backups
+GET /api/v1/system/backups/:id/download
+POST /api/v1/system/backups/:id/validate
+POST /api/v1/system/backups/:id/restore
+```
+
+Manual file fallback:
 
 ```bash
 cp data/geo-pulse-state.json "data/geo-pulse-state.$(date +%Y%m%d-%H%M%S).json"
 ```
 
-Restore:
+Manual file restore fallback:
 
 ```bash
 docker compose down
@@ -139,12 +158,12 @@ curl -f http://localhost:3000/favicon.ico
 If Docker is available:
 
 ```bash
-docker build -t geo-pulse:v0.5 .
+docker build -t geo-pulse:v0.6 .
 ```
 
 ## Stage Closeout Language
 
-GEO Pulse v0.5 is ready for controlled single-user, single-tenant deployment. It includes complete local workflows, connector configuration, connector testing, connector diagnostics, production startup guardrails, health checks, GEO/SEO static files, Docker packaging, and documentation for backup and rollback. It must still be protected by an external access layer and should not be presented as a complete SaaS platform until built-in multi-user login, RBAC, durable database storage, real integrations, monitoring, and multi-tenant controls are implemented.
+GEO Pulse v0.6 is ready for controlled single-user, single-tenant deployment. It includes complete local workflows, connector configuration, connector testing, connector diagnostics, local backup/restore, production startup guardrails, health checks, GEO/SEO static files, Docker packaging, and documentation for rollback. It must still be protected by an external access layer and should not be presented as a complete SaaS platform until built-in multi-user login, RBAC, durable database storage, real integrations, monitoring, and multi-tenant controls are implemented.
 
 ## Rollback
 

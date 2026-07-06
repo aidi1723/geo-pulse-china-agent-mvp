@@ -208,6 +208,11 @@ Visibility collection and campaign send actions check connector permissions befo
 - `GET /audit-events`
 - `GET /audit-events/export.csv`
 - `GET /system/runtime`
+- `GET /system/backups`
+- `POST /system/backups`
+- `GET /system/backups/:id/download`
+- `POST /system/backups/:id/validate`
+- `POST /system/backups/:id/restore`
 - `POST /system/runtime/reset`
 - `GET /system/runtime/scheduler`
 - `POST /system/runtime/scheduler/tick`
@@ -216,6 +221,8 @@ Visibility collection and campaign send actions check connector permissions befo
 - `POST /session/logout`
 
 Audit CSV export neutralizes spreadsheet formula prefixes. Runtime reset restores seed state and records an audit event.
+
+Runtime backups are local operator artifacts. Backup list responses expose metadata only. Download responses return a JSON artifact with `kind`, `schema_version`, `backup`, and `snapshot`; the snapshot intentionally excludes `runtimeBackups` so backups do not recursively contain backup history. Create, validate, and restore operations write audit events.
 
 ## Adding Or Changing APIs
 

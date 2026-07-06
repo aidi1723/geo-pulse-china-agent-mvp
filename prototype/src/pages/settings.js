@@ -42,6 +42,9 @@ function auditActionLabel(value) {
       "model_config.update": "模型配置更新",
       "publish_task.start": "发布任务启动",
       "scheduler.tick": "调度轮询",
+      "runtime.backup.create": "创建备份",
+      "runtime.backup.validate": "校验备份",
+      "runtime.backup.restore": "恢复备份",
       "auth.failure": "鉴权失败"
     }[value] || value || "-"
   );
@@ -128,6 +131,69 @@ function encodeCsvDataUrl(content) {
   return encodeURIComponent(content).replaceAll("'", "%27");
 }
 
+function formatBytes(value) {
+  const size = Number(value || 0);
+  if (!Number.isFinite(size) || size <= 0) return "-";
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function renderRuntimeBackups(backups = {}) {
+  const items = backups.items || [];
+  const latest = backups.latest || items[0] || null;
+  const rows = items.length
+    ? items.map((item) => `
+        <tr>
+          <td>
+            <div class="cell-title">${escapeHtml(item.name || item.id)}</div>
+            <div class="cell-sub">${escapeHtml(item.id)}</div>
+          </td>
+          <td>${escapeHtml(formatDateTime(item.created_at))}</td>
+          <td>
+            <div class="cell-title">${escapeHtml(formatBytes(item.size_bytes))}</div>
+            <div class="cell-sub">问题 ${escapeHtml(item.counts?.keywords ?? 0)} / 文章 ${escapeHtml(item.counts?.articles ?? 0)}</div>
+          </td>
+          <td>
+            <div class="cell-title">${escapeHtml(String(item.checksum || "").slice(0, 12) || "-")}</div>
+            <div class="cell-sub">Schema ${escapeHtml(item.schema_version || 1)}</div>
+          </td>
+          <td>
+            <div class="actions-row">
+              <button class="secondary-btn" data-action="validate-runtime-backup" data-backup-id="${escapeHtml(item.id)}">校验</button>
+              <button class="secondary-btn" data-action="download-runtime-backup" data-backup-id="${escapeHtml(item.id)}">下载</button>
+              <button class="danger-btn" data-action="restore-runtime-backup" data-backup-id="${escapeHtml(item.id)}">恢复</button>
+            </div>
+          </td>
+        </tr>
+      `)
+    : [`
+        <tr>
+          <td colspan="5">
+            <div class="empty-state">暂无本地备份。</div>
+          </td>
+        </tr>
+      `];
+
+  return `
+    <div class="section-block" style="margin-top:18px">
+      <div class="panel-head">
+        <div>
+          <h4 class="panel-title" style="font-size:15px">本地备份</h4>
+          <div class="panel-note">仅显示备份元数据；下载动作会导出完整本地状态 JSON。</div>
+        </div>
+        <button class="secondary-btn" data-action="create-runtime-backup">创建备份</button>
+      </div>
+      <div class="info-list">
+        <div class="info-row"><span>备份数量</span><strong>${escapeHtml(backups.count ?? items.length ?? 0)}</strong></div>
+        <div class="info-row"><span>最新备份</span><strong>${escapeHtml(latest ? formatDateTime(latest.created_at) : "-")}</strong></div>
+        <div class="info-row"><span>最新校验摘要</span><strong>${escapeHtml(latest?.checksum ? latest.checksum.slice(0, 16) : "-")}</strong></div>
+      </div>
+      ${tableMarkup(["备份", "创建时间", "体积 / 范围", "校验", "动作"], rows)}
+    </div>
+  `;
+}
+
 function saveButton(tab) {
   if (tab === "brand") {
     return '<button class="primary-btn" data-action="save-brand-profile">保存品牌知识</button>';
@@ -179,6 +245,7 @@ function renderBrand(profile, runtimeStatus, auditEvents = [], isStaticPreview =
   const counts = runtimeStatus?.counts || {};
   const scheduler = runtimeStatus?.scheduler || {};
   const providers = runtimeStatus?.providers || {};
+  const backups = runtimeStatus?.backups || {};
   return `
     <div class="stack-blocks">
       <section class="surface panel" data-settings-panel="brand">
@@ -234,6 +301,7 @@ function renderBrand(profile, runtimeStatus, auditEvents = [], isStaticPreview =
           <span class="cell-sub">重置会恢复为仓库内置种子数据，并覆盖当前本地持久化文件。</span>
           <button class="danger-btn" data-action="reset-runtime-state">重置运行态</button>
         </div>
+        ${renderRuntimeBackups(backups)}
       </section>
       <section class="surface panel">
         <div class="panel-head">

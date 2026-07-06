@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.6.0 - 2026-07-06
+
+Single-user maintenance backup and restore snapshot.
+
+### Added
+
+- Local runtime backup creation, listing, download, validation, and restore actions.
+- API routes under `/api/v1/system/backups` for backup operations.
+- Settings runtime UI section for local backup metadata and operator actions.
+- Runtime backup summary in `/api/v1/system/runtime`.
+- Audit events for backup create, validate, and restore operations.
+
+### Changed
+
+- Project status is now documented as v0.6 single-user launch-readiness with local backup/restore.
+- Deployment docs now prefer the built-in backup flow before manual JSON file copy fallback.
+
+### Boundaries
+
+- v0.6 still uses local JSON state, not a production database, encrypted vault, cloud backup service, or multi-user restore approval workflow.
+
+### Verification
+
+- `npm run check`
+
 ## 0.5.0 - 2026-07-06
 
 Single-user connector diagnostics snapshot.

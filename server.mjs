@@ -15,6 +15,7 @@ const {
   createExportJobAction,
   createMediaSourceAction,
   createPublishTaskAction,
+  createRuntimeBackupAction,
   createModelConfigAction,
   createKeywordCrawlJobAction,
   createTopicIdeaAction,
@@ -41,6 +42,7 @@ const {
   getKeywordAnalytics,
   getKeywordTrend,
   getPublishTask,
+  getRuntimeBackupDownload,
   getRecentPublishes,
   getSourceAdapterContract,
   getSourceStrategy,
@@ -70,6 +72,7 @@ const {
   listPromptTemplates,
   listPublishRecords,
   listPublishTasks,
+  listRuntimeBackups,
   listAutomationRuns,
   listSourceAdapterContracts,
   listSourceStrategies,
@@ -106,7 +109,9 @@ const {
   logoutSessionAction,
   getPersistenceStatus,
   getRuntimeStatus,
-  resetRuntimeState
+  resetRuntimeState,
+  validateRuntimeBackupAction,
+  restoreRuntimeBackupAction
 } = await import("./mock-data.mjs");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1019,6 +1024,61 @@ async function handleApi(req, res, url) {
   if (req.method === "GET" && pathname === "/system/runtime") {
     sendJson(res, 200, ok(getAugmentedRuntimeStatus()));
     return;
+  }
+
+  if (req.method === "GET" && pathname === "/system/backups") {
+    sendJson(res, 200, ok(listRuntimeBackups(query)));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/system/backups") {
+    const body = await parseBody(req).catch(() => null);
+    if (body === null) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    sendJson(res, 201, ok(createRuntimeBackupAction(body || {})));
+    return;
+  }
+
+  if (req.method === "GET" && pathname.match(/^\/system\/backups\/[^/]+\/download$/)) {
+    const id = pathname.split("/")[3];
+    const artifact = getRuntimeBackupDownload(id);
+    if (!artifact) {
+      sendJson(res, 404, error("NOT_FOUND", "Runtime backup not found", 404).body);
+      return;
+    }
+    sendJson(res, 200, ok(artifact));
+    return;
+  }
+
+  if (req.method === "POST" && pathname.match(/^\/system\/backups\/[^/]+\/validate$/)) {
+    const id = pathname.split("/")[3];
+    const result = validateRuntimeBackupAction(id);
+    if (!result) {
+      sendJson(res, 404, error("NOT_FOUND", "Runtime backup not found", 404).body);
+      return;
+    }
+    sendJson(res, 200, ok(result));
+    return;
+  }
+
+  if (req.method === "POST" && pathname.match(/^\/system\/backups\/[^/]+\/restore$/)) {
+    const id = pathname.split("/")[3];
+    try {
+      const result = restoreRuntimeBackupAction(id);
+      if (!result) {
+        sendJson(res, 404, error("NOT_FOUND", "Runtime backup not found", 404).body);
+        return;
+      }
+      sendJson(res, 200, ok(result));
+      return;
+    } catch (runtimeError) {
+      const status = Number(runtimeError?.status || 400);
+      const message = runtimeError instanceof Error ? runtimeError.message : String(runtimeError);
+      sendJson(res, status, error("BACKUP_RESTORE_FAILED", message, status).body);
+      return;
+    }
   }
 
   if (req.method === "GET" && pathname === "/system/client-config") {

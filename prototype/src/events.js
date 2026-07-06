@@ -492,6 +492,26 @@ export function bindEvents(root, store, rerender, actions) {
       return;
     }
 
+    if (action === "create-runtime-backup") {
+      await actions.createRuntimeBackup();
+      return;
+    }
+
+    if (action === "validate-runtime-backup") {
+      await actions.validateRuntimeBackup(actionButton.dataset.backupId);
+      return;
+    }
+
+    if (action === "download-runtime-backup") {
+      await actions.downloadRuntimeBackup(actionButton.dataset.backupId);
+      return;
+    }
+
+    if (action === "restore-runtime-backup") {
+      await actions.restoreRuntimeBackup(actionButton.dataset.backupId);
+      return;
+    }
+
     if (action === "run-scheduler-tick") {
       await actions.runSchedulerTick(actionButton.dataset.force === "true");
       return;

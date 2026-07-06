@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -1831,6 +1832,7 @@ const providerInvocations = [];
 const connectorHealthChecks = [];
 const connectorDiagnostics = [];
 const auditEvents = [];
+const runtimeBackups = [];
 const maxAuditEvents = 500;
 
 function deepClone(value) {
@@ -2269,6 +2271,7 @@ function getSerializableState() {
     connectorHealthChecks,
     connectorDiagnostics,
     auditEvents,
+    runtimeBackups,
     automationRunSteps,
     keywords,
     keywordCrawlJobs,
@@ -2311,6 +2314,7 @@ function hydrateRuntimeState(payload = {}) {
   replaceArray(connectorHealthChecks, payload.connectorHealthChecks ?? connectorHealthChecks);
   replaceArray(connectorDiagnostics, payload.connectorDiagnostics ?? connectorDiagnostics);
   replaceArray(auditEvents, payload.auditEvents ?? auditEvents);
+  replaceArray(runtimeBackups, payload.runtimeBackups ?? runtimeBackups);
   replaceArray(automationRunSteps, payload.automationRunSteps ?? automationRunSteps);
   replaceArray(keywords, payload.keywords ?? keywords);
   replaceArray(keywordCrawlJobs, payload.keywordCrawlJobs ?? keywordCrawlJobs);
@@ -2373,6 +2377,58 @@ function recordAuditEvent(action, resourceType, resourceId, details = {}) {
     auditEvents.length = maxAuditEvents;
   }
   return event;
+}
+
+function getBackupSnapshot() {
+  const snapshot = deepClone(getSerializableState());
+  delete snapshot.runtimeBackups;
+  return snapshot;
+}
+
+function runtimeStateCounts(snapshot = getSerializableState()) {
+  return {
+    keywords: Array.isArray(snapshot.keywords) ? snapshot.keywords.length : 0,
+    topics: Array.isArray(snapshot.topicIdeas) ? snapshot.topicIdeas.length : 0,
+    articles: Array.isArray(snapshot.articles) ? snapshot.articles.length : 0,
+    tasks: Array.isArray(snapshot.publishTasks) ? snapshot.publishTasks.length : 0,
+    channels: Array.isArray(snapshot.channels) ? snapshot.channels.length : 0,
+    models: Array.isArray(snapshot.modelConfigs) ? snapshot.modelConfigs.length : 0,
+    strategies: Array.isArray(snapshot.sourceStrategies) ? snapshot.sourceStrategies.length : 0,
+    automation_runs: Array.isArray(snapshot.automationRuns) ? snapshot.automationRuns.length : 0,
+    audit_events: Array.isArray(snapshot.auditEvents) ? snapshot.auditEvents.length : 0
+  };
+}
+
+function serializeBackupSnapshot(snapshot) {
+  return JSON.stringify(snapshot);
+}
+
+function checksumBackupSnapshot(snapshot) {
+  return crypto.createHash("sha256").update(serializeBackupSnapshot(snapshot)).digest("hex");
+}
+
+function publicRuntimeBackup(backup) {
+  if (!backup) return null;
+  return {
+    id: backup.id,
+    name: backup.name,
+    version: backup.version,
+    schema_version: backup.schema_version,
+    checksum: backup.checksum,
+    size_bytes: backup.size_bytes,
+    counts: deepClone(backup.counts || {}),
+    state_keys: [...(backup.state_keys || [])],
+    created_at: backup.created_at
+  };
+}
+
+function getRuntimeBackupSummary() {
+  const items = runtimeBackups.map(publicRuntimeBackup);
+  return {
+    count: items.length,
+    latest: items[0] || null,
+    items: items.slice(0, 5)
+  };
 }
 
 const defaultStateSnapshot = deepClone(getSerializableState());
@@ -2454,6 +2510,7 @@ export function getRuntimeStatus() {
     },
     connectors: getConnectorSummary(),
     prompts: getPromptSummary(),
+    backups: getRuntimeBackupSummary(),
     counts: {
       keywords: keywords.length,
       topics: topicIdeas.length,
@@ -2484,6 +2541,112 @@ export function resetRuntimeState() {
   });
   persistState();
   return getRuntimeStatus();
+}
+
+export function listRuntimeBackups(query = {}) {
+  return paginate(runtimeBackups.map(publicRuntimeBackup), query.page, query.page_size || query.pageSize || 20);
+}
+
+export function createRuntimeBackupAction(payload = {}) {
+  const id = uniqueId("bkp");
+  const createdAt = nowIso();
+  const name = String(payload.name || `本地运行态备份 ${createdAt}`).trim();
+
+  recordAuditEvent("runtime.backup.create", "runtime_backup", id, {
+    name
+  });
+
+  const snapshot = getBackupSnapshot();
+  const checksum = checksumBackupSnapshot(snapshot);
+  const serialized = serializeBackupSnapshot(snapshot);
+  const backup = {
+    id,
+    name,
+    version: "0.6.0",
+    schema_version: 1,
+    checksum,
+    size_bytes: Buffer.byteLength(serialized),
+    counts: runtimeStateCounts(snapshot),
+    state_keys: Object.keys(snapshot).sort(),
+    snapshot,
+    created_at: createdAt
+  };
+
+  runtimeBackups.unshift(backup);
+  if (runtimeBackups.length > 20) {
+    runtimeBackups.length = 20;
+  }
+  persistState();
+  return publicRuntimeBackup(backup);
+}
+
+export function getRuntimeBackupDownload(backupId) {
+  const backup = runtimeBackups.find((item) => item.id === backupId);
+  if (!backup) return null;
+  return {
+    kind: "geo-pulse-runtime-backup",
+    schema_version: 1,
+    backup: publicRuntimeBackup(backup),
+    snapshot: deepClone(backup.snapshot)
+  };
+}
+
+export function validateRuntimeBackupAction(backupId) {
+  const backup = runtimeBackups.find((item) => item.id === backupId);
+  if (!backup) return null;
+
+  const issues = [];
+  if (!backup.snapshot || typeof backup.snapshot !== "object" || Array.isArray(backup.snapshot)) {
+    issues.push("snapshot_missing");
+  }
+  if (backup.snapshot && Object.prototype.hasOwnProperty.call(backup.snapshot, "runtimeBackups")) {
+    issues.push("snapshot_contains_runtime_backups");
+  }
+  const checksum = backup.snapshot ? checksumBackupSnapshot(backup.snapshot) : "";
+  if (checksum !== backup.checksum) {
+    issues.push("checksum_mismatch");
+  }
+
+  const result = {
+    valid: issues.length === 0,
+    backup_id: backup.id,
+    checksum,
+    expected_checksum: backup.checksum,
+    issues,
+    counts: deepClone(backup.counts || {})
+  };
+
+  recordAuditEvent("runtime.backup.validate", "runtime_backup", backup.id, {
+    valid: result.valid,
+    issues
+  });
+  persistState();
+  return result;
+}
+
+export function restoreRuntimeBackupAction(backupId) {
+  const backup = runtimeBackups.find((item) => item.id === backupId);
+  if (!backup) return null;
+
+  const validation = validateRuntimeBackupAction(backupId);
+  if (!validation?.valid) {
+    const error = new Error("Runtime backup is not valid");
+    error.status = 400;
+    throw error;
+  }
+
+  hydrateRuntimeState(deepClone(backup.snapshot));
+  recordAuditEvent("runtime.backup.restore", "runtime_backup", backup.id, {
+    name: backup.name,
+    checksum: backup.checksum,
+    counts: backup.counts
+  });
+  persistState();
+  return {
+    restored: true,
+    backup: publicRuntimeBackup(backup),
+    status: getRuntimeStatus()
+  };
 }
 
 initializePersistence();

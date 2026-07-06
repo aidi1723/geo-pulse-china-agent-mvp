@@ -10,6 +10,7 @@ import {
   createChannel as createChannelApi,
   createMediaSource as createMediaSourceApi,
   createModelConfig as createModelConfigApi,
+  createRuntimeBackup as createRuntimeBackupApi,
   createPublishTask as createPublishTaskApi,
   createKeywordCrawlJob,
   createTopicsFromKeywords,
@@ -17,6 +18,7 @@ import {
   generateInternationalGeoArtifacts as generateInternationalGeoArtifactsApi,
   generateTopicOutline as generateTopicOutlineApi,
   getArticleDetail,
+  getRuntimeBackupDownload as getRuntimeBackupDownloadApi,
   logoutSession as logoutSessionApi,
   resetRuntimeState as resetRuntimeStateApi,
   reconnectChannel as reconnectChannelApi,
@@ -28,6 +30,7 @@ import {
   runConnectorDiagnostic as runConnectorDiagnosticApi,
   runInternationalGeoAudit as runInternationalGeoAuditApi,
   runVisibilityCollection as runVisibilityCollectionApi,
+  restoreRuntimeBackup as restoreRuntimeBackupApi,
   saveAutomationProvider as saveAutomationProviderApi,
   saveAutomationConnector as saveAutomationConnectorApi,
   saveBrandProfile,
@@ -42,6 +45,7 @@ import {
   testAutomationConnector as testAutomationConnectorApi,
   updateBillingPlan as updateBillingPlanApi,
   updateTopic as updateTopicApi,
+  validateRuntimeBackup as validateRuntimeBackupApi,
   retryPublishTask,
   startPublishTask,
   updateKeyword,
@@ -1019,6 +1023,72 @@ const actions = {
       showNotice("运行态已重置为初始种子数据。");
     } catch (error) {
       setError(error instanceof Error ? error.message : "重置运行态失败");
+      rerender();
+    }
+  },
+  async createRuntimeBackup() {
+    try {
+      const result = await createRuntimeBackupApi({
+        name: `手动备份 ${new Date().toLocaleString("zh-CN")}`
+      });
+      await refreshData();
+      store.page = "settings";
+      store.tabs.settings = "brand";
+      showNotice(`已创建本地备份 ${result.name || result.id}。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "创建本地备份失败");
+      rerender();
+    }
+  },
+  async validateRuntimeBackup(backupId) {
+    if (!backupId) return;
+    try {
+      const result = await validateRuntimeBackupApi(backupId);
+      await refreshData();
+      showNotice(result.valid ? "备份校验通过。" : `备份校验未通过：${(result.issues || []).join("、")}`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "校验本地备份失败");
+      rerender();
+    }
+  },
+  async downloadRuntimeBackup(backupId) {
+    if (!backupId) return;
+    try {
+      const artifact = await getRuntimeBackupDownloadApi(backupId);
+      const filename = `${artifact.backup?.id || backupId}.json`;
+      const text = JSON.stringify(artifact, null, 2);
+      if (typeof window !== "undefined" && window.URL && typeof document !== "undefined") {
+        const blob = new Blob([text], { type: "application/json" });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      }
+      showNotice(`已准备下载 ${filename}。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "下载本地备份失败");
+      rerender();
+    }
+  },
+  async restoreRuntimeBackup(backupId) {
+    if (!backupId) return;
+    const confirmed =
+      typeof window === "undefined" ||
+      window.confirm("恢复会用该备份覆盖当前本地运行态，是否继续？");
+    if (!confirmed) return;
+    try {
+      await restoreRuntimeBackupApi(backupId);
+      store.data.articleDetails = {};
+      await refreshData();
+      store.page = "settings";
+      store.tabs.settings = "brand";
+      showNotice("已从本地备份恢复运行态。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "恢复本地备份失败");
       rerender();
     }
   },

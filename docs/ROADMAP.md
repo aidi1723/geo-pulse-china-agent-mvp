@@ -2,7 +2,7 @@
 
 ## Current State
 
-The project is a v0.5 single-user launch-ready workspace with connector diagnostics.
+The project is a v0.6 single-user launch-ready workspace with connector diagnostics and local backup/restore.
 
 Completed mock-first product areas:
 
@@ -18,11 +18,12 @@ Completed mock-first product areas:
 - Single-user complete workflows: workspace input, manual topics, topic editing, outline generation, manual articles, templates, exports, International GEO audit/artifacts, local billing plan switch, and logout action.
 - Integration-readiness workflows: connector config editing, connector connection tests, connector health checks, masked secrets, runtime connector health summaries, and connector audit events.
 - Connector diagnostics: readiness scoring, permission decision summaries, audit context, recommended actions, and recent connector run-step visibility.
+- Local runtime backup/restore: create, list, download, validate, restore, runtime backup summary, and audit events.
 - Open-source release docs and GPLv3 licensing.
 
 ## Near-Term Maintenance
 
-These items keep v0.5 healthy without changing its architecture:
+These items keep v0.6 healthy without changing its architecture:
 
 - Keep `npm run check` passing.
 - Expand `verify-mvp.mjs` when new behavior is added.
@@ -47,13 +48,13 @@ These can be built mock-first before real integrations:
 4. Minimal CI.
    - Run `npm run check` on pull requests.
 
-## Post-v0.5 Production Hardening
+## Post-v0.6 Production Hardening
 
 These are required before using the project as a real SaaS or broadly exposed hosted service:
 
 - Real authentication and role-based authorization.
 - Database-backed persistence and migrations.
-- Database-grade backup and restore procedures.
+- Database-grade backup and restore procedures beyond the current local JSON snapshot flow.
 - Production logging, metrics, and alerting.
 - Secret management outside source code and local JSON.
 - Real source adapters, providers, and connectors.
@@ -61,7 +62,7 @@ These are required before using the project as a real SaaS or broadly exposed ho
 - Incident response owner and security contact.
 - Data retention, deletion, and privacy policy.
 
-## Non-Goals For v0.5
+## Non-Goals For v0.6
 
 - Production multi-tenant hosting.
 - Real third-party credential management.
@@ -74,7 +75,7 @@ These are required before using the project as a real SaaS or broadly exposed ho
 
 ## Release Versioning
 
-Current public snapshot: `0.5.0`.
+Current public snapshot: `0.6.0`.
 
 Suggested version policy:
 
