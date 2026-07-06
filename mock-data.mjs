@@ -1171,6 +1171,11 @@ const internationalGeoState = {
     stages: ["Readiness audit", "Citation monitoring", "Content opportunity", "Entity coverage"]
   },
   engineVisibility: [],
+  site_audits: {
+    items: [],
+    latest: null
+  },
+  geo_assets: [],
   artifacts: {
     llms_txt: "",
     json_ld: "",
@@ -2386,6 +2391,7 @@ function hydrateRuntimeState(payload = {}) {
   replaceArray(exportJobs, payload.exportJobs ?? exportJobs);
   replaceObject(billingPlanState, payload.billingPlanState ?? billingPlanState);
   replaceObject(internationalGeoState, payload.internationalGeoState ?? internationalGeoState);
+  ensureInternationalGeoStateShape();
   replaceArray(mediaSources, payload.mediaSources ?? mediaSources);
   replaceArray(sourceStrategies, payload.sourceStrategies ?? sourceStrategies);
   replaceArray(automationRuns, payload.automationRuns ?? automationRuns);
@@ -5671,10 +5677,369 @@ export function getExportJobDownload(exportId) {
 }
 
 export function getInternationalGeoState() {
+  ensureInternationalGeoStateShape();
   return deepClone(internationalGeoState);
 }
 
+function ensureInternationalGeoStateShape() {
+  if (!internationalGeoState.site_audits || typeof internationalGeoState.site_audits !== "object") {
+    internationalGeoState.site_audits = { items: [], latest: null };
+  }
+  if (!Array.isArray(internationalGeoState.site_audits.items)) {
+    internationalGeoState.site_audits.items = [];
+  }
+  if (
+    internationalGeoState.site_audits.latest &&
+    !internationalGeoState.site_audits.items.some((item) => item.id === internationalGeoState.site_audits.latest.id)
+  ) {
+    internationalGeoState.site_audits.items.unshift(internationalGeoState.site_audits.latest);
+  }
+  if (!internationalGeoState.site_audits.latest && internationalGeoState.site_audits.items.length > 0) {
+    internationalGeoState.site_audits.latest = internationalGeoState.site_audits.items[0];
+  }
+  if (!Array.isArray(internationalGeoState.geo_assets)) {
+    internationalGeoState.geo_assets = [];
+  }
+  if (!internationalGeoState.summary || typeof internationalGeoState.summary !== "object") {
+    internationalGeoState.summary = {};
+  }
+  if (!internationalGeoState.artifacts || typeof internationalGeoState.artifacts !== "object") {
+    internationalGeoState.artifacts = {
+      llms_txt: "",
+      json_ld: "",
+      distribution_brief: ""
+    };
+  }
+}
+
+function normalizeSiteAuditUrl(value) {
+  const text = String(value || "").trim();
+  try {
+    const url = new URL(text);
+    if (!["http:", "https:"].includes(url.protocol)) return "";
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return "";
+  }
+}
+
+function siteAuditStatusFromChecks(checks = []) {
+  if (checks.some((item) => item.status === "failed")) return "blocked";
+  if (checks.some((item) => item.status === "warning")) return "review";
+  return "ready";
+}
+
+function siteAuditSummary(checks = [], generatedAssetCount = 0) {
+  return {
+    passed: checks.filter((item) => item.status === "passed").length,
+    warnings: checks.filter((item) => item.status === "warning").length,
+    failed: checks.filter((item) => item.status === "failed").length,
+    blockers: checks.filter((item) => item.status === "failed").length,
+    generated_assets: generatedAssetCount
+  };
+}
+
+function siteAuditScore(checks = []) {
+  const score =
+    100 -
+    checks.filter((item) => item.status === "warning").length * 6 -
+    checks.filter((item) => item.status === "failed").length * 18;
+  return Math.max(0, Math.min(100, score));
+}
+
+function buildSiteAuditChecks(input) {
+  const isHttps = String(input.website_url || "").startsWith("https://");
+  const competitorCount = normalizeStringArray(input.competitors).length;
+  const hasQuery = Boolean(String(input.primary_query || "").trim());
+  return [
+    {
+      id: "url_quality",
+      category: "technical",
+      label: "URL quality",
+      status: isHttps ? "passed" : "warning",
+      message: isHttps ? "Detected HTTPS from local input." : "Local input is not HTTPS.",
+      recommendation: isHttps
+        ? "Keep HTTPS enforced for all canonical pages."
+        : "Use HTTPS canonical URLs before public GEO work."
+    },
+    {
+      id: "robots_ai_access",
+      category: "crawler_access",
+      label: "AI crawler access",
+      status: "warning",
+      message:
+        "Recommended to verify live robots.txt for GPT, Gemini/Google, Claude, Perplexity, and Bing/Copilot crawlers.",
+      recommendation: "Allow intended AI/search crawlers and document crawler policy in robots.txt."
+    },
+    {
+      id: "sitemap",
+      category: "technical",
+      label: "Sitemap",
+      status: "warning",
+      message: "Recommended to verify sitemap.xml on the live site.",
+      recommendation: "Publish sitemap.xml and submit it to Google Search Console and Bing Webmaster Tools."
+    },
+    {
+      id: "llms_txt",
+      category: "ai_readability",
+      label: "llms.txt",
+      status: "warning",
+      message: "Recommended to install a concise /llms.txt generated from this audit.",
+      recommendation: "Add /llms.txt with product, audience, core pages, and canonical entity summary."
+    },
+    {
+      id: "json_ld",
+      category: "structured_data",
+      label: "JSON-LD",
+      status: "warning",
+      message: "Recommended to install Organization, Product/SoftwareApplication, and FAQPage schema.",
+      recommendation: "Use the generated JSON-LD assets and validate them before deployment."
+    },
+    {
+      id: "direct_answer",
+      category: "content",
+      label: "Direct Answer",
+      status: hasQuery ? "passed" : "warning",
+      message: hasQuery ? "Primary query is present in local input." : "Primary buyer/query prompt is missing.",
+      recommendation: "Place a direct answer to the buyer query within the first 100 words of target pages."
+    },
+    {
+      id: "fact_density",
+      category: "content",
+      label: "Fact density",
+      status: "warning",
+      message:
+        "Recommended to verify product parameters, tables, measurable claims, and source citations on live pages.",
+      recommendation: "Add specs, comparison tables, numbers, and sourced claims to increase citation usefulness."
+    },
+    {
+      id: "eeat",
+      category: "trust",
+      label: "E-E-A-T",
+      status: "warning",
+      message: "Recommended to verify author, company, credential, case, and support signals on live pages.",
+      recommendation: "Add named authors, company proof, security posture, case evidence, and update timestamps."
+    },
+    {
+      id: "third_party_validation",
+      category: "entity_validation",
+      label: "Third-party validation",
+      status: competitorCount > 0 ? "passed" : "warning",
+      message: competitorCount > 0 ? "Competitor context is present in local input." : "Competitor context is missing.",
+      recommendation:
+        "Build cross-validation signals on Reddit, Quora, LinkedIn, directories, partner pages, and industry forums."
+    }
+  ];
+}
+
+function jsonLdAsset(type, data) {
+  return JSON.stringify({ "@context": "https://schema.org", "@type": type, ...data }, null, 2);
+}
+
+export function listInternationalGeoSiteAudits(query = {}) {
+  ensureInternationalGeoStateShape();
+  const items = [...internationalGeoState.site_audits.items].sort((left, right) =>
+    String(right.created_at || "").localeCompare(String(left.created_at || ""))
+  );
+  return paginate(items, query.page, query.page_size);
+}
+
+export function getInternationalGeoSiteAudit(auditId) {
+  ensureInternationalGeoStateShape();
+  const audit = internationalGeoState.site_audits.items.find((item) => item.id === auditId);
+  return audit ? deepClone(audit) : null;
+}
+
+export function createInternationalGeoSiteAuditAction(payload = {}) {
+  ensureInternationalGeoStateShape();
+  const websiteUrl = normalizeSiteAuditUrl(
+    payload.website_url || internationalGeoState.input?.website_url || workspaceInput.website_url
+  );
+  if (!websiteUrl) {
+    const error = new Error("INVALID_SITE_URL");
+    error.code = "INVALID_SITE_URL";
+    throw error;
+  }
+
+  const productName = String(
+    payload.product_name || internationalGeoState.input?.product_name || workspaceInput.product_name || ""
+  ).trim();
+  if (!productName) {
+    const error = new Error("PRODUCT_NAME_REQUIRED");
+    error.code = "PRODUCT_NAME_REQUIRED";
+    throw error;
+  }
+
+  const input = {
+    website_url: websiteUrl,
+    product_name: productName,
+    target_market: String(payload.target_market || internationalGeoState.input?.target_market || "Global").trim(),
+    target_language: String(payload.target_language || internationalGeoState.input?.target_language || "en").trim(),
+    primary_query: String(payload.primary_query || internationalGeoState.input?.primary_query || "").trim(),
+    competitors: normalizeStringArray(payload.competitors || internationalGeoState.input?.competitors || [])
+  };
+  const checks = buildSiteAuditChecks(input);
+  const score = siteAuditScore(checks);
+  const status = siteAuditStatusFromChecks(checks);
+  const audit = {
+    id: uniqueId("sga"),
+    ...input,
+    score,
+    status,
+    summary: siteAuditSummary(checks, 0),
+    checks,
+    created_at: nowIso()
+  };
+
+  internationalGeoState.input = { ...internationalGeoState.input, ...input };
+  internationalGeoState.site_audits.items.unshift(audit);
+  internationalGeoState.site_audits.latest = audit;
+  internationalGeoState.summary = {
+    ...internationalGeoState.summary,
+    ai_ready_score: score,
+    llms_status: "待生成",
+    crawler_access: status === "blocked" ? "需复核" : "建议复核",
+    citation_opportunities: Math.max(8, 24 - input.competitors.length)
+  };
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.site_audit.create", "international_geo_site_audit", audit.id, {
+    website_url: audit.website_url,
+    product_name: audit.product_name,
+    target_market: audit.target_market,
+    score: audit.score,
+    status: audit.status
+  });
+  persistState();
+  return deepClone(audit);
+}
+
+export function generateInternationalGeoSiteAuditAssetsAction(auditId) {
+  ensureInternationalGeoStateShape();
+  const audit = getInternationalGeoSiteAudit(auditId);
+  if (!audit) return null;
+
+  const competitors = normalizeStringArray(audit.competitors);
+  const createdAt = nowIso();
+  const assets = [
+    {
+      id: uniqueId("geoasset"),
+      audit_id: audit.id,
+      asset_type: "llms_txt",
+      title: "llms.txt",
+      content_type: "text/markdown",
+      content: `# ${audit.product_name}\n\n${audit.product_name} helps ${audit.target_market || "global"} buyers evaluate ${audit.primary_query || "AI search visibility and GEO operations"}.\n\nOfficial site: ${audit.website_url}\nTarget language: ${audit.target_language || "en"}\n\nKey topics:\n- Generative Engine Optimization\n- AI search visibility\n- llms.txt\n- JSON-LD structured data\n- Direct-answer content\n\nCompetitors to compare against:\n${competitors.map((item) => `- ${item}`).join("\n") || "- Category leaders"}\n`,
+      created_at: createdAt
+    },
+    {
+      id: uniqueId("geoasset"),
+      audit_id: audit.id,
+      asset_type: "organization_json_ld",
+      title: "Organization JSON-LD",
+      content_type: "application/ld+json",
+      content: jsonLdAsset("Organization", {
+        name: audit.product_name,
+        url: audit.website_url,
+        knowsAbout: ["Generative Engine Optimization", "AI search visibility", "structured data"]
+      }),
+      created_at: createdAt
+    },
+    {
+      id: uniqueId("geoasset"),
+      audit_id: audit.id,
+      asset_type: "product_json_ld",
+      title: "Product JSON-LD",
+      content_type: "application/ld+json",
+      content: jsonLdAsset("SoftwareApplication", {
+        name: audit.product_name,
+        applicationCategory: "Generative Engine Optimization",
+        url: audit.website_url,
+        audience: audit.target_market || "Global B2B teams",
+        featureList: [
+          "Site GEO audit",
+          "llms.txt generation",
+          "JSON-LD recommendations",
+          "AI search content planning"
+        ]
+      }),
+      created_at: createdAt
+    },
+    {
+      id: uniqueId("geoasset"),
+      audit_id: audit.id,
+      asset_type: "faq_json_ld",
+      title: "FAQPage JSON-LD",
+      content_type: "application/ld+json",
+      content: jsonLdAsset("FAQPage", {
+        mainEntity: [
+          {
+            "@type": "Question",
+            name: `What is ${audit.product_name}?`,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: `${audit.product_name} is positioned for ${audit.primary_query || "GEO and AI search visibility"} in ${audit.target_market || "global"} markets.`
+            }
+          },
+          {
+            "@type": "Question",
+            name: `How should ${audit.product_name} improve AI search visibility?`,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text:
+                "Install llms.txt, add Organization/Product/FAQ JSON-LD, publish direct-answer pages, and build third-party validation signals."
+            }
+          }
+        ]
+      }),
+      created_at: createdAt
+    },
+    {
+      id: uniqueId("geoasset"),
+      audit_id: audit.id,
+      asset_type: "article_brief",
+      title: "GEO Article Brief",
+      content_type: "text/markdown",
+      content: `# Direct-answer article brief\n\nPrimary query: ${audit.primary_query || "AI search visibility"}\n\n## Direct answer\n${audit.product_name} helps buyers solve ${audit.primary_query || "GEO visibility"} by combining clear entity definitions, structured data, factual proof, and citation-ready content.\n\n## Sections\n1. Direct answer upfront\n2. Product/entity definition\n3. Comparison table against ${competitors.join(", ") || "category alternatives"}\n4. Product facts and measurable claims\n5. FAQ block\n6. Source and author proof\n`,
+      created_at: createdAt
+    },
+    {
+      id: uniqueId("geoasset"),
+      audit_id: audit.id,
+      asset_type: "distribution_brief",
+      title: "Distribution Brief",
+      content_type: "text/markdown",
+      content:
+        "# Distribution brief\n\nPrioritize:\n- Official resource center\n- FAQ page linked from llms.txt\n- Comparison page\n- LinkedIn article\n- Reddit or Quora answer where allowed\n- Industry directory or partner profile\n- GitHub/docs page for technical proof\n\nUse the same entity name, canonical URL, and direct-answer wording across channels.\n",
+      created_at: createdAt
+    }
+  ];
+
+  internationalGeoState.geo_assets = [
+    ...assets,
+    ...internationalGeoState.geo_assets.filter((item) => item.audit_id !== audit.id)
+  ];
+  const storedAudit = internationalGeoState.site_audits.items.find((item) => item.id === audit.id);
+  if (storedAudit) {
+    storedAudit.summary = siteAuditSummary(storedAudit.checks, assets.length);
+    internationalGeoState.site_audits.latest = storedAudit;
+  }
+  internationalGeoState.artifacts = {
+    llms_txt: assets.find((item) => item.asset_type === "llms_txt")?.content || "",
+    json_ld: assets.find((item) => item.asset_type === "product_json_ld")?.content || "",
+    distribution_brief: assets.find((item) => item.asset_type === "distribution_brief")?.content || ""
+  };
+  internationalGeoState.summary.llms_status = "已生成";
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.assets.generate", "international_geo_site_audit", audit.id, {
+    website_url: audit.website_url,
+    product_name: audit.product_name,
+    asset_count: assets.length
+  });
+  persistState();
+  return { audit: getInternationalGeoSiteAudit(audit.id), items: deepClone(assets) };
+}
+
 export function saveInternationalGeoInputAction(patch = {}) {
+  ensureInternationalGeoStateShape();
   internationalGeoState.input = {
     ...internationalGeoState.input,
     website_url: String(patch.website_url || internationalGeoState.input.website_url || "").trim(),
@@ -5694,6 +6059,7 @@ export function saveInternationalGeoInputAction(patch = {}) {
 }
 
 export function runInternationalGeoAuditAction() {
+  createInternationalGeoSiteAuditAction(internationalGeoState.input);
   const input = internationalGeoState.input;
   const hasUrl = /^https?:\/\//.test(input.website_url || "");
   const competitorCount = normalizeStringArray(input.competitors).length;
@@ -5736,31 +6102,10 @@ export function runInternationalGeoAuditAction() {
 }
 
 export function generateInternationalGeoArtifactsAction() {
-  const input = internationalGeoState.input;
-  const productName = input.product_name || workspaceInput.product_name || "GEO Pulse";
-  internationalGeoState.artifacts = {
-    llms_txt: `# ${productName}\n\n${productName} helps teams run domestic and international Generative Engine Optimization workflows.\n\nPrimary site: ${input.website_url || workspaceInput.website_url}\nPrimary query: ${input.primary_query || "AI search visibility"}\nTarget market: ${input.target_market || "Global"}\n\nKey entities: llms.txt, JSON-LD, AI search visibility, ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude, Microsoft Copilot.`,
-    json_ld: `<script type="application/ld+json">\n${JSON.stringify(
-      {
-        "@context": "https://schema.org",
-        "@type": "SoftwareApplication",
-        name: productName,
-        applicationCategory: "AI SEO and GEO operations",
-        url: input.website_url || workspaceInput.website_url,
-        audience: input.target_market || "Global B2B teams",
-        featureList: ["llms.txt generation", "JSON-LD recommendations", "AI engine visibility monitoring"]
-      },
-      null,
-      2
-    )}\n</script>`,
-    distribution_brief: `${productName} should distribute direct-answer articles, comparison pages, FAQ pages, Reddit/Quora answers, and partner directory profiles for ${input.target_market || "global"} AI-search visibility.`
-  };
-  internationalGeoState.summary.llms_status = "已生成";
-  internationalGeoState.updated_at = nowIso();
-  recordAuditEvent("international_geo.artifacts.generate", "international_geo", "single-user", {
-    product_name: productName
-  });
-  persistState();
+  ensureInternationalGeoStateShape();
+  const latestAudit =
+    internationalGeoState.site_audits.latest || internationalGeoState.site_audits.items[0] || createInternationalGeoSiteAuditAction(internationalGeoState.input);
+  generateInternationalGeoSiteAuditAssetsAction(latestAudit.id);
   return deepClone(internationalGeoState.artifacts);
 }
 
