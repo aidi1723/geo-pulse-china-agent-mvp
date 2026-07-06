@@ -10,6 +10,8 @@ http://localhost:3000/api/v1
 
 All responses are JSON unless the route explicitly returns CSV.
 
+Operational routes such as `/healthz`, `/robots.txt`, `/sitemap.xml`, `/llms.txt`, and `/favicon.ico` are served outside the `/api/v1` namespace.
+
 ## Response Shape
 
 Successful JSON responses:
@@ -192,3 +194,13 @@ When adding routes:
 4. Add static preview route data when the UI depends on it.
 5. Add assertions to `verify-mvp.mjs`.
 6. Update this reference and README API list.
+
+## Operational Routes
+
+These routes are not part of the JSON API contract:
+
+- `GET /healthz`: returns safe runtime status including `ok`, package version, environment, persistence summary, scheduler status, and timestamp.
+- `GET /robots.txt`: returns crawler policy and sitemap location.
+- `GET /sitemap.xml`: returns canonical XML sitemap entries.
+- `GET /llms.txt`: returns an LLM-readable product summary for GEO/AI search crawlers.
+- `GET /favicon.ico`: returns a small icon response so production logs do not fill with favicon 404s.

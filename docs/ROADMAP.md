@@ -2,7 +2,7 @@
 
 ## Current State
 
-The project is an open-source-ready local MVP.
+The project is a v0.2 single-tenant deployable workspace.
 
 Completed mock-first product areas:
 
@@ -13,11 +13,13 @@ Completed mock-first product areas:
 - Automation provider registry, connector registry, connector-scoped permissions, automation runs, scheduler, retry, and runtime status.
 - Visibility analytics, mock SERP collection, competitor share-of-voice, audience segments, marketing campaigns, and campaign runs.
 - Audit events, audit CSV export, local persistence, reset, security headers, body limits, rate limits, and remote access guard.
+- International GEO workspace for overseas AI search readiness, content generation planning, distribution execution, and AI engine visibility.
+- Production guardrails, `/healthz`, `robots.txt`, `sitemap.xml`, `llms.txt`, `favicon.ico`, Docker, Docker Compose, and deployment documentation.
 - Open-source release docs and GPLv3 licensing.
 
 ## Near-Term Maintenance
 
-These items keep the MVP healthy without changing its architecture:
+These items keep v0.2 healthy without changing its architecture:
 
 - Keep `npm run check` passing.
 - Expand `verify-mvp.mjs` when new behavior is added.
@@ -39,19 +41,16 @@ These can be built mock-first before real integrations:
 3. Prompt regression dataset.
    - Store sample inputs, expected criteria, generated outputs, and quality score history.
 
-4. Deployment profile documentation.
-   - Add Docker or process-manager examples only after authentication and persistence choices are explicit.
-
-5. Minimal CI.
+4. Minimal CI.
    - Run `npm run check` on pull requests.
 
-## Productionization Backlog
+## Post-v0.2 Production Hardening
 
-These are required before using the project as a real hosted service:
+These are required before using the project as a real SaaS or broadly exposed hosted service:
 
 - Real authentication and role-based authorization.
 - Database-backed persistence and migrations.
-- Backup and restore procedures.
+- Database-grade backup and restore procedures.
 - Production logging, metrics, and alerting.
 - Secret management outside source code and local JSON.
 - Real source adapters, providers, and connectors.
@@ -59,7 +58,7 @@ These are required before using the project as a real hosted service:
 - Incident response owner and security contact.
 - Data retention, deletion, and privacy policy.
 
-## Non-Goals For The MVP
+## Non-Goals For v0.2
 
 - Production multi-tenant hosting.
 - Real third-party credential management.
@@ -70,7 +69,7 @@ These are required before using the project as a real hosted service:
 
 ## Release Versioning
 
-Current public snapshot: `0.1.0`.
+Current public snapshot: `0.2.0`.
 
 Suggested version policy:
 

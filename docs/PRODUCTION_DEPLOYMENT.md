@@ -2,6 +2,8 @@
 
 This guide covers the v0.2 single-tenant deployment profile for GEO Pulse.
 
+For stage-level scope and closing language, see [v0.2 Stage Closeout](STAGE_V0_2_CLOSEOUT.md).
+
 ## Scope
 
 This deployment profile is suitable for one organization running one controlled instance. It is not a multi-tenant SaaS profile.
@@ -139,6 +141,10 @@ If Docker is available:
 ```bash
 docker build -t geo-pulse:v0.2 .
 ```
+
+## Stage Closeout Language
+
+GEO Pulse v0.2 is ready for controlled single-tenant deployment. It includes production startup guardrails, health checks, GEO/SEO static files, Docker packaging, and documentation for backup and rollback. It must still be protected by an external access layer and should not be presented as a complete SaaS platform until built-in login, RBAC, durable database storage, real integrations, monitoring, and multi-tenant controls are implemented.
 
 ## Rollback
 

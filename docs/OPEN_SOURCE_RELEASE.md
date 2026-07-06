@@ -12,7 +12,7 @@ This is a project-owner compliance note, not legal advice.
 
 ## Current Readiness
 
-Ready for GitHub publication as a local, mock-first MVP after owner review.
+Ready for GitHub publication as a v0.2 single-tenant deployable workspace after owner review.
 
 Verified release gate:
 
@@ -50,6 +50,7 @@ verify-mvp: OK
 - Confirm `data/geo-pulse-state.json` is not committed.
 - Confirm `.DS_Store` and local environment files are not committed.
 - Run `npm run check`.
+- Review [v0.2 Stage Closeout](STAGE_V0_2_CLOSEOUT.md) for deployment boundary and remaining SaaS gaps.
 - Create a clean Git history from the intended public root.
 
 ## Suggested GitHub Setup
@@ -76,7 +77,7 @@ Do not publish until the owner has reviewed the pre-publish checklist.
 - Enable private vulnerability reporting.
 - Protect the `main` branch after the first push.
 - Require `npm run check` or equivalent CI before merging.
-- Add repository topics: `geo`, `seo`, `agent`, `content-automation`, `nodejs`, `mvp`.
+- Add repository topics: `geo`, `seo`, `agent`, `content-automation`, `nodejs`, `ai-search`.
 - Use GitHub license detection to confirm GPLv3.
 
 ## Privacy Incident Handling
@@ -87,6 +88,6 @@ For a new repository with no external contributors, prefer replacing the public 
 
 ## Release Notes Draft
 
-GEO Pulse China Agent MVP is a zero-dependency, mock-first admin prototype for GEO/SEO content operations around agent workflows. It includes source ingestion contracts, automation providers, connector governance, publishing operations, visibility metrics, campaign loops, audit logs, and local verification.
+GEO Pulse China Agent v0.2 is a zero-dependency GEO/SEO operations workspace for agent content workflows. It includes source ingestion contracts, automation providers, connector governance, publishing operations, visibility metrics, campaign loops, audit logs, international GEO planning, production guardrails, and local verification.
 
-The first public snapshot is intended for review, experimentation, and extension. It is not a production-hosted service without additional authentication, persistence, deployment, and operations work.
+The current snapshot is suitable for controlled single-tenant deployment behind an external access layer. It is not a complete SaaS platform without built-in login, RBAC, durable database storage, real third-party integrations, monitoring, and multi-tenant operations.

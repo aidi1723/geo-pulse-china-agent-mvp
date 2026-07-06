@@ -2,7 +2,7 @@
 
 ## Project Shape
 
-GEO Pulse China Agent MVP is intentionally small:
+GEO Pulse China Agent v0.2 is intentionally small:
 
 - Runtime: Node.js ESM.
 - Dependencies: none.
@@ -11,6 +11,7 @@ GEO Pulse China Agent MVP is intentionally small:
 - Provider adapter registry: `automation-providers.mjs`.
 - Browser prototype: `prototype/`.
 - Regression gate: `verify-mvp.mjs`.
+- Deployment artifacts: `Dockerfile`, `docker-compose.yml`, `.env.example`.
 
 The codebase favors explicit mock contracts over framework abstractions. Keep that style unless a maintainer approves a larger change.
 
@@ -42,7 +43,10 @@ Runtime state is written to `data/geo-pulse-state.json` by default. The `data/` 
 
 - `PORT`: local server port, default `3000`.
 - `GEO_HOST`: bind host. Leave empty for local demo.
+- `NODE_ENV=production`: enables production startup validation.
+- `GEO_PUBLIC_SITE_URL`: public canonical site URL for generated `robots.txt`, `sitemap.xml`, and `llms.txt`.
 - `GEO_DATA_FILE`: custom persistence file path.
+- `GEO_ENABLE_PERSISTENCE`: enable or disable local JSON persistence.
 - `GEO_INTERNAL_API_KEY`: fixed write API key.
 - `GEO_ALLOW_REMOTE_ACCESS=1`: enable non-local access. Requires `GEO_INTERNAL_API_KEY`.
 - `GEO_ENABLE_AUTOMATION_SCHEDULER=1`: enable scheduler.
@@ -93,6 +97,7 @@ When behavior changes, update docs in the same change:
 
 - Commands or environment variables: `README.md` and this guide.
 - API routes: `README.md` and `API_REFERENCE.md`.
+- Operational routes or deployment behavior: `README.md`, `PRODUCTION_DEPLOYMENT.md`, and `STAGE_V0_2_CLOSEOUT.md`.
 - Extension seams: `ARCHITECTURE.md` and `EXTENDING.md`.
 - Security behavior: `SECURITY.md`, `MAINTENANCE.md`, and `reports/security-hardening-log.md`.
 - Release-visible changes: `CHANGELOG.md`.

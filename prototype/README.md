@@ -24,6 +24,7 @@
 - Analytics
 - Account & Billing
 - Settings
+- International GEO
 
 ## 当前特性
 
@@ -46,6 +47,8 @@
 - 远程 provider 支持 `mock://` 演示模式，以及真实 HTTP endpoint 的超时、重试和回退
 - provider 页可查看最近调用日志，区分 remote、fallback_local 和 local 执行模式
 - 关键词、内容、分发、设置核心状态支持 URL hash 恢复
+- 国际 GEO 支持海外 AI 搜索可读性、文章生成与分发规划，以及 ChatGPT Search、Perplexity、Google AI Overviews、Gemini、Claude、Copilot 等引擎监测模型展示
+- v0.2 服务模式提供 `/healthz`、`/robots.txt`、`/sitemap.xml`、`/llms.txt` 和 `/favicon.ico`
 
 ## 当前结构
 
@@ -68,3 +71,4 @@
 2. 把 API stub 替换成真实持久化数据层
 3. 把关键词、文章、发布任务改成真实异步状态
 4. 把当前内置调度器替换成独立 worker / queue
+5. 接入真实国际 GEO 监测、内容分发和第三方平台 API

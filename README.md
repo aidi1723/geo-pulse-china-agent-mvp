@@ -1,13 +1,13 @@
-# GEO Pulse China Agent MVP
+# GEO Pulse China Agent
 
 License: GPL-3.0-only
 
-Status: local, mock-first MVP ready for open-source publication after repository owner review.
+Status: v0.2 single-tenant deployable workspace, ready for controlled deployment after repository owner review.
 
 这个仓库现在包含两部分内容：
 
 1. 中国智能体 GEO 平台的一期产品方案、后台设计和交互文档
-2. 一个可直接运行的最小全栈 MVP 骨架
+2. 一个可直接运行、可单租户部署的最小全栈服务骨架
 
 ## 目录说明
 
@@ -38,7 +38,7 @@ Status: local, mock-first MVP ready for open-source publication after repository
 - `中国智能体GEO平台-*.md`
   产品定位、落地计划、后台可开发稿、接口与数据表、低保真交互说明
 
-## 运行 MVP
+## 运行项目
 
 直接启动本地服务：
 
@@ -109,6 +109,19 @@ GEO_INTERNAL_API_KEY=local-dev-key node server.mjs
 - HTML 静态页：`X-Content-Type-Options: nosniff`、`Cache-Control: no-store`、`Content-Security-Policy`
 - 其他静态资源：`X-Content-Type-Options: nosniff`
 
+## 生产部署
+
+v0.2 支持单租户受控部署。生产环境必须配置固定的 `GEO_INTERNAL_API_KEY`，并在公网暴露前增加反向代理认证、VPN、IP allowlist 或其他外部访问控制。
+
+生产部署入口：
+
+- 部署指南：[docs/PRODUCTION_DEPLOYMENT.md](docs/PRODUCTION_DEPLOYMENT.md)
+- 阶段收口：[docs/STAGE_V0_2_CLOSEOUT.md](docs/STAGE_V0_2_CLOSEOUT.md)
+- 环境变量示例：[.env.example](.env.example)
+- Docker Compose：[docker-compose.yml](docker-compose.yml)
+
+v0.2 不是完整 SaaS：暂不内置用户登录、RBAC、多租户隔离、支付计费、生产数据库迁移和真实第三方发布凭据。
+
 ## 工程校验
 
 本地可以直接运行一轮基础验收：
@@ -129,6 +142,7 @@ npm run check
 - 开发指南：[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
 - 架构说明：[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - 生产部署指南：[docs/PRODUCTION_DEPLOYMENT.md](docs/PRODUCTION_DEPLOYMENT.md)
+- v0.2 阶段收口：[docs/STAGE_V0_2_CLOSEOUT.md](docs/STAGE_V0_2_CLOSEOUT.md)
 - API 参考：[docs/API_REFERENCE.md](docs/API_REFERENCE.md)
 - 扩展指南：[docs/EXTENDING.md](docs/EXTENDING.md)
 - 维护指南：[docs/MAINTENANCE.md](docs/MAINTENANCE.md)
@@ -174,6 +188,8 @@ npm run check
 - 设置页运行态面板，可查看本地持久化状态并重置回初始种子数据
 - 可执行的本地验收脚本
 - 根文档、可开发稿、接口设计和低保真交互说明
+- 国际 GEO 板块，覆盖海外 AI 搜索可读性、文章生成与分发规划、ChatGPT Search、Perplexity、Google AI Overviews、Gemini、Claude、Copilot 等引擎可见度监测模型
+- v0.2 单租户生产部署基础，包括 `/healthz`、`/robots.txt`、`/sitemap.xml`、`/llms.txt`、Docker、Docker Compose、`.env.example` 和部署文档
 
 ## 当前 API 范围
 
@@ -222,6 +238,16 @@ npm run check
 - `/api/v1/channels/:id/reconnect`
 - `/api/v1/articles/from-topic`
 - `/api/v1/keywords/:id/actions`
+
+## 运维端点
+
+这些端点不在 `/api/v1` 下，用于部署、健康检查和 GEO/SEO 基础可读性：
+
+- `/healthz`
+- `/robots.txt`
+- `/sitemap.xml`
+- `/llms.txt`
+- `/favicon.ico`
 
 ## 旧审计工具
 

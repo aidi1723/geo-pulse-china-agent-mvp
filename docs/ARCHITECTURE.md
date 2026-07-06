@@ -2,13 +2,13 @@
 
 ## Overview
 
-GEO Pulse China Agent MVP is a local, zero-dependency Node.js application with a browser admin prototype. It is mock-first by design: the product shape, API contracts, workflow state, security boundaries, and operational UI are represented locally before real third-party services are connected.
+GEO Pulse China Agent v0.2 is a zero-dependency Node.js application with a browser admin workspace. It remains mock-first for third-party integrations, but it now includes a single-tenant deployment profile, production startup guardrails, health checks, and GEO/SEO static files for controlled server use.
 
 ## Runtime Components
 
 | Area | File or Directory | Responsibility |
 | --- | --- | --- |
-| HTTP server | `server.mjs` | Serves the prototype, exposes `/api/v1/*`, applies security headers, mutation authorization, CORS, rate limiting, body limits, SSRF checks, scheduler controls, and static file handling. |
+| HTTP server | `server.mjs` | Serves the prototype, exposes `/api/v1/*`, applies security headers, mutation authorization, CORS, rate limiting, body limits, SSRF checks, scheduler controls, health checks, and static GEO/SEO routes. |
 | Mock domain data | `mock-data.mjs` | Stores seed data, local state mutation actions, API read models, persistence hydration, audit events, provider invocation logs, connector permissions, source adapter contracts, and workflow actions. |
 | Provider registry | `automation-providers.mjs` | Defines keyword discovery, topic planning, and article generation provider contracts, local fallback behavior, remote execution validation, masking, and provider config persistence helpers. |
 | Prototype shell | `prototype/` | Browser admin prototype with hash routing, state store, API client, static preview mode, UI pages, and shared utilities. |
@@ -32,6 +32,7 @@ GEO Pulse China Agent MVP is a local, zero-dependency Node.js application with a
 | Publishing | Channels, publish tasks, task items, calendar metadata, variants, readiness checks, approval guard, records. | `mock-data.mjs`, `prototype/src/pages/distribution.js` |
 | Automation operations | Provider registry, connector registry, permission matrix, automation run steps, scheduler tick, retries. | `automation-providers.mjs`, `mock-data.mjs`, `prototype/src/pages/settings.js` |
 | Analytics | Visibility tracking, SERP snapshots, competitor domains, audience segments, campaign runs. | `mock-data.mjs`, `prototype/src/pages/analytics.js` |
+| International GEO | Overseas AI search readiness, article and distribution planning, engine visibility, community citation surfaces. | `prototype/src/pages/international.js` |
 | Security and governance | API key guard, audit events, CSV export safety, connector-scoped permissions, endpoint restrictions. | `server.mjs`, `mock-data.mjs`, `reports/security-hardening-log.md` |
 
 ## Persistence Model
@@ -45,17 +46,28 @@ Persistence is local JSON, not a production database.
 
 ## Security Model
 
-The MVP uses local-first safeguards:
+v0.2 uses local-first safeguards plus production startup guardrails:
 
 - Remote access is disabled unless `GEO_ALLOW_REMOTE_ACCESS=1`.
 - Remote access requires a fixed `GEO_INTERNAL_API_KEY`.
+- `NODE_ENV=production` fails startup when `GEO_INTERNAL_API_KEY` is missing or shorter than 24 characters.
 - Mutation APIs require `X-GEO-API-Key`.
 - Sensitive reads such as audit events require authorization when remote access is enabled.
 - Provider endpoints are restricted to `mock://` and `https://`, with loopback/private/link-local targets blocked.
 - CSV audit export neutralizes spreadsheet formula prefixes.
 - Connector actions are evaluated against scoped permission metadata before visibility collection or campaign execution.
 
-These safeguards are not a replacement for production authentication, authorization, database controls, monitoring, and incident response.
+These safeguards are not a replacement for built-in user login, RBAC, database controls, monitoring, incident response, or an external access layer.
+
+## Operational Routes
+
+Outside `/api/v1`, the server exposes deployment and GEO/SEO routes:
+
+- `GET /healthz`
+- `GET /robots.txt`
+- `GET /sitemap.xml`
+- `GET /llms.txt`
+- `GET /favicon.ico`
 
 ## UI Architecture
 

@@ -25,7 +25,7 @@
 **Files:**
 - Modify: `verify-mvp.mjs`
 
-- [ ] **Step 1: Add failing production checks**
+- [x] **Step 1: Add failing production checks**
 
 Add tests that verify:
 
@@ -75,7 +75,7 @@ const favicon = await httpRequest(port, "/favicon.ico");
 assert.equal(favicon.status, 200, "favicon should be served");
 ```
 
-- [ ] **Step 2: Run verification and confirm red**
+- [x] **Step 2: Run verification and confirm red**
 
 Run:
 
@@ -90,7 +90,7 @@ Expected: FAIL before implementation, because `/healthz`, production validation,
 **Files:**
 - Modify: `server.mjs`
 
-- [ ] **Step 1: Add production config helpers**
+- [x] **Step 1: Add production config helpers**
 
 Add constants:
 
@@ -109,7 +109,7 @@ if (isProduction && explicitInternalApiKey.length < minProductionApiKeyLength) {
 }
 ```
 
-- [ ] **Step 2: Add content types**
+- [x] **Step 2: Add content types**
 
 Extend `contentTypes`:
 
@@ -119,7 +119,7 @@ Extend `contentTypes`:
 ".xml": "application/xml; charset=utf-8"
 ```
 
-- [ ] **Step 3: Add safe text response helper**
+- [x] **Step 3: Add safe text response helper**
 
 Add:
 
@@ -134,7 +134,7 @@ function sendText(res, status, content, contentType = "text/plain; charset=utf-8
 }
 ```
 
-- [ ] **Step 4: Add health and static route generators**
+- [x] **Step 4: Add health and static route generators**
 
 Add route helpers for:
 
@@ -146,7 +146,7 @@ Add route helpers for:
 
 The favicon can be a tiny generated ICO buffer or a minimal SVG served only if using a route. Prefer ICO response for `/favicon.ico`.
 
-- [ ] **Step 5: Run verification**
+- [x] **Step 5: Run verification**
 
 Run:
 
@@ -166,11 +166,11 @@ Expected: PASS through new server checks, except Docker/docs checks are not yet 
 - Modify: `docs/README.md`
 - Modify: `README.md`
 
-- [ ] **Step 1: Add `.env.example`**
+- [x] **Step 1: Add `.env.example`**
 
 Include documented variables with safe placeholder values and comments.
 
-- [ ] **Step 2: Add Docker artifacts**
+- [x] **Step 2: Add Docker artifacts**
 
 Create a Dockerfile that:
 
@@ -186,7 +186,7 @@ Create compose file with:
 - persistent `./data:/app/data`
 - healthcheck hitting `/healthz`
 
-- [ ] **Step 3: Add deployment docs**
+- [x] **Step 3: Add deployment docs**
 
 Document:
 
@@ -198,7 +198,7 @@ Document:
 - verification checklist
 - rollback notes
 
-- [ ] **Step 4: Link docs**
+- [x] **Step 4: Link docs**
 
 Add production guide links to `README.md` and `docs/README.md`.
 
@@ -207,7 +207,7 @@ Add production guide links to `README.md` and `docs/README.md`.
 **Files:**
 - Verify all changed files.
 
-- [ ] **Step 1: Run full verification**
+- [x] **Step 1: Run full verification**
 
 Run:
 
@@ -217,7 +217,7 @@ npm run check
 
 Expected: PASS.
 
-- [ ] **Step 2: Run SEO static check**
+- [x] **Step 2: Run SEO static check**
 
 Run:
 
@@ -227,7 +227,7 @@ node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .
 
 Expected: no robots or sitemap warnings.
 
-- [ ] **Step 3: Run HTTP smoke against live server**
+- [x] **Step 3: Run HTTP smoke against live server**
 
 Run curl checks for:
 
@@ -240,7 +240,7 @@ Run curl checks for:
 
 Expected: all return 200.
 
-- [ ] **Step 4: Docker check**
+- [x] **Step 4: Docker check**
 
 Run Docker build if Docker is available:
 
@@ -250,7 +250,7 @@ docker build -t geo-pulse:v0.2 .
 
 If Docker is unavailable, record that as an environment limitation, not a code pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Commit production v0.2 slice:
 
@@ -264,3 +264,11 @@ git commit -m "feat: add production v0.2 readiness"
 - Spec coverage: environment config, production validation, health, robots, sitemap, llms, favicon, Docker artifacts, deployment docs, security baseline, and verification are covered.
 - Placeholder scan: no placeholders are required in the plan.
 - Type consistency: health and static routes use plain Node server response helpers and existing process env config.
+
+## Completion Evidence
+
+- Commit: `57fb87b feat: add production v0.2 readiness`
+- `npm run check`: `verify-mvp: OK`
+- Google SEO static scan: `Errors: 0`, `Warnings: 0`
+- Docker image: `geo-pulse:v0.2` built successfully
+- Production container smoke: `GET /healthz` returned `ok: true`
