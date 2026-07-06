@@ -2093,6 +2093,26 @@ function runInternationalGeoUiChecks() {
   );
   assert.match(html, /Direct Answer/, "International GEO page should render Direct Answer guidance");
   assert.match(html, /Entity Coverage/, "International GEO page should render entity coverage");
+  assert.match(
+    html,
+    /AI 引擎收录与推荐矩阵/,
+    "International GEO page should render the engine inclusion matrix"
+  );
+  assert.match(html, /OAI-SearchBot/, "International GEO page should render OpenAI crawler coverage");
+  assert.match(html, /Claude-SearchBot/, "International GEO page should render Claude crawler coverage");
+  assert.match(html, /PerplexityBot/, "International GEO page should render Perplexity crawler coverage");
+  assert.match(html, /Bingbot/, "International GEO page should render Bing crawler coverage");
+  assert.match(
+    html,
+    /Prompt 推荐监测/,
+    "International GEO page should render prompt recommendation monitoring"
+  );
+  assert.match(html, /Content Generation Tasks/, "International GEO page should render content tasks");
+  assert.match(
+    html,
+    /Distribution Execution Plan/,
+    "International GEO page should render distribution execution planning"
+  );
 }
 
 function runPersistenceChecks() {

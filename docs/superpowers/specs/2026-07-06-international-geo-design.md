@@ -17,6 +17,14 @@ It should help operators answer four questions:
 3. Which international keyword or prompt opportunities should become content, FAQ, comparison, product entity, or statistics-rich pages?
 4. Which external entity channels need coverage, such as Reddit, Quora, Wikipedia, LinkedIn, Medium, YouTube, industry directories, or vertical forums?
 
+The unified workflow is:
+
+1. Input a URL, product, target market, competitors, and target AI engines.
+2. Audit crawl/index readiness for GPT, Gemini / Google AI Overviews, Claude, Perplexity, and Copilot / Bing.
+3. Generate prompt monitoring sets and detect whether the brand is mentioned, cited, or recommended.
+4. Generate content tasks mapped to the AI engine, target prompt, page type, and distribution channel.
+5. Track distribution and entity coverage across owned pages and third-party platforms.
+
 ## Navigation
 
 Add a new left navigation item:
@@ -55,15 +63,27 @@ The page should include these zones:
    - Engines: ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude.
    - Fields: market, brand mentions, citation count, share of voice, cited URL, competitor gap, last checked time, status.
 
-4. International Keyword Opportunities
+4. AI Engine Inclusion and Recommendation Matrix
+   - Engines: GPT / ChatGPT Search, Gemini / Google AI Overviews, Claude, Perplexity, Copilot / Bing.
+   - Fields: crawler or bot, crawler access, index source, inclusion signal, recommendation signal, optimization action.
+   - Bot examples should include `OAI-SearchBot`, `Googlebot`, `Claude-SearchBot`, `PerplexityBot`, and `Bingbot`.
+
+5. Prompt Recommendation Monitoring
+   - Fields: prompt, engine, market, brand mentioned, cited URL, recommended rank, competitors, next action.
+
+6. International Keyword Opportunities
    - Fields: keyword or prompt, market, language, intent, recommended format, citation potential, recommended action.
    - Content concepts should include Direct Answer Upfront, statistics/table enrichment, FAQ, comparison, and product entity pages.
 
-5. GEO Audit Checklist
+7. Content Generation Tasks
+   - Fields: page type, working title, target prompt, target engine, distribution channel, reason, review status.
+   - Task types should cover definition pages, comparison pages, alternative pages, FAQ, product parameter pages, scenario pages, and case studies.
+
+8. GEO Audit Checklist
    - Items: `llms.txt`, JSON-LD Schema, robots and AI crawler access, Direct Answer Upfront, statistics/table evidence, author or expert proof, FAQ structure, product or organization entity markup.
    - Each item should have a status, severity, current signal, and fix recommendation.
 
-6. Entity and Channel Coverage
+9. Entity and Channel Coverage
    - Channels: Reddit, Quora, Wikipedia, LinkedIn, Medium, YouTube, industry directories, vertical forums.
    - Fields: coverage status, entity consistency, evidence count, next action.
 
@@ -76,7 +96,10 @@ Recommended data groups:
 - `internationalGeo.summary`
 - `internationalGeo.filters`
 - `internationalGeo.engineVisibility`
+- `internationalGeo.engineInclusion`
+- `internationalGeo.promptMonitoring`
 - `internationalGeo.keywordOpportunities`
+- `internationalGeo.contentTasks`
 - `internationalGeo.auditChecklist`
 - `internationalGeo.entityCoverage`
 
@@ -99,6 +122,7 @@ Expected checks:
 - Navigation contains `international`.
 - The page renderer can render the international page.
 - The rendered page includes international GEO concepts such as `llms.txt`, JSON-LD, ChatGPT Search, Perplexity, Google AI Overviews, Direct Answer, and Entity Coverage.
+- The rendered page includes AI engine inclusion and recommendation concepts such as `OAI-SearchBot`, `Claude-SearchBot`, `PerplexityBot`, `Bingbot`, Prompt Recommendation Monitoring, Content Generation Tasks, and Distribution Execution Plan.
 - Static preview data or page-local mock data is enough for the page to render without a server.
 
 Manual verification:
@@ -111,6 +135,6 @@ Manual verification:
 
 - `国际 GEO` appears in the sidebar.
 - Selecting the page displays a complete international AI search visibility workspace.
-- The page covers readiness, engine visibility, keyword opportunities, audit checklist, and external entity coverage.
+- The page covers readiness, engine visibility, AI engine inclusion, prompt recommendation monitoring, keyword opportunities, content generation tasks, audit checklist, distribution execution, and external entity coverage.
 - The first version is read-only and works with mock data.
 - `npm run check` passes.
