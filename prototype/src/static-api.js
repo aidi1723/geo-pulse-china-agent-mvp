@@ -44,9 +44,57 @@ export async function handleStaticRequest(path, method = "GET") {
             label: "llms.txt",
             status: "warning",
             message: "Recommended to verify live /llms.txt.",
-            recommendation: "Install a concise llms.txt file."
+            recommendation: "Install a concise llms.txt file.",
+            evidence_status: "crawl_evidenced",
+            evidence_source: "llms_txt",
+            evidence: "# GEO Pulse"
           }
         ],
+        crawl_evidence: {
+          provider_id: "builtin_safe_fetch",
+          execution_mode: "live_fetch",
+          status: "partial",
+          origin: "https://example.com",
+          resources: {
+            homepage: {
+              url: "https://example.com",
+              status_code: 200,
+              ok: true,
+              content_type: "text/html",
+              title: "GEO Pulse",
+              json_ld_types: ["Organization"],
+              text_excerpt: "GEO Pulse helps B2B teams prepare AI-readable pages.",
+              error_code: ""
+            },
+            robots_txt: {
+              url: "https://example.com/robots.txt",
+              status_code: 200,
+              ok: true,
+              content_type: "text/plain",
+              mentioned_bots: ["Googlebot", "OAI-SearchBot"],
+              text_excerpt: "User-agent: Googlebot\nAllow: /",
+              error_code: ""
+            },
+            sitemap_xml: {
+              url: "https://example.com/sitemap.xml",
+              status_code: 200,
+              ok: true,
+              content_type: "application/xml",
+              url_count: 2,
+              sample_urls: ["https://example.com/"],
+              error_code: ""
+            },
+            llms_txt: {
+              url: "https://example.com/llms.txt",
+              status_code: 200,
+              ok: true,
+              content_type: "text/markdown",
+              text_excerpt: "# GEO Pulse",
+              error_code: ""
+            }
+          },
+          issues: []
+        },
         created_at: "2026-07-06T00:00:00.000Z"
       };
 

@@ -428,6 +428,11 @@ export function bindEvents(root, store, rerender, actions) {
       return;
     }
 
+    if (action === "international-site-crawl") {
+      await actions.crawlInternationalSiteEvidence();
+      return;
+    }
+
     if (action === "international-artifacts") {
       await actions.generateInternationalArtifacts();
       return;

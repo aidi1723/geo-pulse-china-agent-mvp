@@ -8,6 +8,7 @@ import {
   createManualArticle as createManualArticleApi,
   createManualTopic as createManualTopicApi,
   createChannel as createChannelApi,
+  crawlInternationalGeoSiteAudit as crawlInternationalGeoSiteAuditApi,
   createInternationalGeoSiteAudit as createInternationalGeoSiteAuditApi,
   createMediaSource as createMediaSourceApi,
   createModelConfig as createModelConfigApi,
@@ -1334,6 +1335,27 @@ const actions = {
       showNotice(`GEO 资产已生成 ${assets.items?.length || 0} 项。`);
     } catch (error) {
       setError(error instanceof Error ? error.message : "生成 GEO 资产失败");
+      rerender();
+    }
+  },
+  async crawlInternationalSiteEvidence() {
+    const auditId =
+      store.data.internationalGeo?.site_audits?.latest?.id ||
+      store.data.internationalGeo?.site_audits?.items?.[0]?.id ||
+      "";
+    if (!auditId) {
+      setError("请先运行站点 GEO 审计");
+      rerender();
+      return;
+    }
+
+    try {
+      const result = await crawlInternationalGeoSiteAuditApi(auditId);
+      await refreshData();
+      store.page = "international";
+      showNotice(`抓取证据已完成，状态 ${result.crawl_evidence?.status || "-"}。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "抓取站点证据失败");
       rerender();
     }
   },

@@ -372,6 +372,10 @@ export function generateInternationalGeoSiteAuditAssets(auditId) {
   return requestJson(`/api/v1/international-geo/site-audits/${auditId}/assets`, "POST", {});
 }
 
+export function crawlInternationalGeoSiteAudit(auditId) {
+  return requestJson(`/api/v1/international-geo/site-audits/${auditId}/crawl`, "POST", {});
+}
+
 export function runInternationalGeoAudit() {
   return requestJson("/api/v1/international-geo/audit", "POST", {});
 }

@@ -449,6 +449,34 @@ function auditStatusLabel(value) {
   return labels[value] || value || "-";
 }
 
+function evidenceStatusLabel(value) {
+  const labels = {
+    rule_first: "规则生成",
+    crawl_evidenced: "抓取证据",
+    unavailable: "不可用"
+  };
+  return labels[value] || value || "规则生成";
+}
+
+function resourceStatus(resource = {}) {
+  if (!resource) return "-";
+  if (resource.ok) return `HTTP ${resource.status_code || 200}`;
+  return resource.error_code || `HTTP ${resource.status_code || 0}`;
+}
+
+function resourceDetail(resource = {}) {
+  if (!resource) return "";
+  const parts = [
+    resource.title || resource.h1 || "",
+    resource.json_ld_types?.length ? `JSON-LD: ${resource.json_ld_types.join(", ")}` : "",
+    resource.mentioned_bots?.length ? `Bots: ${resource.mentioned_bots.join(", ")}` : "",
+    typeof resource.url_count === "number" ? `URLs: ${resource.url_count}` : "",
+    resource.sample_urls?.[0] ? `Sample: ${resource.sample_urls[0]}` : "",
+    resource.text_excerpt || ""
+  ].filter(Boolean);
+  return parts.join(" / ");
+}
+
 function assetLabel(value) {
   const labels = {
     llms_txt: "llms.txt",
@@ -624,6 +652,7 @@ function renderSiteAuditPanel(data = {}) {
           <div class="panel-note">输入网址和产品信息，生成规则优先的 AI 搜索可读性审计。</div>
         </div>
         <div class="actions-row">
+          <button class="ghost-btn" data-action="international-site-crawl">抓取站点证据</button>
           <button class="ghost-btn" data-action="international-site-assets">生成 GEO 资产</button>
           <button class="secondary-btn" data-action="international-site-audit">运行站点审计</button>
         </div>
@@ -663,6 +692,7 @@ function renderSiteAuditChecks(audit = {}) {
             <td>${statusMarkup(auditStatusLabel(item.status))}</td>
             <td>
               <div class="cell-title">${escapeHtml(item.message || "-")}</div>
+              <div class="cell-sub">${escapeHtml(evidenceStatusLabel(item.evidence_status))}${item.evidence_source ? ` / ${escapeHtml(item.evidence_source)}` : ""}${item.evidence ? ` / ${escapeHtml(item.evidence)}` : ""}</div>
               <div class="cell-sub">${escapeHtml(item.recommendation || "-")}</div>
             </td>
           </tr>
@@ -679,6 +709,47 @@ function renderSiteAuditChecks(audit = {}) {
         </div>
       </div>
       ${tableMarkup(["检查项", "状态", "证据 / 建议"], rows)}
+    </section>
+  `;
+}
+
+function renderCrawlEvidencePanel(audit = {}) {
+  const evidence = audit?.crawl_evidence;
+  const resources = evidence?.resources || {};
+  const resourceRows = [
+    ["homepage", "Homepage", resources.homepage],
+    ["robots_txt", "robots.txt", resources.robots_txt],
+    ["sitemap_xml", "sitemap.xml", resources.sitemap_xml],
+    ["llms_txt", "llms.txt", resources.llms_txt]
+  ];
+  const rows = evidence
+    ? resourceRows.map(
+        ([key, label, resource]) => `
+          <tr>
+            <td>
+              <div class="cell-title">${escapeHtml(label)}</div>
+              <div class="cell-sub">${escapeHtml(resource?.url || key)}</div>
+            </td>
+            <td>${statusMarkup(resource?.ok ? "通过" : "需复核")}</td>
+            <td>${escapeHtml(resourceStatus(resource))}</td>
+            <td>
+              <div class="cell-title">${escapeHtml(resource?.content_type || "-")}</div>
+              <div class="cell-sub">${escapeHtml(resourceDetail(resource) || "-")}</div>
+            </td>
+          </tr>
+        `
+      )
+    : [`<tr><td colspan="4"><div class="empty-state">暂无抓取证据。运行站点审计后可抓取 homepage、robots.txt、sitemap.xml 和 llms.txt。</div></td></tr>`];
+
+  return `
+    <section class="surface panel">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">抓取证据</h3>
+          <div class="panel-note">${escapeHtml(evidence ? `${evidence.provider_id || "builtin_safe_fetch"} / ${evidence.status || "-"}` : "等待站点证据抓取。")}</div>
+        </div>
+      </div>
+      ${tableMarkup(["资源", "状态", "HTTP / 错误", "摘要"], rows)}
     </section>
   `;
 }
@@ -771,6 +842,7 @@ export function renderInternationalGeo(data = internationalGeo) {
 
     ${renderSiteAuditPanel(data)}
     ${renderSiteAuditChecks(latestAudit)}
+    ${renderCrawlEvidencePanel(latestAudit)}
     ${renderSiteAuditHistory(data.site_audits || {})}
     ${renderGeoAssetPreviews(data.geo_assets || [])}
 
