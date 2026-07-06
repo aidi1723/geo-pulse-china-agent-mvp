@@ -126,7 +126,10 @@ Runs include structured steps, provider/connector metadata, input/output preview
 
 - `GET /topic-ideas`
 - `POST /topic-ideas`
+- `PUT /topic-ideas/:id`
+- `POST /topic-ideas/:id/outline`
 - `GET /articles`
+- `POST /articles`
 - `GET /articles/:id`
 - `PUT /articles/:id`
 - `POST /articles/from-topic`
@@ -135,8 +138,27 @@ Runs include structured steps, provider/connector metadata, input/output preview
 - `GET /prompt-templates`
 - `GET /prompt-templates/:id`
 - `GET /content-quality-traces`
+- `POST /content-templates`
 
 These routes power topic planning, article drafting, review flow, prompt lineage, and content quality traces.
+
+### Single-User Workspace And Exports
+
+- `GET /workspace-input`
+- `PUT /workspace-input`
+- `POST /exports`
+- `GET /exports/:id/download`
+
+Workspace input stores the one-user operating context. Export jobs generate local downloadable artifacts.
+
+### International GEO
+
+- `GET /international-geo`
+- `PUT /international-geo/input`
+- `POST /international-geo/audit`
+- `POST /international-geo/artifacts`
+
+These routes power local International GEO readiness audits and artifact generation for `llms.txt`, JSON-LD, and distribution briefs.
 
 ### Publishing
 
@@ -181,6 +203,8 @@ Visibility collection and campaign send actions check connector permissions befo
 - `GET /system/runtime/scheduler`
 - `POST /system/runtime/scheduler/tick`
 - `GET /system/client-config`
+- `POST /billing/plan`
+- `POST /session/logout`
 
 Audit CSV export neutralizes spreadsheet formula prefixes. Runtime reset restores seed state and records an audit event.
 

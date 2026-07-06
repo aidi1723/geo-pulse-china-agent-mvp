@@ -9,10 +9,22 @@ function primaryActionAttrs(currentPage) {
     return 'data-nav="keywords"';
   }
   if (currentPage === "content") {
-    return 'data-open-article';
+    return 'data-action="create-manual-article"';
   }
   if (currentPage === "distribution") {
     return 'data-action="open-publish-panel"';
+  }
+  if (currentPage === "analytics") {
+    return 'data-action="export-artifact" data-export-type="analytics_visibility"';
+  }
+  if (currentPage === "international") {
+    return 'data-action="international-audit"';
+  }
+  if (currentPage === "billing") {
+    return 'data-action="upgrade-plan" data-plan-id="single_user_pro"';
+  }
+  if (currentPage === "settings") {
+    return 'data-action="save-brand-profile"';
   }
   return "disabled";
 }

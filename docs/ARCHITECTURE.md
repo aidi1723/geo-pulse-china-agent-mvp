@@ -2,7 +2,7 @@
 
 ## Overview
 
-GEO Pulse China Agent v0.2 is a zero-dependency Node.js application with a browser admin workspace. It remains mock-first for third-party integrations, but it now includes a single-tenant deployment profile, production startup guardrails, health checks, and GEO/SEO static files for controlled server use.
+GEO Pulse China Agent v0.3 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes a single-user complete workflow, a single-tenant deployment profile, production startup guardrails, health checks, and GEO/SEO static files for controlled server use.
 
 ## Runtime Components
 
@@ -33,6 +33,7 @@ GEO Pulse China Agent v0.2 is a zero-dependency Node.js application with a brows
 | Automation operations | Provider registry, connector registry, permission matrix, automation run steps, scheduler tick, retries. | `automation-providers.mjs`, `mock-data.mjs`, `prototype/src/pages/settings.js` |
 | Analytics | Visibility tracking, SERP snapshots, competitor domains, audience segments, campaign runs. | `mock-data.mjs`, `prototype/src/pages/analytics.js` |
 | International GEO | Overseas AI search readiness, article and distribution planning, engine visibility, community citation surfaces. | `prototype/src/pages/international.js` |
+| Single-user completion | Workspace input, manual topics, outlines, manual articles, templates, exports, local billing plan switch, and logout action. | `mock-data.mjs`, `server.mjs`, `prototype/src/main.js` |
 | Security and governance | API key guard, audit events, CSV export safety, connector-scoped permissions, endpoint restrictions. | `server.mjs`, `mock-data.mjs`, `reports/security-hardening-log.md` |
 
 ## Persistence Model
@@ -46,7 +47,7 @@ Persistence is local JSON, not a production database.
 
 ## Security Model
 
-v0.2 uses local-first safeguards plus production startup guardrails:
+v0.3 uses local-first safeguards plus production startup guardrails:
 
 - Remote access is disabled unless `GEO_ALLOW_REMOTE_ACCESS=1`.
 - Remote access requires a fixed `GEO_INTERNAL_API_KEY`.

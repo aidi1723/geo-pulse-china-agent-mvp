@@ -2,7 +2,7 @@
 
 License: GPL-3.0-only
 
-Status: v0.2 single-tenant deployable workspace, ready for controlled deployment after repository owner review.
+Status: v0.3 single-user complete workspace, ready for controlled single-tenant deployment after repository owner review.
 
 这个仓库现在包含两部分内容：
 
@@ -111,16 +111,17 @@ GEO_INTERNAL_API_KEY=local-dev-key node server.mjs
 
 ## 生产部署
 
-v0.2 支持单租户受控部署。生产环境必须配置固定的 `GEO_INTERNAL_API_KEY`，并在公网暴露前增加反向代理认证、VPN、IP allowlist 或其他外部访问控制。
+v0.3 支持单用户、单租户受控部署。生产环境必须配置固定的 `GEO_INTERNAL_API_KEY`，并在公网暴露前增加反向代理认证、VPN、IP allowlist 或其他外部访问控制。
 
 生产部署入口：
 
 - 部署指南：[docs/PRODUCTION_DEPLOYMENT.md](docs/PRODUCTION_DEPLOYMENT.md)
 - 阶段收口：[docs/STAGE_V0_2_CLOSEOUT.md](docs/STAGE_V0_2_CLOSEOUT.md)
+- v0.3 阶段收口：[docs/STAGE_V0_3_CLOSEOUT.md](docs/STAGE_V0_3_CLOSEOUT.md)
 - 环境变量示例：[.env.example](.env.example)
 - Docker Compose：[docker-compose.yml](docker-compose.yml)
 
-v0.2 不是完整 SaaS：暂不内置用户登录、RBAC、多租户隔离、支付计费、生产数据库迁移和真实第三方发布凭据。
+v0.3 不是完整 SaaS：暂不内置多用户登录、RBAC、多租户隔离、真实支付计费、生产数据库迁移和真实第三方发布凭据。
 
 ## 工程校验
 
@@ -190,6 +191,7 @@ npm run check
 - 根文档、可开发稿、接口设计和低保真交互说明
 - 国际 GEO 板块，覆盖海外 AI 搜索可读性、文章生成与分发规划、ChatGPT Search、Perplexity、Google AI Overviews、Gemini、Claude、Copilot 等引擎可见度监测模型
 - v0.2 单租户生产部署基础，包括 `/healthz`、`/robots.txt`、`/sitemap.xml`、`/llms.txt`、Docker、Docker Compose、`.env.example` 和部署文档
+- v0.3 单用户完整闭环，包括网站/产品输入、手动选题、选题编辑、大纲生成、手动文章、模板新增、导出、国际 GEO 审计、`llms.txt`/JSON-LD 资产生成、本地套餐切换和安全退出动作
 
 ## 当前 API 范围
 
@@ -237,7 +239,21 @@ npm run check
 - `/api/v1/system/runtime/reset`
 - `/api/v1/channels/:id/reconnect`
 - `/api/v1/articles/from-topic`
+- `/api/v1/articles`
 - `/api/v1/keywords/:id/actions`
+- `/api/v1/workspace-input`
+- `/api/v1/topic-ideas`
+- `/api/v1/topic-ideas/:id`
+- `/api/v1/topic-ideas/:id/outline`
+- `/api/v1/content-templates`
+- `/api/v1/exports`
+- `/api/v1/exports/:id/download`
+- `/api/v1/international-geo`
+- `/api/v1/international-geo/input`
+- `/api/v1/international-geo/audit`
+- `/api/v1/international-geo/artifacts`
+- `/api/v1/billing/plan`
+- `/api/v1/session/logout`
 
 ## 运维端点
 

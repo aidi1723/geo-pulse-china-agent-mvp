@@ -13,6 +13,36 @@ export async function handleStaticRequest(path, method = "GET") {
 
   const response = STATIC_ROUTE_RESPONSES[route];
   if (response === undefined) {
+    if (route === "/workspace-input") {
+      return clone({
+        website_url: "https://example.com",
+        product_name: "GEO Pulse",
+        industry: "AI search operations",
+        target_markets: ["CN", "US"],
+        audience: "GEO operators and B2B marketing teams",
+        language: "zh-CN",
+        competitors: ["traditional SEO tools", "AI visibility platforms"],
+        differentiators: ["local-first workflow", "domestic and international GEO"]
+      });
+    }
+    if (route === "/international-geo") {
+      return clone({
+        summary: {
+          ai_ready_score: 78,
+          llms_status: "已生成",
+          schema_coverage: "68%",
+          crawler_access: "允许",
+          citation_opportunities: 24
+        },
+        filters: {
+          markets: ["US", "EU", "UK", "SEA"],
+          languages: ["en-US", "en-GB", "en"],
+          engines: ["ChatGPT Search", "Perplexity", "Google AI Overviews", "Gemini", "Claude", "Microsoft Copilot"],
+          stages: ["Readiness audit", "Citation monitoring", "Content opportunity", "Entity coverage"]
+        },
+        engineVisibility: []
+      });
+    }
     throw new Error(`Static preview route not found: ${route}`);
   }
 

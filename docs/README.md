@@ -1,18 +1,19 @@
 # Documentation Index
 
-This directory contains the maintainer-facing documentation for GEO Pulse China Agent v0.2.
+This directory contains the maintainer-facing documentation for GEO Pulse China Agent v0.3.
 
 ## Start Here
 
 - [Development Guide](DEVELOPMENT.md): local setup, test gate, environment variables, UI rules, and contribution workflow.
 - [Architecture Guide](ARCHITECTURE.md): runtime structure, module boundaries, data flow, security model, and extension points.
-- [Production Deployment Guide](PRODUCTION_DEPLOYMENT.md): single-tenant v0.2 deployment, environment, Docker, health checks, backup, and rollback.
+- [Production Deployment Guide](PRODUCTION_DEPLOYMENT.md): single-user/single-tenant v0.3 deployment, environment, Docker, health checks, backup, and rollback.
 - [v0.2 Stage Closeout](STAGE_V0_2_CLOSEOUT.md): stage result, launch boundary, verification evidence, and closing copy.
+- [v0.3 Stage Closeout](STAGE_V0_3_CLOSEOUT.md): single-user complete stage result, launch boundary, verification evidence, and closing copy.
 - [API Reference](API_REFERENCE.md): current mock API groups, route behavior, mutation requirements, and response shape.
 - [Extension Guide](EXTENDING.md): how to add providers, connectors, source adapters, UI pages, tests, and static preview data.
 - [Maintenance Guide](MAINTENANCE.md): routine maintenance, release gate, runtime state, security defaults, and production backlog.
 - [Privacy Release Review](PRIVACY_RELEASE_REVIEW.md): public-branch privacy scans, cleanup rules, and history-rewrite guidance.
-- [Roadmap](ROADMAP.md): what is done, what remains mock-first, and what belongs to post-v0.2 production hardening.
+- [Roadmap](ROADMAP.md): what is done, what remains local-first, and what belongs to post-v0.3 production hardening.
 - [Open Source Release Checklist](OPEN_SOURCE_RELEASE.md): publication readiness, GitHub settings, and release-note draft.
 
 ## Root-Level Documents
@@ -37,4 +38,4 @@ The root-level Chinese product documents are retained as product context:
 - `AgentCoreOS-GEO-Suite-产品拆解方案.md`
 - `AgentCoreOS-GEO-网站优化与内容方案.md`
 
-The `reports/` directory contains audit, benchmark, and security hardening notes used during MVP and v0.2 preparation.
+The `reports/` directory contains audit, benchmark, and security hardening notes used during MVP, v0.2, and v0.3 preparation.

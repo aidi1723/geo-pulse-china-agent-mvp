@@ -4689,6 +4689,9 @@ export function getCampaignAnalytics() {
 }
 
 export function getBillingSummary() {
+  const upgradeHistory = Array.isArray(billingPlanState.upgrade_history)
+    ? billingPlanState.upgrade_history
+    : [];
   const planQuotas =
     billingPlanState.plan_id === "single_user_pro"
       ? { keyword_crawl: 5000, article_generation: 800, publish: 300 }
@@ -4706,11 +4709,14 @@ export function getBillingSummary() {
       article_generation: 96,
       publish: 28
     },
-    upgrade_history: [...billingPlanState.upgrade_history]
+    upgrade_history: [...upgradeHistory]
   };
 }
 
 export function updateBillingPlanAction(payload = {}) {
+  if (!Array.isArray(billingPlanState.upgrade_history)) {
+    billingPlanState.upgrade_history = [];
+  }
   const planId = payload.plan_id || "single_user_pro";
   billingPlanState.plan_id = planId;
   billingPlanState.plan_name = planId === "single_user_pro" ? "单用户旗舰版" : "单用户专业版";

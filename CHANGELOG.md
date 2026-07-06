@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.3.0 - 2026-07-06
+
+Single-user complete v0.3 snapshot.
+
+### Added
+
+- Local-first workspace input for website, product, market, audience, competitors, and differentiators.
+- Manual topic creation, topic editing, outline generation, manual article creation, and content template creation.
+- Export jobs and downloadable CSV/JSON artifacts for single-user workflows.
+- International GEO state, local readiness audit, `llms.txt` generation, JSON-LD recommendation, and distribution brief generation.
+- Local billing plan switch and safe single-user logout action.
+- Browser wiring for content creation, exports, International GEO audit/artifacts, billing upgrade, and logout.
+- Regression tests for v0.3 data actions, HTTP routes, source dead-end checks, and UI workflow labels.
+
+### Changed
+
+- Project status is now documented as v0.3 single-user complete, while still single-tenant and local-first.
+- Disabled "coming soon" and read-only primary workflow buttons were replaced with working local actions.
+
+### Verification
+
+- `npm run check`
+
 ## 0.2.0 - 2026-07-06
 
 Single-tenant deployable v0.2 snapshot.
