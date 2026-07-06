@@ -1078,6 +1078,76 @@ async function runMockDataChecks() {
     "Audit events should not contain raw model API keys"
   );
 
+  assert.ok(
+    getInternationalGeoState().site_audits,
+    "International GEO state should expose site audit records"
+  );
+  assert.ok(
+    Array.isArray(getInternationalGeoState().geo_assets),
+    "International GEO state should expose generated GEO assets"
+  );
+  assert.throws(
+    () =>
+      createInternationalGeoSiteAuditAction({
+        website_url: "not-a-url",
+        product_name: "Invalid Site"
+      }),
+    /INVALID_SITE_URL/,
+    "Invalid site audit URL should be rejected"
+  );
+
+  const siteAudit = createInternationalGeoSiteAuditAction({
+    website_url: "https://example.com",
+    product_name: "Example GEO Platform",
+    target_market: "US",
+    target_language: "en-US",
+    primary_query: "best GEO platform for B2B teams",
+    competitors: ["Semrush", "Ahrefs"]
+  });
+  assert.equal(siteAudit.website_url, "https://example.com", "Site audit should keep the audited URL");
+  assert.ok(siteAudit.score >= 0 && siteAudit.score <= 100, "Site audit should have a bounded score");
+  assert.match(siteAudit.status, /^(ready|review|blocked)$/, "Site audit should expose a review status");
+  assert.ok(siteAudit.checks.some((item) => item.id === "llms_txt"), "Site audit should check llms.txt");
+  assert.ok(siteAudit.checks.some((item) => item.id === "json_ld"), "Site audit should check JSON-LD");
+  assert.ok(siteAudit.summary.warnings >= 0, "Site audit summary should expose warnings");
+  assert.equal(
+    getInternationalGeoSiteAudit(siteAudit.id)?.id,
+    siteAudit.id,
+    "Created site audit should be queryable by id"
+  );
+  assert.ok(
+    listInternationalGeoSiteAudits().items.some((item) => item.id === siteAudit.id),
+    "Created site audit should be listable"
+  );
+
+  const siteAssets = generateInternationalGeoSiteAuditAssetsAction(siteAudit.id);
+  assert.ok(siteAssets.items.some((item) => item.asset_type === "llms_txt"), "Site assets should include llms.txt");
+  assert.ok(
+    siteAssets.items.some((item) => item.asset_type === "organization_json_ld"),
+    "Site assets should include Organization JSON-LD"
+  );
+  assert.ok(
+    siteAssets.items.some((item) => item.asset_type === "product_json_ld"),
+    "Site assets should include Product JSON-LD"
+  );
+  assert.ok(
+    siteAssets.items.some((item) => item.asset_type === "faq_json_ld"),
+    "Site assets should include FAQ JSON-LD"
+  );
+  assert.ok(
+    siteAssets.items.some((item) => item.asset_type === "article_brief"),
+    "Site assets should include an article brief"
+  );
+  assert.ok(
+    siteAssets.items.some((item) => item.asset_type === "distribution_brief"),
+    "Site assets should include a distribution brief"
+  );
+  assert.match(
+    JSON.stringify(siteAssets),
+    /Example GEO Platform/,
+    "Generated site assets should include the product context"
+  );
+
   resetRuntimeState();
   const resetAuditEvents = listAuditEvents({ page_size: 5 }).items;
   assert.equal(resetAuditEvents[0]?.action, "runtime.reset", "Runtime reset should be recorded in audit events");
@@ -1270,75 +1340,6 @@ async function runSingleUserCompleteChecks() {
   assert.match(artifacts.llms_txt, /AgentCore GEO/, "International artifacts should generate llms.txt text");
   assert.match(artifacts.json_ld, /application\/ld\+json|@context/, "International artifacts should generate JSON-LD");
   assert.ok(getInternationalGeoState().artifacts.llms_txt, "International GEO artifacts should persist");
-  assert.ok(
-    getInternationalGeoState().site_audits,
-    "International GEO state should expose site audit records"
-  );
-  assert.ok(
-    Array.isArray(getInternationalGeoState().geo_assets),
-    "International GEO state should expose generated GEO assets"
-  );
-  assert.throws(
-    () =>
-      createInternationalGeoSiteAuditAction({
-        website_url: "not-a-url",
-        product_name: "Invalid Site"
-      }),
-    /INVALID_SITE_URL/,
-    "Invalid site audit URL should be rejected"
-  );
-
-  const siteAudit = createInternationalGeoSiteAuditAction({
-    website_url: "https://example.com",
-    product_name: "Example GEO Platform",
-    target_market: "US",
-    target_language: "en-US",
-    primary_query: "best GEO platform for B2B teams",
-    competitors: ["Semrush", "Ahrefs"]
-  });
-  assert.equal(siteAudit.website_url, "https://example.com", "Site audit should keep the audited URL");
-  assert.ok(siteAudit.score >= 0 && siteAudit.score <= 100, "Site audit should have a bounded score");
-  assert.match(siteAudit.status, /^(ready|review|blocked)$/, "Site audit should expose a review status");
-  assert.ok(siteAudit.checks.some((item) => item.id === "llms_txt"), "Site audit should check llms.txt");
-  assert.ok(siteAudit.checks.some((item) => item.id === "json_ld"), "Site audit should check JSON-LD");
-  assert.ok(siteAudit.summary.warnings >= 0, "Site audit summary should expose warnings");
-  assert.equal(
-    getInternationalGeoSiteAudit(siteAudit.id)?.id,
-    siteAudit.id,
-    "Created site audit should be queryable by id"
-  );
-  assert.ok(
-    listInternationalGeoSiteAudits().items.some((item) => item.id === siteAudit.id),
-    "Created site audit should be listable"
-  );
-
-  const siteAssets = generateInternationalGeoSiteAuditAssetsAction(siteAudit.id);
-  assert.ok(siteAssets.items.some((item) => item.asset_type === "llms_txt"), "Site assets should include llms.txt");
-  assert.ok(
-    siteAssets.items.some((item) => item.asset_type === "organization_json_ld"),
-    "Site assets should include Organization JSON-LD"
-  );
-  assert.ok(
-    siteAssets.items.some((item) => item.asset_type === "product_json_ld"),
-    "Site assets should include Product JSON-LD"
-  );
-  assert.ok(
-    siteAssets.items.some((item) => item.asset_type === "faq_json_ld"),
-    "Site assets should include FAQ JSON-LD"
-  );
-  assert.ok(
-    siteAssets.items.some((item) => item.asset_type === "article_brief"),
-    "Site assets should include an article brief"
-  );
-  assert.ok(
-    siteAssets.items.some((item) => item.asset_type === "distribution_brief"),
-    "Site assets should include a distribution brief"
-  );
-  assert.match(
-    JSON.stringify(siteAssets),
-    /Example GEO Platform/,
-    "Generated site assets should include the product context"
-  );
 
   const upgradedPlan = updateBillingPlanAction({
     plan_id: "single_user_pro",
