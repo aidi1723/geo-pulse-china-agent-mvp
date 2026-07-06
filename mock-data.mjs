@@ -5844,12 +5844,16 @@ function internationalGeoLegacyAuditPayload() {
   };
 }
 
+function canCreateInternationalGeoSiteAudit(payload = {}) {
+  return Boolean(normalizeSiteAuditUrl(payload.website_url) && String(payload.product_name || "").trim());
+}
+
 export function listInternationalGeoSiteAudits(query = {}) {
   ensureInternationalGeoStateShape();
   const items = [...internationalGeoState.site_audits.items].sort((left, right) =>
     String(right.created_at || "").localeCompare(String(left.created_at || ""))
   );
-  return paginate(items, query.page, query.page_size);
+  return paginate(deepClone(items), query.page, query.page_size);
 }
 
 export function getInternationalGeoSiteAudit(auditId) {
@@ -6064,7 +6068,10 @@ export function saveInternationalGeoInputAction(patch = {}) {
 }
 
 export function runInternationalGeoAuditAction() {
-  createInternationalGeoSiteAuditAction(internationalGeoLegacyAuditPayload());
+  const siteAuditPayload = internationalGeoLegacyAuditPayload();
+  if (canCreateInternationalGeoSiteAudit(siteAuditPayload)) {
+    createInternationalGeoSiteAuditAction(siteAuditPayload);
+  }
   const input = internationalGeoState.input;
   const hasUrl = /^https?:\/\//.test(input.website_url || "");
   const competitorCount = normalizeStringArray(input.competitors).length;
