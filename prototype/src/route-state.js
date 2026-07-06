@@ -4,6 +4,7 @@ const validPages = new Set([
   "content",
   "distribution",
   "analytics",
+  "international",
   "billing",
   "settings"
 ]);

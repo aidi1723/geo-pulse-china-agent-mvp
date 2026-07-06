@@ -4,6 +4,7 @@ export const navigation = [
   { id: "content", label: "内容中心", desc: "选题、草稿、审核、模板编排" },
   { id: "distribution", label: "分发中心", desc: "渠道适配、发布任务、人工接管" },
   { id: "analytics", label: "分析复盘", desc: "关键词、内容、渠道表现分析" },
+  { id: "international", label: "国际 GEO", desc: "跨市场、跨语言、跨 AI 搜索引擎的可见度运营" },
   { id: "billing", label: "套餐与账单", desc: "额度、账单与开票状态" },
   { id: "settings", label: "系统设置", desc: "品牌知识、模型接入、渠道与自动化" }
 ];
@@ -14,6 +15,7 @@ export const pageMeta = {
   content: ["内容中心", "从选题到文章审核的一体化流程"],
   distribution: ["分发中心", "多渠道发布、失败接管与结果回写"],
   analytics: ["分析复盘", "关键词、内容与渠道效果分析"],
+  international: ["国际 GEO", "跨市场、跨语言、跨 AI 搜索引擎的可见度运营"],
   billing: ["套餐与账单", "额度、账单与开票状态"],
   settings: ["系统设置", "品牌知识、模型接入与运行策略配置"]
 };
@@ -24,6 +26,7 @@ export const primaryActions = {
   content: "新建内容",
   distribution: "创建发布任务",
   analytics: "导出分析",
+  international: "生成审计",
   billing: "升级套餐",
   settings: "保存配置"
 };

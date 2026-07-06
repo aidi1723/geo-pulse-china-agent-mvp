@@ -4,6 +4,7 @@ import { renderKeywords } from "./pages/keywords.js?v=20260418-3";
 import { renderContent } from "./pages/content.js?v=20260418-3";
 import { renderDistribution } from "./pages/distribution.js?v=20260418-3";
 import { renderAnalytics } from "./pages/analytics.js?v=20260418-3";
+import { renderInternationalGeo } from "./pages/international.js?v=20260418-3";
 import { renderBilling } from "./pages/billing.js?v=20260418-3";
 import { renderSettings } from "./pages/settings.js?v=20260418-3";
 
@@ -51,6 +52,8 @@ function renderPage(store) {
       return renderDistribution(store);
     case "analytics":
       return renderAnalytics(store);
+    case "international":
+      return renderInternationalGeo();
     case "billing":
       return renderBilling(store.data);
     case "settings":

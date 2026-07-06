@@ -73,8 +73,10 @@ import {
   resolvePublishPanelState
 } from "./prototype/src/experience-utils.js";
 import { applyRouteState, serializeRouteState } from "./prototype/src/route-state.js";
+import { navigation } from "./prototype/src/config.js";
 import { renderAnalytics } from "./prototype/src/pages/analytics.js";
 import { renderDistribution } from "./prototype/src/pages/distribution.js";
+import { renderInternationalGeo } from "./prototype/src/pages/international.js";
 import { renderKeywords } from "./prototype/src/pages/keywords.js";
 import { renderSettings } from "./prototype/src/pages/settings.js";
 
@@ -94,6 +96,7 @@ const syntaxTargets = [
   "prototype/src/pages/content.js",
   "prototype/src/pages/dashboard.js",
   "prototype/src/pages/distribution.js",
+  "prototype/src/pages/international.js",
   "prototype/src/pages/keywords.js",
   "prototype/src/pages/settings.js",
   "prototype/src/route-state.js",
@@ -914,6 +917,11 @@ function createRouteStateFixture() {
 }
 
 function runRouteStateChecks() {
+  assert(
+    navigation.some((item) => item.id === "international" && item.label === "国际 GEO"),
+    "Navigation should include International GEO"
+  );
+
   const contentStore = createRouteStateFixture();
   contentStore.page = "content";
   contentStore.tabs.content = "articles";
@@ -973,6 +981,19 @@ function runRouteStateChecks() {
     "Selected provider should restore"
   );
   assert.equal(restoredSettingsStore.selectedIds.strategy, "stg-4", "Selected strategy should restore");
+
+  const internationalStore = createRouteStateFixture();
+  internationalStore.page = "international";
+  const internationalHash = serializeRouteState(internationalStore);
+  assert.match(internationalHash, /page=international/, "International GEO page should serialize");
+
+  const restoredInternationalStore = createRouteStateFixture();
+  applyRouteState(restoredInternationalStore, `#${internationalHash}`);
+  assert.equal(
+    restoredInternationalStore.page,
+    "international",
+    "International GEO page should restore"
+  );
 
   const keywordStore = createRouteStateFixture();
   keywordStore.page = "keywords";
@@ -2057,6 +2078,23 @@ function runAnalyticsCampaignUiChecks() {
   assert.match(html, /匹配受众分群/, "Campaign UI should render campaign run steps");
 }
 
+function runInternationalGeoUiChecks() {
+  const html = renderInternationalGeo();
+
+  assert.match(html, /国际 GEO/, "International GEO page should render its title");
+  assert.match(html, /llms\.txt/, "International GEO page should render llms.txt readiness");
+  assert.match(html, /JSON-LD/, "International GEO page should render JSON-LD audit coverage");
+  assert.match(html, /ChatGPT Search/, "International GEO page should render ChatGPT Search visibility");
+  assert.match(html, /Perplexity/, "International GEO page should render Perplexity visibility");
+  assert.match(
+    html,
+    /Google AI Overviews/,
+    "International GEO page should render Google AIO visibility"
+  );
+  assert.match(html, /Direct Answer/, "International GEO page should render Direct Answer guidance");
+  assert.match(html, /Entity Coverage/, "International GEO page should render entity coverage");
+}
+
 function runPersistenceChecks() {
   const tempFile = path.join(os.tmpdir(), `geo-pulse-state-${Date.now()}.json`);
   const baseEnv = {
@@ -2755,6 +2793,7 @@ try {
   runDistributionPublishingOpsUiChecks();
   runAnalyticsVisibilityUiChecks();
   runAnalyticsCampaignUiChecks();
+  runInternationalGeoUiChecks();
   runPersistenceChecks();
   await runHttpSecurityChecks();
   await runSchedulerAuditChecks();
