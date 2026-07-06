@@ -52,7 +52,7 @@ export function sidebarMarkup(currentPage) {
             <div class="plan-badge">专业版演示</div>
           </div>
         </div>
-        <button class="ghost-btn" style="width:100%" disabled title="账号体系即将开放">退出登录</button>
+        <button class="ghost-btn" style="width:100%" data-action="logout-session">退出登录</button>
       </div>
     </aside>
   `;

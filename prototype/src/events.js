@@ -280,8 +280,43 @@ export function bindEvents(root, store, rerender, actions) {
       return;
     }
 
+    if (action === "create-manual-topic") {
+      await actions.createManualTopic();
+      return;
+    }
+
+    if (action === "edit-topic") {
+      await actions.editTopic(actionButton.dataset.topicId || store.selectedIds.topic);
+      return;
+    }
+
+    if (action === "generate-outline") {
+      await actions.generateOutline(actionButton.dataset.topicId || store.selectedIds.topic);
+      return;
+    }
+
     if (action === "generate-article") {
       await actions.generateArticle(actionButton.dataset.topicId || store.selectedIds.topic);
+      return;
+    }
+
+    if (action === "create-manual-article") {
+      await actions.createManualArticle();
+      return;
+    }
+
+    if (action === "create-content-template") {
+      await actions.createContentTemplate();
+      return;
+    }
+
+    if (action === "export-artifact") {
+      await actions.exportArtifact(actionButton.dataset.exportType);
+      return;
+    }
+
+    if (action === "assign-review") {
+      await actions.assignReview(actionButton.dataset.articleId || store.selectedIds.review);
       return;
     }
 
@@ -368,6 +403,26 @@ export function bindEvents(root, store, rerender, actions) {
 
     if (action === "campaign-run") {
       await actions.runMarketingCampaign(actionButton.dataset.campaignId);
+      return;
+    }
+
+    if (action === "international-audit") {
+      await actions.runInternationalAudit();
+      return;
+    }
+
+    if (action === "international-artifacts") {
+      await actions.generateInternationalArtifacts();
+      return;
+    }
+
+    if (action === "upgrade-plan") {
+      await actions.upgradePlan(actionButton.dataset.planId || "single_user_pro");
+      return;
+    }
+
+    if (action === "logout-session") {
+      await actions.logoutSession();
       return;
     }
 

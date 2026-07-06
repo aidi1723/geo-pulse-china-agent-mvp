@@ -330,7 +330,7 @@ export function renderKeywords(store) {
         </div>
         <div class="toolbar-right">
           <button class="ghost-btn" data-action="reset-keyword-filters">重置筛选</button>
-          <button class="ghost-btn" disabled title="导出能力即将开放">导出</button>
+          <button class="ghost-btn" data-action="export-artifact" data-export-type="keywords">导出</button>
           <button class="primary-btn" data-action="open-expand-panel">裂变问题</button>
         </div>
       </div>

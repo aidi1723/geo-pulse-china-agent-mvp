@@ -104,6 +104,8 @@ export const store = {
     marketingCampaigns: [],
     billingSummary: null,
     invoices: [],
+    workspaceInput: null,
+    internationalGeo: null,
     runtimeStatus: null,
     brandProfile: null,
     modelConfigs: [],

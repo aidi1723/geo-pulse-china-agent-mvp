@@ -2,14 +2,22 @@ import {
   approvePublishTask as approvePublishTaskApi,
   bootstrapData,
   cancelPublishTask,
+  createContentTemplate as createContentTemplateApi,
+  createExportJob as createExportJobApi,
   createArticleFromTopic,
+  createManualArticle as createManualArticleApi,
+  createManualTopic as createManualTopicApi,
   createChannel as createChannelApi,
   createMediaSource as createMediaSourceApi,
   createModelConfig as createModelConfigApi,
   createPublishTask as createPublishTaskApi,
   createKeywordCrawlJob,
   createTopicsFromKeywords,
+  exportDownloadUrl,
+  generateInternationalGeoArtifacts as generateInternationalGeoArtifactsApi,
+  generateTopicOutline as generateTopicOutlineApi,
   getArticleDetail,
+  logoutSession as logoutSessionApi,
   resetRuntimeState as resetRuntimeStateApi,
   reconnectChannel as reconnectChannelApi,
   reviewArticle,
@@ -17,16 +25,20 @@ import {
   runSourceStrategy as runSourceStrategyApi,
   runMarketingCampaign as runMarketingCampaignApi,
   runSchedulerTick as runSchedulerTickApi,
+  runInternationalGeoAudit as runInternationalGeoAuditApi,
   runVisibilityCollection as runVisibilityCollectionApi,
   saveAutomationProvider as saveAutomationProviderApi,
   saveBrandProfile,
   saveChannel as saveChannelApi,
+  saveInternationalGeoInput as saveInternationalGeoInputApi,
   saveMediaSource as saveMediaSourceApi,
   saveModelConfig as saveModelConfigApi,
   saveSourceStrategy as saveSourceStrategyApi,
   submitArticleReview,
   takeoverPublishTaskItem as takeoverPublishTaskItemApi,
   testAutomationProvider as testAutomationProviderApi,
+  updateBillingPlan as updateBillingPlanApi,
+  updateTopic as updateTopicApi,
   retryPublishTask,
   startPublishTask,
   updateKeyword,
@@ -419,6 +431,57 @@ const actions = {
       rerender();
     }
   },
+  async createManualTopic() {
+    try {
+      const keyword = store.data.keywords.find((item) => item.id === store.selectedIds.keyword);
+      const topic = await createManualTopicApi({
+        title: keyword?.suggested_titles?.[0] || `${store.data.workspaceInput?.product_name || "GEO"} 单用户选题`,
+        keyword: keyword?.keyword || store.data.workspaceInput?.product_name || "GEO",
+        keyword_id: keyword?.id || "",
+        template_type: keyword?.intent === "decision" ? "decision" : "how_to",
+        core_messages: store.data.brandProfile?.core_value_props || [],
+        required_terms: ["llms.txt", "JSON-LD", "Direct Answer"]
+      });
+      store.selectedIds.topic = topic.id;
+      store.page = "content";
+      store.tabs.content = "topics";
+      await refreshData();
+      showNotice("已新建单用户选题。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "新建选题失败");
+      rerender();
+    }
+  },
+  async editTopic(topicId) {
+    if (!topicId) return;
+    try {
+      const current = store.data.topics.find((item) => item.id === topicId);
+      const topic = await updateTopicApi(topicId, {
+        title: current?.title?.includes("单用户优化")
+          ? current.title
+          : `${current?.title || "GEO 选题"}（单用户优化）`,
+        priority: Math.max(1, Number(current?.priority || 2) - 1)
+      });
+      store.selectedIds.topic = topic.id;
+      await refreshData();
+      showNotice("选题已完成本地编辑。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "编辑选题失败");
+      rerender();
+    }
+  },
+  async generateOutline(topicId) {
+    if (!topicId) return;
+    try {
+      const topic = await generateTopicOutlineApi(topicId);
+      store.selectedIds.topic = topic.id;
+      await refreshData();
+      showNotice("已生成文章大纲。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "生成大纲失败");
+      rerender();
+    }
+  },
   async generateArticle(topicId) {
     if (!topicId) return;
     try {
@@ -434,6 +497,62 @@ const actions = {
       setError(error instanceof Error ? error.message : "生成草稿失败");
       rerender();
     }
+  },
+  async createManualArticle() {
+    try {
+      const topic = store.data.topics.find((item) => item.id === store.selectedIds.topic);
+      const article = await createManualArticleApi({
+        topic_idea_id: topic?.id || "",
+        title: topic?.title || `${store.data.workspaceInput?.product_name || "GEO"} 单用户文章`,
+        content_markdown: `Direct answer: ${topic?.title || "Single-user GEO workflow"}.\n\nUse structured facts, direct answers, llms.txt, JSON-LD, and distribution evidence to increase AI-search citation readiness.`,
+        target_channel_types: topic?.target_channels || ["website_blog"]
+      });
+      store.selectedIds.article = article.id;
+      store.page = "content";
+      store.tabs.content = "articles";
+      store.data.articleDetails[article.id] = article;
+      await refreshData();
+      showNotice("已新建单用户文章草稿。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "新建文章失败");
+      rerender();
+    }
+  },
+  async createContentTemplate() {
+    try {
+      const template = await createContentTemplateApi({
+        name: "单用户 Direct Answer 模板",
+        template_type: "how_to",
+        applicable_categories: ["definition", "comparison", "how_to"],
+        structure: ["Direct answer", "Evidence table", "FAQ", "CTA"]
+      });
+      store.page = "content";
+      store.tabs.content = "templates";
+      await refreshData();
+      showNotice(`已新增模板：${template.name}`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "新增模板失败");
+      rerender();
+    }
+  },
+  async exportArtifact(exportType = "content_articles") {
+    try {
+      const job = await createExportJobApi({
+        artifact_type: exportType || "content_articles",
+        format: "csv"
+      });
+      if (typeof window !== "undefined" && job?.id) {
+        window.open(exportDownloadUrl(job.id), "_blank", "noopener,noreferrer");
+      }
+      showNotice(`已生成导出文件：${job.file_name || "export.csv"}`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "导出失败");
+      rerender();
+    }
+  },
+  async assignReview(articleId) {
+    if (!articleId) return;
+    showNotice("单用户模式下已由当前操作者接收复审任务。");
   },
   async openPublishPanel(articleId) {
     const nextState = resolvePublishPanelState({
@@ -875,6 +994,60 @@ const actions = {
       showNotice(`自有活动已运行，发送 ${result.metrics?.sent_count || 0} 人。`);
     } catch (error) {
       setError(error instanceof Error ? error.message : "运行自有活动失败");
+      rerender();
+    }
+  },
+  async runInternationalAudit() {
+    try {
+      const result = await runInternationalGeoAuditApi();
+      store.data.internationalGeo = result;
+      store.page = "international";
+      rerender();
+      showNotice(`国际 GEO 审计完成，AI-ready score ${result.summary?.ai_ready_score || "-"}。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "国际 GEO 审计失败");
+      rerender();
+    }
+  },
+  async generateInternationalArtifacts() {
+    try {
+      await saveInternationalGeoInputApi({
+        website_url: store.data.workspaceInput?.website_url || store.data.internationalGeo?.input?.website_url,
+        product_name: store.data.workspaceInput?.product_name || store.data.internationalGeo?.input?.product_name
+      });
+      const artifacts = await generateInternationalGeoArtifactsApi();
+      await refreshData();
+      store.page = "international";
+      showNotice(`已生成 llms.txt 和 JSON-LD：${artifacts.llms_txt ? "完成" : "待检查"}`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "生成国际 GEO 资产失败");
+      rerender();
+    }
+  },
+  async upgradePlan(planId = "single_user_pro") {
+    try {
+      await updateBillingPlanApi({
+        plan_id: planId,
+        billing_cycle: "monthly"
+      });
+      await refreshData();
+      store.page = "billing";
+      showNotice("单用户本地套餐已更新，无需真实支付。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "更新套餐失败");
+      rerender();
+    }
+  },
+  async logoutSession() {
+    try {
+      await logoutSessionApi({ reason: "single_user_ui" });
+      store.search = "";
+      store.ui.panel = "";
+      store.page = "dashboard";
+      rerender();
+      showNotice("已退出当前单用户操作视图。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "退出失败");
       rerender();
     }
   }

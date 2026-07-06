@@ -53,7 +53,7 @@ function renderPage(store) {
     case "analytics":
       return renderAnalytics(store);
     case "international":
-      return renderInternationalGeo();
+      return renderInternationalGeo(store.data.internationalGeo);
     case "billing":
       return renderBilling(store.data);
     case "settings":

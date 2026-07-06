@@ -103,6 +103,7 @@ function extractItems(result) {
 export async function bootstrapData() {
   const [
     workspace,
+    workspaceInput,
     dashboardSummary,
     keywordTrend,
     contentFunnel,
@@ -132,6 +133,7 @@ export async function bootstrapData() {
     marketingCampaignsResult,
     billingSummary,
     invoicesResult,
+    internationalGeo,
     runtimeStatus,
     brandProfile,
     modelConfigsResult,
@@ -140,6 +142,7 @@ export async function bootstrapData() {
     membersResult
   ] = await Promise.all([
     request("/api/v1/workspaces/current"),
+    request("/api/v1/workspace-input"),
     request("/api/v1/dashboard/summary"),
     request("/api/v1/dashboard/keyword-trend"),
     request("/api/v1/dashboard/content-funnel"),
@@ -169,6 +172,7 @@ export async function bootstrapData() {
     request("/api/v1/marketing-campaigns"),
     request("/api/v1/billing/summary"),
     request("/api/v1/billing/invoices"),
+    request("/api/v1/international-geo"),
     request("/api/v1/system/runtime"),
     request("/api/v1/brand-profile"),
     request("/api/v1/model-configs"),
@@ -179,6 +183,7 @@ export async function bootstrapData() {
 
   return {
     workspace,
+    workspaceInput,
     dashboardSummary,
     keywordTrend,
     contentFunnel,
@@ -208,6 +213,7 @@ export async function bootstrapData() {
     marketingCampaigns: extractItems(marketingCampaignsResult),
     billingSummary,
     invoices: extractItems(invoicesResult),
+    internationalGeo,
     runtimeStatus,
     brandProfile,
     modelConfigs: extractItems(modelConfigsResult),
@@ -258,6 +264,18 @@ export function createTopicsFromKeywords(keywordIds, templateType = "decision") 
   });
 }
 
+export function createManualTopic(payload) {
+  return requestJson("/api/v1/topic-ideas", "POST", payload);
+}
+
+export function updateTopic(topicId, payload) {
+  return requestJson(`/api/v1/topic-ideas/${topicId}`, "PUT", payload);
+}
+
+export function generateTopicOutline(topicId) {
+  return requestJson(`/api/v1/topic-ideas/${topicId}/outline`, "POST", {});
+}
+
 export function getArticleDetail(articleId) {
   return request(`/api/v1/articles/${articleId}`);
 }
@@ -266,6 +284,10 @@ export function createArticleFromTopic(topicId) {
   return requestJson("/api/v1/articles/from-topic", "POST", {
     topic_id: topicId
   });
+}
+
+export function createManualArticle(payload) {
+  return requestJson("/api/v1/articles", "POST", payload);
 }
 
 export function getArticleVersions(articleId) {
@@ -286,6 +308,38 @@ export function reviewArticle(articleId, action, comments = "", reasonCodes = []
     comments,
     reason_codes: reasonCodes
   });
+}
+
+export function createContentTemplate(payload) {
+  return requestJson("/api/v1/content-templates", "POST", payload);
+}
+
+export function createExportJob(payload) {
+  return requestJson("/api/v1/exports", "POST", payload);
+}
+
+export function exportDownloadUrl(exportId) {
+  return `/api/v1/exports/${encodeURIComponent(exportId)}/download`;
+}
+
+export function saveInternationalGeoInput(payload) {
+  return requestJson("/api/v1/international-geo/input", "PUT", payload);
+}
+
+export function runInternationalGeoAudit() {
+  return requestJson("/api/v1/international-geo/audit", "POST", {});
+}
+
+export function generateInternationalGeoArtifacts() {
+  return requestJson("/api/v1/international-geo/artifacts", "POST", {});
+}
+
+export function updateBillingPlan(payload) {
+  return requestJson("/api/v1/billing/plan", "POST", payload);
+}
+
+export function logoutSession(payload = {}) {
+  return requestJson("/api/v1/session/logout", "POST", payload);
 }
 
 export function startPublishTask(taskId) {

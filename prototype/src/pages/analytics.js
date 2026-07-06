@@ -277,7 +277,7 @@ export function renderAnalytics(store) {
               ? '<button class="primary-btn" data-action="visibility-collect">运行采集</button>'
               : ""
           }
-          <button class="ghost-btn" disabled title="导出能力即将开放">导出数据</button>
+          <button class="ghost-btn" data-action="export-artifact" data-export-type="analytics_visibility">导出数据</button>
         </div>
       </div>
     </section>

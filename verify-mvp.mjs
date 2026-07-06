@@ -137,6 +137,24 @@ function runSyntaxChecks() {
   }
 }
 
+function runSingleUserSourceChecks() {
+  const sourceFiles = [
+    "prototype/src/components.js",
+    "prototype/src/pages/analytics.js",
+    "prototype/src/pages/billing.js",
+    "prototype/src/pages/content.js",
+    "prototype/src/pages/distribution.js",
+    "prototype/src/pages/international.js",
+    "prototype/src/pages/keywords.js"
+  ];
+  const combined = sourceFiles.map((file) => fs.readFileSync(file, "utf8")).join("\n");
+  assert.doesNotMatch(
+    combined,
+    /即将开放|Read-only MVP/,
+    "Single-user v0.3 source should not contain coming-soon or read-only workflow buttons"
+  );
+}
+
 async function runMockDataChecks() {
   const baselineSummary = getDashboardSummary();
   assert.ok(baselineSummary.weekly_new_keywords > 0, "Dashboard summary should be available");
@@ -3121,6 +3139,7 @@ async function runRemoteAccessSecurityChecks() {
 
 try {
   runSyntaxChecks();
+  runSingleUserSourceChecks();
   await runMockDataChecks();
   await runSingleUserCompleteChecks();
   runRouteStateChecks();

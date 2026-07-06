@@ -153,7 +153,7 @@ export function renderDistribution(store) {
         </div>
         <div class="toolbar-right">
           <button class="ghost-btn" data-action="reset-distribution-filters">重置筛选</button>
-          <button class="ghost-btn" disabled title="导出能力即将开放">导出结果</button>
+          <button class="ghost-btn" data-action="export-artifact" data-export-type="distribution_tasks">导出结果</button>
           <button class="primary-btn" data-action="open-publish-panel">创建发布任务</button>
         </div>
       </div>
