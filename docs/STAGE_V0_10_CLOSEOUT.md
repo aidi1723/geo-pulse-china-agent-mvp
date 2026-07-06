@@ -35,4 +35,4 @@ Warnings: 0
 
 ## Closing Copy
 
-GEO Pulse v0.10 turns International GEO into a usable site audit and asset generation workflow. Operators can enter a website and product context, create a rule-first GEO audit, inspect check-level recommendations, and generate copyable llms.txt, JSON-LD, FAQ, article, and distribution assets. The next stage should connect live site crawling and AI visibility monitoring before claiming real-time engine inclusion or recommendation tracking.
+GEO Pulse v0.10 turns International GEO into a usable site audit and asset generation workflow. Operators can enter a website and product context, create a rule-first GEO audit, inspect check-level recommendations, and generate copyable llms.txt, JSON-LD, FAQ, article, and distribution assets. The next stage should follow the [Phase 2 Roadmap](PHASE_2_ROADMAP.md): connect live site crawling, evidence-backed scoring, AI visibility monitoring, and controlled external distribution before claiming real-time engine inclusion or recommendation tracking.

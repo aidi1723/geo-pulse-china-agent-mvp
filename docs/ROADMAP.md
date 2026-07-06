@@ -37,7 +37,7 @@ These items keep v0.10.0 healthy without changing its architecture:
 
 ## Next Product Slices
 
-These can be built mock-first before real integrations:
+These are the immediate product slices. The full second-stage direction is tracked in [Phase 2 Roadmap](PHASE_2_ROADMAP.md).
 
 1. Live site crawl connector for International GEO.
    - Fetch submitted website pages, robots, sitemap, Schema, and `/llms.txt` through a guarded connector.
@@ -56,6 +56,20 @@ These can be built mock-first before real integrations:
 
 5. Prompt regression dataset.
    - Store sample inputs, expected criteria, generated outputs, and quality score history.
+
+## Phase 2 Direction
+
+Phase 2 should move the product from v0.10 rule-first audit preparation to evidence-backed GEO operations:
+
+- Live site crawl and evidence collection.
+- Evidence-backed GEO scoring.
+- AI visibility monitoring through approved data sources.
+- Content and GEO asset generation from crawl evidence and prompt gaps.
+- External distribution connectors with manual approval gates.
+- Multi-user production hardening with database persistence, durable secrets, monitoring, and audit retention.
+- Multi-tenant SaaS readiness only after the one-organization deployment model is hardened.
+
+Phase 2 must preserve a clear distinction between rule-first recommendations, crawl-evidenced findings, and measured external visibility data.
 
 ## Post-v0.10 Production Hardening
 

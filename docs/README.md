@@ -22,6 +22,7 @@ This directory contains the maintainer-facing documentation for GEO Pulse China 
 - [Maintenance Guide](MAINTENANCE.md): routine maintenance, release gate, runtime state, security defaults, and production backlog.
 - [Privacy Release Review](PRIVACY_RELEASE_REVIEW.md): public-branch privacy scans, cleanup rules, and history-rewrite guidance.
 - [Roadmap](ROADMAP.md): what is done, what remains local-first, and what belongs to post-v0.10 production hardening.
+- [Phase 2 Roadmap](PHASE_2_ROADMAP.md): future development tracks for live crawl evidence, measured AI visibility, external distribution, production hardening, and SaaS readiness.
 - [Open Source Release Checklist](OPEN_SOURCE_RELEASE.md): publication readiness, GitHub settings, and release-note draft.
 - [Minimal CI Plan](superpowers/plans/2026-07-06-minimal-ci.md): GitHub Actions quality gate plan for `npm run check`.
 
