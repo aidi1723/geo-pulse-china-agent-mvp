@@ -1002,6 +1002,56 @@ tbody tr:hover {
   gap: 16px;
 }
 
+.compact-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.compact-form input,
+.compact-form textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(20, 37, 63, 0.1);
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--text);
+}
+
+.compact-form .span-2 {
+  grid-column: 1 / -1;
+}
+
+.asset-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.compact-panel {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(20, 37, 63, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.code-preview {
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid rgba(20, 37, 63, 0.08);
+  border-radius: 12px;
+  background: rgba(13, 27, 42, 0.04);
+  color: #223248;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
 .form-field {
   display: flex;
   flex-direction: column;
