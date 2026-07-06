@@ -12,6 +12,7 @@ import {
   createChannelAction,
   createContentTemplateAction,
   createExportJobAction,
+  createInternationalGeoVisibilityPromptSetAction,
   createInternationalGeoSiteAuditAction,
   createMediaSourceAction,
   createModelConfigAction,
@@ -34,6 +35,7 @@ import {
   getExportJobDownload,
   getCampaignAnalytics,
   getInternationalGeoState,
+  getInternationalGeoVisibilityState,
   getInternationalGeoSiteAudit,
   getKeyword,
   getPromptTemplate,
@@ -73,6 +75,7 @@ import {
   approvePublishTaskAction,
   crawlInternationalGeoSiteAuditAction,
   runInternationalGeoAuditAction,
+  runInternationalGeoVisibilityMeasurementAction,
   retryAutomationRunAction,
   runVisibilityCollectionAction,
   runSourceStrategyAction,
@@ -99,6 +102,7 @@ import {
   verifyUserPassword,
   validateRuntimeBackupImportAction,
   validateRuntimeBackupAction,
+  validateInternationalGeoVisibilitySnapshot,
   importRuntimeBackupAction,
   restoreRuntimeBackupAction
 } from "./mock-data.mjs";
@@ -1147,6 +1151,108 @@ async function runMockDataChecks() {
     listInternationalGeoSiteAudits().items.some((item) => item.id === siteAudit.id),
     "Created site audit should be listable"
   );
+
+  const visibilityState = getInternationalGeoVisibilityState();
+  assert.ok(
+    visibilityState.prompt_sets.length >= 1,
+    "International GEO visibility should expose prompt sets"
+  );
+  const expectedVisibilityEngines = [
+    "chatgpt_search",
+    "perplexity",
+    "google_ai_overviews",
+    "gemini",
+    "claude",
+    "copilot_bing"
+  ];
+  assert.ok(
+    visibilityState.provider_readiness.length >= expectedVisibilityEngines.length,
+    "International GEO visibility should expose provider readiness for supported engines"
+  );
+  const providerReadinessEngineIds = new Set(visibilityState.provider_readiness.map((item) => item.engine_id));
+  assert.ok(
+    expectedVisibilityEngines.every((engineId) => providerReadinessEngineIds.has(engineId)),
+    "Provider readiness should include all supported AI visibility engines"
+  );
+  assert.ok(
+    visibilityState.provider_readiness.every((item) =>
+      ["measured", "simulated", "unavailable"].includes(item.data_status)
+    ),
+    "Provider readiness rows should expose stable data_status values"
+  );
+  assert.ok(
+    visibilityState.summary.unavailable_snapshots >= 0,
+    "International GEO visibility summary should expose unavailable counts"
+  );
+
+  const promptSet = createInternationalGeoVisibilityPromptSetAction({
+    prompt: "best GEO platform for B2B exporters",
+    market: "US",
+    language: "en-US",
+    buyer_intent: "comparison",
+    product_name: "GEO Pulse",
+    target_url: "https://example.com",
+    target_brand: "GEO Pulse",
+    competitors: ["Profound", "AthenaHQ"],
+    engines: ["chatgpt_search", "perplexity"]
+  });
+  assert.equal(promptSet.prompt, "best GEO platform for B2B exporters");
+  assert.deepEqual(promptSet.engines, ["chatgpt_search", "perplexity"]);
+  assert.throws(
+    () =>
+      createInternationalGeoVisibilityPromptSetAction({
+        prompt: "invalid engine prompt",
+        engines: ["unknown_engine"]
+      }),
+    /VALIDATION_ERROR/,
+    "Unsupported AI visibility engine ids should be rejected"
+  );
+
+  const visibilityRun = runInternationalGeoVisibilityMeasurementAction({ trigger: "manual" });
+  assert.equal(
+    visibilityRun.run.data_source_type,
+    "unavailable",
+    "Default International GEO visibility run should not claim measured data"
+  );
+  assert.ok(Array.isArray(visibilityRun.snapshots), "Visibility measurement should return snapshot rows");
+  assert.ok(
+    visibilityRun.snapshots_created >= getInternationalGeoVisibilityState().prompt_sets.length,
+    "Visibility measurement should create snapshots for configured prompt sets"
+  );
+  assert.equal(
+    visibilityRun.snapshots.length,
+    visibilityRun.snapshots_created,
+    "Visibility run snapshot count should match created snapshot count"
+  );
+  assert.ok(
+    visibilityRun.snapshots.length >= promptSet.engines.length,
+    "Visibility run should create snapshots for every prompt-set engine"
+  );
+  const visibilityRunEngineIds = new Set(visibilityRun.snapshots.map((item) => item.engine_id));
+  assert.ok(
+    promptSet.engines.every((engineId) => visibilityRunEngineIds.has(engineId)),
+    "Visibility run should include snapshots for the created prompt-set engines"
+  );
+  assert.ok(
+    visibilityRun.snapshots.every((item) => item.data_status === "unavailable"),
+    "Default visibility snapshots should be unavailable until a provider is configured"
+  );
+  assert.ok(
+    visibilityRun.snapshots.every((item) => item.brand_mentioned === null && item.recommendation_rank === null),
+    "Unavailable snapshots should not invent brand mentions or ranks"
+  );
+
+  assert.throws(
+    () =>
+      validateInternationalGeoVisibilitySnapshot({
+        data_status: "measured",
+        engine_id: "perplexity",
+        captured_at: "2026-07-07T00:00:00.000Z"
+      }),
+    /MEASURED_SOURCE_REQUIRED/,
+    "Measured snapshots should require provider and source evidence"
+  );
+
   assert.equal(
     normalizeCrawlTarget("https://example.com/path?x=1")?.href,
     "https://example.com/path?x=1",
@@ -3123,7 +3229,87 @@ function runInternationalGeoUiChecks() {
         content_type: "text/markdown",
         created_at: "2026-07-06T00:00:00.000Z"
       }
-    ]
+    ],
+    visibility: {
+      provider_readiness: [
+        {
+          engine_id: "chatgpt_search",
+          engine_name: "ChatGPT Search",
+          data_status: "unavailable",
+          provider_id: "",
+          last_checked_at: "2026-07-07T00:00:00.000Z"
+        },
+        {
+          engine_id: "perplexity",
+          engine_name: "Perplexity",
+          data_status: "unavailable",
+          provider_id: "",
+          last_checked_at: "2026-07-07T00:00:00.000Z"
+        },
+        {
+          engine_id: "google_ai_overviews",
+          engine_name: "Google AI Overviews",
+          data_status: "unavailable",
+          provider_id: "",
+          last_checked_at: "2026-07-07T00:00:00.000Z"
+        },
+        {
+          engine_id: "gemini",
+          engine_name: "Gemini",
+          data_status: "unavailable",
+          provider_id: "",
+          last_checked_at: "2026-07-07T00:00:00.000Z"
+        },
+        {
+          engine_id: "claude",
+          engine_name: "Claude",
+          data_status: "unavailable",
+          provider_id: "",
+          last_checked_at: "2026-07-07T00:00:00.000Z"
+        },
+        {
+          engine_id: "copilot_bing",
+          engine_name: "Copilot Bing",
+          data_status: "unavailable",
+          provider_id: "",
+          last_checked_at: "2026-07-07T00:00:00.000Z"
+        }
+      ],
+      snapshots: [
+        {
+          id: "vis-snap-chatgpt",
+          prompt_set_id: "vis-prompt-ui",
+          prompt: "best GEO platform for B2B exporters",
+          engine_id: "chatgpt_search",
+          engine_name: "ChatGPT Search",
+          data_status: "unavailable",
+          brand_mentioned: null,
+          recommendation_rank: null,
+          captured_at: "2026-07-07T00:00:00.000Z"
+        },
+        {
+          id: "vis-snap-perplexity",
+          prompt_set_id: "vis-prompt-ui",
+          prompt: "best GEO platform for B2B exporters",
+          engine_id: "perplexity",
+          engine_name: "Perplexity",
+          data_status: "unavailable",
+          brand_mentioned: null,
+          recommendation_rank: null,
+          captured_at: "2026-07-07T00:00:00.000Z"
+        }
+      ],
+      runs: [
+        {
+          id: "vis-run-ui",
+          trigger: "manual",
+          status: "completed",
+          data_source_type: "unavailable",
+          snapshots_created: 2,
+          created_at: "2026-07-07T00:00:00.000Z"
+        }
+      ]
+    }
   });
   assert.match(siteAuditHtml, /站点 GEO 审计/, "International GEO page should render site audit workflow");
   assert.match(
@@ -3151,6 +3337,11 @@ function runInternationalGeoUiChecks() {
   );
   assert.match(siteAuditHtml, /GEO 资产/, "International GEO page should render GEO assets");
   assert.match(siteAuditHtml, /llms\.txt/, "International GEO page should render llms.txt assets");
+  assert.match(siteAuditHtml, /AI 可见度测量/, "International GEO should render AI visibility measurement panel");
+  assert.match(siteAuditHtml, /引擎数据源状态/, "International GEO should render engine provider readiness");
+  assert.match(siteAuditHtml, /Prompt 测量快照/, "International GEO should render prompt measurement snapshots");
+  assert.match(siteAuditHtml, /测量运行记录/, "International GEO should render visibility run history");
+  assert.match(siteAuditHtml, /unavailable|simulated|measured/, "International GEO should expose data source labels");
 }
 
 function runPersistenceChecks() {
@@ -3962,6 +4153,53 @@ async function runMultiUserAccessHttpChecks() {
     assert.ok(
       ownerAssets.body?.data?.items?.some((item) => item.asset_type === "llms_txt"),
       "Generated site audit assets should include llms.txt"
+    );
+
+    const visibilityRead = await httpRequest(port, "/api/v1/international-geo/visibility", {
+      headers: { Cookie: viewerLogin.cookie }
+    });
+    assert.equal(visibilityRead.status, 200, "Viewer should read International GEO visibility state");
+    assert.ok(
+      visibilityRead.body?.data?.provider_readiness?.length >= 1,
+      "Visibility HTTP read should include provider readiness"
+    );
+
+    const viewerPromptWrite = await httpRequest(port, "/api/v1/international-geo/visibility/prompt-sets", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: viewerLogin.cookie
+      },
+      body: JSON.stringify({ prompt: "viewer should not write prompts" })
+    });
+    assert.equal(viewerPromptWrite.status, 403, "Viewer should not create visibility prompt sets");
+
+    const ownerPromptWrite = await httpRequest(port, "/api/v1/international-geo/visibility/prompt-sets", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: ownerLogin.cookie
+      },
+      body: JSON.stringify({
+        prompt: "best AI visibility platform",
+        engines: ["chatgpt_search", "perplexity"]
+      })
+    });
+    assert.equal(ownerPromptWrite.status, 201, "Owner should create visibility prompt sets");
+
+    const ownerVisibilityRun = await httpRequest(port, "/api/v1/international-geo/visibility/run", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: ownerLogin.cookie
+      },
+      body: JSON.stringify({ trigger: "manual" })
+    });
+    assert.equal(ownerVisibilityRun.status, 200, "Owner should run visibility measurement");
+    assert.equal(
+      ownerVisibilityRun.body?.data?.run?.data_source_type,
+      "unavailable",
+      "HTTP visibility run should not claim measured data without a provider"
     );
 
     const createdEditor = await httpRequest(port, "/api/v1/users", {
