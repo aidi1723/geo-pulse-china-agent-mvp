@@ -437,6 +437,30 @@ function renderFilterSummary(filters = {}) {
     .join("");
 }
 
+function auditStatusLabel(value) {
+  const labels = {
+    ready: "就绪",
+    review: "需复核",
+    blocked: "阻断",
+    passed: "通过",
+    warning: "告警",
+    failed: "失败"
+  };
+  return labels[value] || value || "-";
+}
+
+function assetLabel(value) {
+  const labels = {
+    llms_txt: "llms.txt",
+    organization_json_ld: "Organization JSON-LD",
+    product_json_ld: "Product JSON-LD",
+    faq_json_ld: "FAQ JSON-LD",
+    article_brief: "Article brief",
+    distribution_brief: "Distribution brief"
+  };
+  return labels[value] || value || "-";
+}
+
 function renderEngineVisibilityTable(items = []) {
   return tableMarkup(
     ["AI 引擎", "市场", "品牌提及 / 引用", "Share of Voice", "引用 URL", "竞品缺口", "状态"],
@@ -587,8 +611,144 @@ function renderEntityCoverageTable(items = []) {
   );
 }
 
+function renderSiteAuditPanel(data = {}) {
+  const input = data.input || {};
+  const latest = data.site_audits?.latest || data.site_audits?.items?.[0] || null;
+  const competitors = Array.isArray(input.competitors) ? input.competitors.join("\n") : "";
+
+  return `
+    <section class="surface panel" data-international-panel="site-audit">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">站点 GEO 审计</h3>
+          <div class="panel-note">输入网址和产品信息，生成规则优先的 AI 搜索可读性审计。</div>
+        </div>
+        <div class="actions-row">
+          <button class="ghost-btn" data-action="international-site-assets">生成 GEO 资产</button>
+          <button class="secondary-btn" data-action="international-site-audit">运行站点审计</button>
+        </div>
+      </div>
+      <div class="form-grid compact-form">
+        <label>Website URL<input data-international-audit-field="website_url" value="${escapeHtml(input.website_url || "")}" /></label>
+        <label>Product / Brand<input data-international-audit-field="product_name" value="${escapeHtml(input.product_name || "")}" /></label>
+        <label>Target market<input data-international-audit-field="target_market" value="${escapeHtml(input.target_market || "Global")}" /></label>
+        <label>Target language<input data-international-audit-field="target_language" value="${escapeHtml(input.target_language || "en")}" /></label>
+        <label class="span-2">Primary buyer query<input data-international-audit-field="primary_query" value="${escapeHtml(input.primary_query || "")}" /></label>
+        <label class="span-2">Competitors<textarea data-international-audit-field="competitors" rows="3">${escapeHtml(competitors)}</textarea></label>
+      </div>
+      ${
+        latest
+          ? `<div class="info-grid">
+              <div class="info-row"><span>最近审计</span><strong>${escapeHtml(latest.product_name || "-")}</strong></div>
+              <div class="info-row"><span>分数</span><strong>${escapeHtml(latest.score ?? "-")}</strong></div>
+              <div class="info-row"><span>状态</span><strong>${escapeHtml(auditStatusLabel(latest.status))}</strong></div>
+              <div class="info-row"><span>资产</span><strong>${escapeHtml(latest.summary?.generated_assets ?? 0)}</strong></div>
+            </div>`
+          : `<div class="empty-state">暂无站点审计。</div>`
+      }
+    </section>
+  `;
+}
+
+function renderSiteAuditChecks(audit = {}) {
+  const checks = audit?.checks || [];
+  const rows = checks.length
+    ? checks.map(
+        (item) => `
+          <tr>
+            <td>
+              <div class="cell-title">${escapeHtml(item.label || item.id)}</div>
+              <div class="cell-sub">${escapeHtml(item.category || "-")}</div>
+            </td>
+            <td>${statusMarkup(auditStatusLabel(item.status))}</td>
+            <td>
+              <div class="cell-title">${escapeHtml(item.message || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.recommendation || "-")}</div>
+            </td>
+          </tr>
+        `
+      )
+    : [`<tr><td colspan="3"><div class="empty-state">暂无审计检查项。</div></td></tr>`];
+
+  return `
+    <section class="surface panel">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">审计检查项</h3>
+          <div class="panel-note">v0.10 是规则优先审计；live robots、sitemap、Schema 和 AI 引擎收录仍需上线后核验。</div>
+        </div>
+      </div>
+      ${tableMarkup(["检查项", "状态", "证据 / 建议"], rows)}
+    </section>
+  `;
+}
+
+function renderSiteAuditHistory(siteAudits = {}) {
+  const items = siteAudits.items || [];
+  const rows = items.length
+    ? items.slice(0, 5).map(
+        (item) => `
+          <tr>
+            <td>
+              <div class="cell-title">${escapeHtml(item.product_name || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.website_url || "-")}</div>
+            </td>
+            <td>${escapeHtml(item.target_market || "-")}</td>
+            <td><strong>${escapeHtml(item.score ?? "-")}</strong></td>
+            <td>${statusMarkup(auditStatusLabel(item.status))}</td>
+            <td>${escapeHtml(item.summary?.generated_assets ?? 0)}</td>
+          </tr>
+        `
+      )
+    : [`<tr><td colspan="5"><div class="empty-state">暂无站点审计记录。</div></td></tr>`];
+
+  return `
+    <section class="surface panel">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">最近审计记录</h3>
+          <div class="panel-note">保留最近站点 GEO 审计，便于比较输入和资产生成状态。</div>
+        </div>
+      </div>
+      ${tableMarkup(["站点", "市场", "分数", "状态", "资产"], rows)}
+    </section>
+  `;
+}
+
+function renderGeoAssetPreviews(assets = []) {
+  const items = (assets || []).slice(0, 6);
+  const previews = items.map(
+    (item) => `
+      <article class="compact-panel">
+        <div class="panel-head">
+          <div>
+            <h4 class="panel-title">${escapeHtml(assetLabel(item.asset_type))}</h4>
+            <div class="panel-note">${escapeHtml(item.content_type || "-")}</div>
+          </div>
+        </div>
+        <pre class="code-preview">${escapeHtml(item.content || "")}</pre>
+      </article>
+    `
+  );
+
+  return `
+    <section class="surface panel">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">GEO 资产</h3>
+          <div class="panel-note">可复制到站点、CMS 或分发任务中的 llms.txt、JSON-LD、FAQ 和内容简报。</div>
+        </div>
+      </div>
+      <div class="asset-preview-grid">
+        ${previews.join("") || `<div class="empty-state">暂无 GEO 资产，请先运行审计并生成资产。</div>`}
+      </div>
+    </section>
+  `;
+}
+
 export function renderInternationalGeo(data = internationalGeo) {
   const summary = data.summary || {};
+  const latestAudit = data.site_audits?.latest || data.site_audits?.items?.[0] || {};
 
   return `
     <section class="surface toolbar">
@@ -608,6 +768,11 @@ export function renderInternationalGeo(data = internationalGeo) {
       ${metricCard("JSON-LD", summary.schema_coverage || "-", "Schema and entity coverage")}
       ${metricCard("Citation opportunities", summary.citation_opportunities ?? "-", "Direct Answer and source gaps")}
     </div>
+
+    ${renderSiteAuditPanel(data)}
+    ${renderSiteAuditChecks(latestAudit)}
+    ${renderSiteAuditHistory(data.site_audits || {})}
+    ${renderGeoAssetPreviews(data.geo_assets || [])}
 
     <section class="surface panel">
       <div class="panel-head">
