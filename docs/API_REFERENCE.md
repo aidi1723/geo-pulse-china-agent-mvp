@@ -43,13 +43,27 @@ Error JSON responses:
 
 ## Authorization
 
-Write APIs require:
+Browser access uses the built-in session flow:
+
+- `POST /session/login` verifies username and password.
+- The server sets an HTTP-only `geo_session` cookie.
+- Normal admin workspace reads and writes require a valid session.
+- Mutating routes also enforce role permissions.
+
+System scripts can still use:
 
 ```text
 X-GEO-API-Key: <runtime-key>
 ```
 
-In local same-origin mode, the browser prototype reads the development key from `/api/v1/system/client-config`. When `GEO_ALLOW_REMOTE_ACCESS=1`, the server requires a fixed `GEO_INTERNAL_API_KEY` and does not expose it to the client config endpoint.
+The browser client config endpoint does not expose the mutation API key in v0.9. Keep `GEO_INTERNAL_API_KEY` for automation, diagnostics, and controlled scripts.
+
+Roles:
+
+- `owner`: all operations, restore, reset, and user management.
+- `admin`: configuration, connectors, backups, and editor/viewer user management.
+- `editor`: content, keyword, distribution, International GEO, visibility, and campaign operations.
+- `viewer`: read-only workspace access.
 
 ## Pagination
 
@@ -65,6 +79,18 @@ List endpoints generally return:
 ```
 
 ## Route Groups
+
+### Session And Users
+
+- `GET /session/current`
+- `POST /session/login`
+- `POST /session/logout`
+- `GET /users`
+- `POST /users`
+- `POST /users/:id/disable`
+- `POST /users/:id/reset-password`
+
+User responses never include password hashes. Create and reset responses may include a temporary password only in the direct response to the authorized action.
 
 ### Dashboard
 
@@ -227,7 +253,7 @@ Audit CSV export neutralizes spreadsheet formula prefixes. Runtime reset restore
 
 Runtime backups are local operator artifacts. Backup list responses expose metadata only. Download responses return a JSON artifact with `kind`, `schema_version`, `backup`, and `snapshot`; the snapshot intentionally excludes `runtimeBackups` so backups do not recursively contain backup history. Import routes accept that downloaded artifact shape, validate checksum and schema, and store the artifact under a new local backup id. Create, import, validate, and restore operations write audit events.
 
-Launch preflight is read-only. It returns overall status, score, summary counts, and check rows for persistence, mutation auth, remote access, backup recovery, connectors, GEO static routes, and scheduler state. It does not expose raw API keys or environment values.
+Launch preflight is read-only. It returns overall status, score, summary counts, and check rows for persistence, mutation auth, user auth, session security, remote access, backup recovery, connectors, GEO static routes, and scheduler state. It does not expose raw API keys or environment values.
 
 ## Adding Or Changing APIs
 

@@ -2,13 +2,13 @@
 
 ## Overview
 
-GEO Pulse China Agent v0.8 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes a single-user complete workflow, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, a single-tenant deployment profile, production startup guardrails, health checks, and GEO/SEO static files for controlled server use.
+GEO Pulse China Agent v0.9 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes built-in one-organization multi-user access, role-based permissions, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production startup guardrails, health checks, and GEO/SEO static files for controlled server use.
 
 ## Runtime Components
 
 | Area | File or Directory | Responsibility |
 | --- | --- | --- |
-| HTTP server | `server.mjs` | Serves the prototype, exposes `/api/v1/*`, applies security headers, mutation authorization, CORS, rate limiting, body limits, SSRF checks, scheduler controls, health checks, and static GEO/SEO routes. |
+| HTTP server | `server.mjs` | Serves the prototype, exposes `/api/v1/*`, applies security headers, session authentication, role authorization, API-key automation access, CORS, rate limiting, body limits, SSRF checks, scheduler controls, health checks, and static GEO/SEO routes. |
 | Mock domain data | `mock-data.mjs` | Stores seed data, local state mutation actions, API read models, persistence hydration, runtime backups, audit events, provider invocation logs, connector permissions, connector diagnostics, source adapter contracts, and workflow actions. |
 | Provider registry | `automation-providers.mjs` | Defines keyword discovery, topic planning, and article generation provider contracts, local fallback behavior, remote execution validation, masking, and provider config persistence helpers. |
 | Prototype shell | `prototype/` | Browser admin prototype with hash routing, state store, API client, static preview mode, UI pages, and shared utilities. |
@@ -35,7 +35,7 @@ GEO Pulse China Agent v0.8 is a zero-dependency Node.js application with a brows
 | Analytics | Visibility tracking, SERP snapshots, competitor domains, audience segments, campaign runs. | `mock-data.mjs`, `prototype/src/pages/analytics.js` |
 | International GEO | Overseas AI search readiness, article and distribution planning, engine visibility, community citation surfaces. | `prototype/src/pages/international.js` |
 | Single-user completion | Workspace input, manual topics, outlines, manual articles, templates, exports, local billing plan switch, and logout action. | `mock-data.mjs`, `server.mjs`, `prototype/src/main.js` |
-| Security and governance | API key guard, audit events, CSV export safety, connector-scoped permissions, endpoint restrictions, local backup/restore audit trail. | `server.mjs`, `mock-data.mjs`, `reports/security-hardening-log.md` |
+| Security and governance | Login sessions, local users, role permissions, API key automation guard, audit events, CSV export safety, connector-scoped permissions, endpoint restrictions, local backup/restore audit trail. | `server.mjs`, `mock-data.mjs`, `reports/security-hardening-log.md` |
 
 ## Persistence Model
 
@@ -48,20 +48,23 @@ Persistence is local JSON, not a production database.
 
 ## Security Model
 
-v0.8 uses local-first safeguards plus production startup guardrails:
+v0.9 uses built-in team access plus local-first production guardrails:
 
 - Remote access is disabled unless `GEO_ALLOW_REMOTE_ACCESS=1`.
 - Remote access requires a fixed `GEO_INTERNAL_API_KEY`.
 - `NODE_ENV=production` fails startup when `GEO_INTERNAL_API_KEY` is missing or shorter than 24 characters.
-- Mutation APIs require `X-GEO-API-Key`.
-- Sensitive reads such as audit events require authorization when remote access is enabled.
+- `NODE_ENV=production` requires `GEO_BOOTSTRAP_OWNER_PASSWORD` for first owner bootstrap.
+- Browser access uses username/password login and an HTTP-only `geo_session` cookie.
+- Roles are `owner`, `admin`, `editor`, and `viewer`.
+- System scripts may still use `X-GEO-API-Key`.
+- Sensitive reads such as audit events require admin/owner session or system API key.
 - Provider endpoints are restricted to `mock://` and `https://`, with loopback/private/link-local targets blocked.
 - CSV audit export neutralizes spreadsheet formula prefixes.
 - Connector actions are evaluated against scoped permission metadata before visibility collection or campaign execution.
 - Connector diagnostics summarize endpoint safety, credential status, health checks, permission decisions, audit context, and recent run steps without exposing raw secrets.
-- Launch preflight summarizes readiness checks without exposing raw API keys, secrets, full env vars, or local file contents.
+- Launch preflight summarizes readiness checks, including user auth and session security, without exposing raw API keys, secrets, full env vars, or local file contents.
 
-These safeguards are not a replacement for built-in user login, RBAC, database controls, monitoring, incident response, or an external access layer.
+These safeguards are not a replacement for database controls, multi-tenant isolation, MFA, monitoring, incident response, or an external access layer.
 
 ## Operational Routes
 

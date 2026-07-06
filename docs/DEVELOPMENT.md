@@ -2,7 +2,7 @@
 
 ## Project Shape
 
-GEO Pulse China Agent v0.8 is intentionally small:
+GEO Pulse China Agent v0.9 is intentionally small:
 
 - Runtime: Node.js ESM.
 - Dependencies: none.
@@ -48,6 +48,8 @@ Runtime state is written to `data/geo-pulse-state.json` by default. The `data/` 
 - `GEO_DATA_FILE`: custom persistence file path.
 - `GEO_ENABLE_PERSISTENCE`: enable or disable local JSON persistence.
 - `GEO_INTERNAL_API_KEY`: fixed write API key.
+- `GEO_BOOTSTRAP_OWNER_PASSWORD`: first owner password for production bootstrap.
+- `GEO_SESSION_TTL_MS`: browser session lifetime in milliseconds.
 - `GEO_ALLOW_REMOTE_ACCESS=1`: enable non-local access. Requires `GEO_INTERNAL_API_KEY`.
 - `GEO_ENABLE_AUTOMATION_SCHEDULER=1`: enable scheduler.
 - `GEO_AUTOMATION_TICK_MS`: scheduler interval.

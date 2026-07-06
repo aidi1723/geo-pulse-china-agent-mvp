@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.9.0 - 2026-07-06
+
+Built-in multi-user access for one-organization team deployment.
+
+### Added
+
+- Username/password login with HTTP-only browser sessions.
+- Role-based permissions for owner, admin, editor, and viewer.
+- Settings user management for creating, disabling, and resetting users.
+- Access audit events for login, logout, permission denial, and user changes.
+- Launch preflight checks for user authentication and session security.
+
+### Changed
+
+- Admin workspace API reads now require a valid session or system API key.
+- Browser client config no longer exposes the startup mutation API key.
+
+### Boundaries
+
+- v0.9 does not add multi-tenant SaaS isolation, OAuth/SSO, MFA, database persistence, email invitations, or per-seat billing.
+
+### Verification
+
+- `npm run check`
+
 ## 0.8.0 - 2026-07-06
 
 Single-user launch preflight snapshot.

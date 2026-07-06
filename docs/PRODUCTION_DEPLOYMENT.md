@@ -1,8 +1,8 @@
 # Production Deployment Guide
 
-This guide covers the v0.8 single-user, single-tenant deployment profile for GEO Pulse.
+This guide covers the v0.9 one-organization team-access deployment profile for GEO Pulse.
 
-For stage-level scope and closing language, see [v0.8 Stage Closeout](STAGE_V0_8_CLOSEOUT.md).
+For stage-level scope and closing language, see [v0.9 Stage Closeout](STAGE_V0_9_CLOSEOUT.md).
 
 ## Scope
 
@@ -13,7 +13,8 @@ Supported:
 - Fixed environment configuration.
 - Persistent local JSON state under `data/`.
 - Built-in local runtime backup, download, import validation, import, and restore.
-- Built-in launch preflight for persistence, auth, remote access, backup recovery, connectors, GEO static routes, and scheduler state.
+- Built-in login, HTTP-only browser sessions, and owner/admin/editor/viewer roles.
+- Built-in launch preflight for persistence, auth, session security, remote access, backup recovery, connectors, GEO static routes, and scheduler state.
 - Health checks.
 - Mutation API-key guard.
 - Basic SEO/GEO files: `robots.txt`, `sitemap.xml`, `llms.txt`, and `favicon.ico`.
@@ -21,16 +22,16 @@ Supported:
 
 Not included:
 
-- Built-in user login.
-- Full RBAC.
+- Multi-tenant workspace isolation.
+- OAuth/SSO and MFA.
 - Payment billing.
 - Real third-party publishing credentials.
 - Real GPT, Gemini, Claude, Perplexity, or Copilot monitoring APIs.
-- Multi-tenant workspace isolation.
+- Email invitations or self-service signup.
 
 ## Security Boundary
 
-The app must be protected by an external access layer before internet exposure:
+The app includes built-in login, but it must still be protected by an external access layer before internet exposure:
 
 - reverse proxy authentication,
 - VPN,
@@ -38,9 +39,9 @@ The app must be protected by an external access layer before internet exposure:
 - private network access,
 - or another deployment-owner-controlled access system.
 
-Set a long random `GEO_INTERNAL_API_KEY`. All write APIs require `X-GEO-API-Key`.
+Set a long random `GEO_INTERNAL_API_KEY` for scripts and automation. Browser users should use the built-in login flow.
 
-Do not expose the app publicly without an access layer. `GEO_ALLOW_REMOTE_ACCESS=1` only allows the Node process to accept non-local requests; it is not user authentication.
+Do not expose the app publicly without an access layer. `GEO_ALLOW_REMOTE_ACCESS=1` only allows the Node process to accept non-local requests; it is not a replacement for HTTPS, reverse proxy controls, VPN, or IP allowlists.
 
 ## Environment
 
@@ -57,10 +58,18 @@ Required production values:
 - `GEO_PUBLIC_SITE_URL=https://your-domain.example`
 - `GEO_ALLOW_REMOTE_ACCESS=1`
 - `GEO_INTERNAL_API_KEY=<long-random-secret>`
+- `GEO_BOOTSTRAP_OWNER_PASSWORD=<change-me-before-first-login>`
 - `GEO_ENABLE_PERSISTENCE=1`
 - `GEO_DATA_FILE=/app/data/geo-pulse-state.json`
 
-Production startup fails when `GEO_INTERNAL_API_KEY` is missing or shorter than 24 characters.
+Production startup fails when `GEO_INTERNAL_API_KEY` is missing or shorter than 24 characters. Production startup also requires `GEO_BOOTSTRAP_OWNER_PASSWORD` for first owner bootstrap.
+
+First login:
+
+- Username: `owner`
+- Password: the value of `GEO_BOOTSTRAP_OWNER_PASSWORD`
+
+After first login, create named admin/editor/viewer accounts in Settings -> Brand Knowledge -> User Management and rotate the bootstrap password through the user reset flow.
 
 ## Docker Compose
 
@@ -106,7 +115,7 @@ curl -f http://localhost:3000/favicon.ico
 
 ## Backup And Restore
 
-The v0.8 deployment stores state in a local JSON file and provides built-in local backup controls in Settings -> Brand Knowledge -> Runtime and Data.
+The v0.9 deployment stores state in a local JSON file and provides built-in local backup controls in Settings -> Brand Knowledge -> Runtime and Data.
 
 Preferred operator flow:
 
@@ -163,18 +172,18 @@ curl -f http://localhost:3000/favicon.ico
 Also check the launch preflight route:
 
 ```bash
-curl -f http://localhost:3000/api/v1/system/preflight
+curl -f -H "X-GEO-API-Key: $GEO_INTERNAL_API_KEY" http://localhost:3000/api/v1/system/preflight
 ```
 
 If Docker is available:
 
 ```bash
-docker build -t geo-pulse:v0.8 .
+docker build -t geo-pulse:v0.9 .
 ```
 
 ## Stage Closeout Language
 
-GEO Pulse v0.8 is ready for controlled single-user, single-tenant deployment. It includes complete local workflows, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production startup guardrails, health checks, GEO/SEO static files, Docker packaging, and documentation for rollback. It must still be protected by an external access layer and should not be presented as a complete SaaS platform until built-in multi-user login, RBAC, durable database storage, real integrations, monitoring, and multi-tenant controls are implemented.
+GEO Pulse v0.9 is ready for controlled one-organization team deployment. It includes built-in login, role-based access, local workflows, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production startup guardrails, health checks, GEO/SEO static files, Docker packaging, and documentation for rollback. It must still be protected by an external access layer and should not be presented as a complete SaaS platform until durable database storage, OAuth/SSO, MFA, real integrations, monitoring, and multi-tenant controls are implemented.
 
 ## Rollback
 

@@ -1,6 +1,6 @@
 # Multi-User Access v0.9 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add built-in multi-user login, session cookies, role-based permissions, user management, audit events, and launch preflight coverage for one-organization team access.
 
@@ -44,7 +44,7 @@
 **Files:**
 - Modify: `verify-mvp.mjs`
 
-- [ ] **Step 1: Add cookie helpers for HTTP tests**
+- [x] **Step 1: Add cookie helpers for HTTP tests**
 
 Add helpers near `httpRequest()`:
 
@@ -71,7 +71,7 @@ async function loginHttp(port, username = "owner", password = "geo-owner-change-
 }
 ```
 
-- [ ] **Step 2: Add access-control assertions**
+- [x] **Step 2: Add access-control assertions**
 
 Create `runMultiUserAccessHttpChecks()` after `runHttpSecurityChecks()` with assertions for:
 
@@ -103,7 +103,7 @@ const authenticatedWorkspace = await httpRequest(port, "/api/v1/workspaces/curre
 assert.equal(authenticatedWorkspace.status, 200);
 ```
 
-- [ ] **Step 3: Add RBAC and user-management assertions**
+- [x] **Step 3: Add RBAC and user-management assertions**
 
 Continue the same test with owner/admin/editor/viewer flows:
 
@@ -158,7 +158,7 @@ const editorConfigWrite = await httpRequest(port, "/api/v1/model-configs", {
 assert.equal(editorConfigWrite.status, 403);
 ```
 
-- [ ] **Step 4: Add admin boundary assertions**
+- [x] **Step 4: Add admin boundary assertions**
 
 Add admin checks:
 
@@ -201,7 +201,7 @@ const adminCreatesOwner = await httpRequest(port, "/api/v1/users", {
 assert.equal(adminCreatesOwner.status, 403);
 ```
 
-- [ ] **Step 5: Add logout, audit, and preflight assertions**
+- [x] **Step 5: Add logout, audit, and preflight assertions**
 
 Add final assertions:
 
@@ -232,7 +232,7 @@ assert.ok(preflight.body?.data?.checks?.some((item) => item.id === "user_auth"))
 assert.ok(preflight.body?.data?.checks?.some((item) => item.id === "session_security"));
 ```
 
-- [ ] **Step 6: Add UI red assertions**
+- [x] **Step 6: Add UI red assertions**
 
 Import `renderApp` from `prototype/src/render.js` and add this helper near other UI test helpers:
 
@@ -268,7 +268,7 @@ assert.match(settingsHtml, /data-action="create-user"/);
 assert.match(settingsHtml, /data-action="reset-user-password"/);
 ```
 
-- [ ] **Step 7: Run red check**
+- [x] **Step 7: Run red check**
 
 Run:
 
@@ -286,7 +286,7 @@ Expected: FAIL because session routes, RBAC, and login UI do not exist yet.
 - Modify: `mock-data.mjs`
 - Modify: `verify-mvp.mjs`
 
-- [ ] **Step 1: Add direct mock-data red tests**
+- [x] **Step 1: Add direct mock-data red tests**
 
 Import planned helpers in `verify-mvp.mjs`:
 
@@ -311,7 +311,7 @@ assert.equal(verifyUserPassword("owner", "bad-password"), false);
 
 Run `npm run check`. Expected: FAIL on missing exports.
 
-- [ ] **Step 2: Add password helpers and seed owner**
+- [x] **Step 2: Add password helpers and seed owner**
 
 In `mock-data.mjs`, import `crypto` at the top:
 
@@ -363,7 +363,7 @@ const users = [
 ];
 ```
 
-- [ ] **Step 3: Persist users**
+- [x] **Step 3: Persist users**
 
 Update `getSerializableState()`:
 
@@ -379,7 +379,7 @@ replaceArray(users, Array.isArray(payload.users) && payload.users.length ? paylo
 replaceArray(members, payload.members ?? members);
 ```
 
-- [ ] **Step 4: Add user actions**
+- [x] **Step 4: Add user actions**
 
 Add exports near `listMembers()`:
 
@@ -490,7 +490,7 @@ export function resetUserPasswordAction(userId, actor = {}) {
 }
 ```
 
-- [ ] **Step 5: Run green check for mock-data slice**
+- [x] **Step 5: Run green check for mock-data slice**
 
 Run:
 
@@ -500,7 +500,7 @@ npm run check
 
 Expected: Still FAIL on server/frontend auth tests, but mock-data missing-export failures are gone.
 
-- [ ] **Step 6: Checkpoint user domain**
+- [x] **Step 6: Checkpoint user domain**
 
 Do not commit while the full suite is still red from subsequent auth/UI assertions. Confirm the missing-export failures are gone and continue to Task 3.
 
@@ -516,7 +516,7 @@ npm run check
 - Modify: `server.mjs`
 - Modify: `verify-mvp.mjs`
 
-- [ ] **Step 1: Add imports from mock-data**
+- [x] **Step 1: Add imports from mock-data**
 
 Add to the existing dynamic import destructuring:
 
@@ -529,7 +529,7 @@ Add to the existing dynamic import destructuring:
   resetUserPasswordAction
 ```
 
-- [ ] **Step 2: Add session constants and registry**
+- [x] **Step 2: Add session constants and registry**
 
 Add after API key constants:
 
@@ -548,7 +548,7 @@ if (isProduction && !process.env.GEO_BOOTSTRAP_OWNER_PASSWORD) {
 }
 ```
 
-- [ ] **Step 3: Add cookie/session helpers**
+- [x] **Step 3: Add cookie/session helpers**
 
 Add before auth helper functions:
 
@@ -609,7 +609,7 @@ function getSessionFromRequest(req) {
 }
 ```
 
-- [ ] **Step 4: Add role permission helpers**
+- [x] **Step 4: Add role permission helpers**
 
 Add route classification:
 
@@ -644,7 +644,7 @@ function canCreateTargetRole(actor, targetRole) {
 }
 ```
 
-- [ ] **Step 5: Replace auth gate**
+- [x] **Step 5: Replace auth gate**
 
 Change `handleApi()` flow:
 
@@ -675,7 +675,7 @@ if (isPublicApiPath(req.method, pathname)) {
 
 Keep mutation rate limiting active for mutating requests regardless of user/session.
 
-- [ ] **Step 6: Add session routes**
+- [x] **Step 6: Add session routes**
 
 Before normal app routes:
 
@@ -709,7 +709,7 @@ if (req.method === "POST" && pathname === "/session/logout") {
 }
 ```
 
-- [ ] **Step 7: Add user routes**
+- [x] **Step 7: Add user routes**
 
 Add:
 
@@ -758,11 +758,11 @@ if (req.method === "POST" && pathname.match(/^\/users\/[^/]+\/reset-password$/))
 }
 ```
 
-- [ ] **Step 8: Update existing logout route**
+- [x] **Step 8: Update existing logout route**
 
 Remove or replace the old `/session/logout` branch that calls `logoutSessionAction()` so there is only one logout route.
 
-- [ ] **Step 9: Run server auth checks**
+- [x] **Step 9: Run server auth checks**
 
 Run:
 
@@ -772,7 +772,7 @@ npm run check
 
 Expected: Server auth tests should pass or expose route classification gaps. Fix only permission classification and session handling in this task.
 
-- [ ] **Step 10: Checkpoint server auth**
+- [x] **Step 10: Checkpoint server auth**
 
 Do not commit if frontend red tests are still failing. Confirm HTTP auth failures are fixed and continue to Task 4.
 
@@ -793,7 +793,7 @@ npm run check
 - Modify: `prototype/src/components.js`
 - Modify: `verify-mvp.mjs`
 
-- [ ] **Step 1: Add API wrappers**
+- [x] **Step 1: Add API wrappers**
 
 In `prototype/src/api.js`, set fetch credentials for API calls:
 
@@ -821,7 +821,7 @@ export async function logoutSession(payload = {}) {
 }
 ```
 
-- [ ] **Step 2: Add session state**
+- [x] **Step 2: Add session state**
 
 In `prototype/src/store.js`, add:
 
@@ -848,7 +848,7 @@ export function clearSession() {
 }
 ```
 
-- [ ] **Step 3: Render login before app shell**
+- [x] **Step 3: Render login before app shell**
 
 In `prototype/src/render.js`, add `renderLogin(store)` and return it before the shell when unauthenticated:
 
@@ -892,7 +892,7 @@ function renderLogin(store) {
 }
 ```
 
-- [ ] **Step 4: Add login startup flow**
+- [x] **Step 4: Add login startup flow**
 
 In `prototype/src/main.js`, import `getCurrentSession` and `loginSession`.
 
@@ -939,7 +939,7 @@ async loginSession() {
 
 Update logout action to clear session and render login.
 
-- [ ] **Step 5: Wire login events**
+- [x] **Step 5: Wire login events**
 
 In `prototype/src/events.js`, handle:
 
@@ -958,7 +958,7 @@ if (action === "login-session") {
 }
 ```
 
-- [ ] **Step 6: Show user in sidebar**
+- [x] **Step 6: Show user in sidebar**
 
 Change `sidebarMarkup(currentPage)` to `sidebarMarkup(currentPage, session)` and display:
 
@@ -974,7 +974,7 @@ Update `renderApp()` call:
 ${sidebarMarkup(store.page, store.session.current)}
 ```
 
-- [ ] **Step 7: Run UI auth checks**
+- [x] **Step 7: Run UI auth checks**
 
 Run:
 
@@ -984,7 +984,7 @@ npm run check
 
 Expected: Login UI checks pass. User-management UI checks may still fail until Task 5.
 
-- [ ] **Step 8: Checkpoint login UI**
+- [x] **Step 8: Checkpoint login UI**
 
 Do not commit if user-management UI tests are still failing. Confirm login UI failures are fixed and continue to Task 5.
 
@@ -1004,7 +1004,7 @@ npm run check
 - Modify: `prototype/src/pages/settings.js`
 - Modify: `verify-mvp.mjs`
 
-- [ ] **Step 1: Add user API wrappers**
+- [x] **Step 1: Add user API wrappers**
 
 In `prototype/src/api.js`:
 
@@ -1022,7 +1022,7 @@ export async function resetUserPassword(userId) {
 }
 ```
 
-- [ ] **Step 2: Add user form state**
+- [x] **Step 2: Add user form state**
 
 In `store.forms`:
 
@@ -1035,7 +1035,7 @@ user: {
 }
 ```
 
-- [ ] **Step 3: Include users in bootstrap**
+- [x] **Step 3: Include users in bootstrap**
 
 In `bootstrapData()`, request:
 
@@ -1051,7 +1051,7 @@ users: extractItems(usersResult)
 
 Keep existing `members` if other pages still use it.
 
-- [ ] **Step 4: Render user management section**
+- [x] **Step 4: Render user management section**
 
 In `prototype/src/pages/settings.js`, add `renderUserManagement(store)`:
 
@@ -1113,7 +1113,7 @@ function renderCreateUserForm(form = {}) {
 
 Render this section inside settings brand/runtime stack or add a Settings tab if a user tab already fits the existing tab system. Prefer inserting after "运行态与数据" to keep scope low.
 
-- [ ] **Step 5: Wire form and actions**
+- [x] **Step 5: Wire form and actions**
 
 In `events.js`:
 
@@ -1133,7 +1133,7 @@ if (action === "reset-user-password") await actions.resetUserPassword(actionButt
 
 In `main.js`, add action implementations that call API wrappers, refresh data, and show the temporary password once.
 
-- [ ] **Step 6: Run UI checks**
+- [x] **Step 6: Run UI checks**
 
 Run:
 
@@ -1143,7 +1143,7 @@ npm run check
 
 Expected: User-management UI tests pass.
 
-- [ ] **Step 7: Commit multi-user access implementation**
+- [x] **Step 7: Commit multi-user access implementation**
 
 ```bash
 npm run check
@@ -1159,7 +1159,7 @@ git commit -m "feat: add multi-user access"
 - Modify: `server.mjs`
 - Modify: `verify-mvp.mjs`
 
-- [ ] **Step 1: Add preflight auth checks**
+- [x] **Step 1: Add preflight auth checks**
 
 Update `getLaunchPreflight()` with:
 
@@ -1185,7 +1185,7 @@ checks.push(preflightCheck(
 ));
 ```
 
-- [ ] **Step 2: Remove browser exposure of mutation API key**
+- [x] **Step 2: Remove browser exposure of mutation API key**
 
 Update `/system/client-config` so authenticated browser sessions do not need the startup mutation key:
 
@@ -1201,7 +1201,7 @@ mutation_api_key: ""
 
 Keep API-key authorization for scripts that already know `GEO_INTERNAL_API_KEY`.
 
-- [ ] **Step 3: Update tests for client config**
+- [x] **Step 3: Update tests for client config**
 
 Change old assertion:
 
@@ -1223,7 +1223,7 @@ GEO_INTERNAL_API_KEY: "test-internal-key-1234567890"
 
 and use that header explicitly.
 
-- [ ] **Step 4: Run check**
+- [x] **Step 4: Run check**
 
 Run:
 
@@ -1233,7 +1233,7 @@ npm run check
 
 Expected: auth, preflight, and client-config tests pass.
 
-- [ ] **Step 5: Commit preflight/client-config changes**
+- [x] **Step 5: Commit preflight/client-config changes**
 
 ```bash
 git add server.mjs verify-mvp.mjs
@@ -1256,7 +1256,7 @@ git commit -m "feat: update preflight for user auth"
 - Modify: `docs/README.md`
 - Create: `docs/STAGE_V0_9_CLOSEOUT.md`
 
-- [ ] **Step 1: Bump version**
+- [x] **Step 1: Bump version**
 
 Set `package.json`:
 
@@ -1264,7 +1264,7 @@ Set `package.json`:
 "version": "0.9.0"
 ```
 
-- [ ] **Step 2: Add changelog**
+- [x] **Step 2: Add changelog**
 
 Add to `CHANGELOG.md`:
 
@@ -1291,7 +1291,7 @@ Built-in multi-user access for one-organization team deployment.
 - Multi-tenant SaaS isolation, OAuth/SSO, MFA, database persistence, email invites, or per-seat billing.
 ```
 
-- [ ] **Step 3: Document API routes**
+- [x] **Step 3: Document API routes**
 
 In `docs/API_REFERENCE.md`, add:
 
@@ -1312,7 +1312,7 @@ In `docs/API_REFERENCE.md`, add:
 
 Document that password hashes are never returned and temporary passwords only appear in create/reset responses.
 
-- [ ] **Step 4: Update deployment docs**
+- [x] **Step 4: Update deployment docs**
 
 In `docs/PRODUCTION_DEPLOYMENT.md`, add environment guidance:
 
@@ -1324,7 +1324,7 @@ NODE_ENV=production
 
 State that first login uses `owner` plus the bootstrap password and operators must reset it before use.
 
-- [ ] **Step 5: Add closeout**
+- [x] **Step 5: Add closeout**
 
 Create `docs/STAGE_V0_9_CLOSEOUT.md`:
 
@@ -1356,11 +1356,11 @@ verify-mvp: OK
 ```
 ```
 
-- [ ] **Step 6: Update roadmap and docs index**
+- [x] **Step 6: Update roadmap and docs index**
 
 Update roadmap current state from v0.8 to v0.9 and move "Real authentication and role-based authorization" out of the hardening list into completed scope, while keeping multi-tenant isolation and database persistence as future work.
 
-- [ ] **Step 7: Run check and SEO scan**
+- [x] **Step 7: Run check and SEO scan**
 
 Run:
 
@@ -1371,7 +1371,7 @@ node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .
 
 Expected: `verify-mvp: OK`, SEO errors `0`, warnings `0`.
 
-- [ ] **Step 8: Commit docs**
+- [x] **Step 8: Commit docs**
 
 ```bash
 git add package.json README.md CHANGELOG.md docs/API_REFERENCE.md docs/ARCHITECTURE.md docs/PRODUCTION_DEPLOYMENT.md docs/OPEN_SOURCE_RELEASE.md docs/ROADMAP.md docs/README.md docs/STAGE_V0_9_CLOSEOUT.md
@@ -1387,7 +1387,7 @@ Do not stage `docs/MAINTENANCE.md` unless the user explicitly asks.
 **Files:**
 - Modify only if smoke exposes defects.
 
-- [ ] **Step 1: Run full check**
+- [x] **Step 1: Run full check**
 
 Run with permission to listen on local ports:
 
@@ -1401,7 +1401,7 @@ Expected:
 verify-mvp: OK
 ```
 
-- [ ] **Step 2: Run static SEO scan**
+- [x] **Step 2: Run static SEO scan**
 
 Run:
 
@@ -1416,7 +1416,7 @@ Errors: 0
 Warnings: 0
 ```
 
-- [ ] **Step 3: Start local server for browser smoke**
+- [x] **Step 3: Start local server for browser smoke**
 
 Run:
 
@@ -1430,7 +1430,7 @@ Expected:
 GEO Pulse MVP running at http://localhost:3106
 ```
 
-- [ ] **Step 4: Browser smoke with Playwright CLI**
+- [x] **Step 4: Browser smoke with Playwright CLI**
 
 Use:
 
@@ -1470,7 +1470,7 @@ Navigate to settings, verify:
 
 Click logout and verify login page returns.
 
-- [ ] **Step 5: Clean smoke artifacts**
+- [x] **Step 5: Clean smoke artifacts**
 
 Stop server and remove Playwright temp files:
 
@@ -1478,7 +1478,7 @@ Stop server and remove Playwright temp files:
 rm -rf .playwright-cli
 ```
 
-- [ ] **Step 6: Final status check**
+- [x] **Step 6: Final status check**
 
 Run:
 
@@ -1492,7 +1492,7 @@ Expected:
 - only pre-existing `docs/MAINTENANCE.md` remains unstaged.
 - latest commits include v0.9 implementation and docs.
 
-- [ ] **Step 7: Final report**
+- [x] **Step 7: Final report**
 
 Report:
 
