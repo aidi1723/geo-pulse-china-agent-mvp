@@ -1,4 +1,6 @@
 import dns from "node:dns/promises";
+import http from "node:http";
+import https from "node:https";
 import net from "node:net";
 
 const DEFAULT_TIMEOUT_MS = 5000;
@@ -10,7 +12,7 @@ const BLOCKED_HOSTS = new Set(["localhost", "localhost.localdomain"]);
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 
 function crawlBlocked(message) {
-  const error = new Error(message || "CRAWL_TARGET_BLOCKED");
+  const error = new Error(message ? `CRAWL_TARGET_BLOCKED: ${message}` : "CRAWL_TARGET_BLOCKED");
   error.code = "CRAWL_TARGET_BLOCKED";
   return error;
 }
@@ -18,6 +20,12 @@ function crawlBlocked(message) {
 function codedError(code) {
   const error = new Error(code);
   error.code = code;
+  return error;
+}
+
+function responseError(code, responseInfo) {
+  const error = codedError(code);
+  error.responseInfo = responseInfo;
   return error;
 }
 
@@ -110,9 +118,12 @@ export function isBlockedIpAddress(address) {
       a === 0 ||
       a === 10 ||
       a === 127 ||
+      (a === 100 && b >= 64 && b <= 127) ||
       (a === 169 && b === 254) ||
       (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 0) ||
       (a === 192 && b === 168) ||
+      (a === 198 && (b === 18 || b === 19)) ||
       a >= 224
     );
   }
@@ -122,9 +133,17 @@ export function isBlockedIpAddress(address) {
   const { numbers, embeddedIpv4 } = parsed;
   const [first, second, third, fourth, fifth, sixth] = numbers;
 
-  if (embeddedIpv4) {
-    const isMapped = first === 0 && second === 0 && third === 0 && fourth === 0 && fifth === 0 && sixth === 0xffff;
-    if (isMapped && isBlockedIpAddress(embeddedIpv4.join("."))) return true;
+  const isMapped = first === 0 && second === 0 && third === 0 && fourth === 0 && fifth === 0 && sixth === 0xffff;
+  const isCompatible = first === 0 && second === 0 && third === 0 && fourth === 0 && fifth === 0 && sixth === 0;
+  if (embeddedIpv4 && (isMapped || isCompatible) && isBlockedIpAddress(embeddedIpv4.join("."))) return true;
+  if (isMapped || isCompatible) {
+    const mappedIpv4 = [
+      (numbers[6] >> 8) & 0xff,
+      numbers[6] & 0xff,
+      (numbers[7] >> 8) & 0xff,
+      numbers[7] & 0xff
+    ].join(".");
+    if (isBlockedIpAddress(mappedIpv4)) return true;
   }
 
   const isUnspecified = numbers.every((item) => item === 0);
@@ -156,61 +175,153 @@ async function assertDnsSafe(url) {
   }
 }
 
-async function readLimitedBody(response, maxBytes) {
-  const reader = response.body?.getReader?.();
-  if (!reader) {
-    const text = await response.text();
-    if (Buffer.byteLength(text) > maxBytes) throw codedError("BODY_TOO_LARGE");
-    return text;
-  }
-
-  const chunks = [];
-  let total = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > maxBytes) throw codedError("BODY_TOO_LARGE");
-    chunks.push(Buffer.from(value));
-  }
-  return Buffer.concat(chunks).toString("utf8");
+function headersGet(headers, name) {
+  const value = headers[String(name || "").toLowerCase()];
+  if (Array.isArray(value)) return value.join(", ");
+  return value || "";
 }
 
-async function fetchLimited(url, options) {
-  let current = validateCrawlTarget(url);
-  for (let redirect = 0; redirect <= options.maxRedirects; redirect += 1) {
-    await assertDnsSafe(current);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), options.timeoutMs);
+function responseInfoFromMessage(response, url) {
+  const status = response.statusCode || 0;
+  return {
+    url,
+    status_code: status,
+    ok: status >= 200 && status < 300,
+    content_type: headersGet(response.headers, "content-type"),
+    location: headersGet(response.headers, "location")
+  };
+}
 
-    try {
-      const response = await fetch(current, {
-        method: "GET",
-        redirect: "manual",
-        signal: controller.signal,
-        headers: {
-          "User-Agent": USER_AGENT,
-          Accept: "text/html,text/plain,application/xml,text/xml,application/xhtml+xml,*/*;q=0.5"
-        }
-      });
-
-      if (REDIRECT_STATUSES.has(response.status)) {
-        const location = response.headers.get("location");
-        if (!location) return { response, url: current.href, body: "" };
-        current = validateCrawlTarget(new URL(location, current.href).href);
-        continue;
+function createResponseLike(info) {
+  return {
+    status: info.status_code,
+    ok: info.ok,
+    headers: {
+      get(name) {
+        if (String(name || "").toLowerCase() === "content-type") return info.content_type;
+        return "";
       }
-
-      const body = await readLimitedBody(response, options.maxBodyBytes);
-      return { response, url: current.href, body };
-    } catch (error) {
-      if (error?.name === "AbortError") throw codedError("FETCH_TIMEOUT");
-      throw error;
-    } finally {
-      clearTimeout(timer);
     }
+  };
+}
+
+function isSupportedContentType(contentType, resourceType) {
+  const type = String(contentType || "").toLowerCase().split(";")[0].trim();
+  if (!type) return true;
+  if (resourceType === "homepage") {
+    return ["text/html", "application/xhtml+xml", "text/plain"].includes(type);
   }
-  throw codedError("TOO_MANY_REDIRECTS");
+  if (resourceType === "robots_txt" || resourceType === "llms_txt") {
+    return ["text/plain", "text/markdown", "text/x-markdown", "text/html"].includes(type);
+  }
+  if (resourceType === "sitemap_xml") {
+    return ["application/xml", "text/xml", "application/rss+xml", "application/atom+xml", "text/plain"].includes(type);
+  }
+  return type.startsWith("text/") || type.includes("xml") || type.includes("json");
+}
+
+async function safeLookup(hostname, options, callback) {
+  try {
+    const host = normalizedHost(hostname);
+    if (isBlockedHostname(host) || isBlockedIpAddress(host)) {
+      callback(crawlBlocked("Crawl target host is blocked by safety policy"));
+      return;
+    }
+    if (net.isIP(host)) {
+      callback(null, host, net.isIP(host));
+      return;
+    }
+    const records = await dns.lookup(host, { all: true, verbatim: true });
+    if (!records.length || records.some((record) => isBlockedIpAddress(record.address))) {
+      callback(crawlBlocked("Crawl target resolves to a blocked IP range"));
+      return;
+    }
+    const preferredFamily = options?.family ? records.find((record) => record.family === options.family) : null;
+    const selected = preferredFamily || records[0];
+    callback(null, selected.address, selected.family);
+  } catch (error) {
+    callback(error);
+  }
+}
+
+function readHttpResource(url, options, resourceType) {
+  return new Promise((resolve, reject) => {
+    const client = url.protocol === "https:" ? https : http;
+    const request = client.request(url, {
+      method: "GET",
+      lookup: safeLookup,
+      headers: {
+        "User-Agent": USER_AGENT,
+        Accept: "text/html,text/plain,application/xml,text/xml,application/xhtml+xml,text/markdown,*/*;q=0.5"
+      }
+    });
+    let settled = false;
+    let responseInfo = null;
+    const chunks = [];
+    let total = 0;
+    const timer = setTimeout(() => {
+      request.destroy(codedError("FETCH_TIMEOUT"));
+    }, options.timeoutMs);
+
+    function settle(callback, value) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      callback(value);
+    }
+
+    request.on("response", (response) => {
+      responseInfo = responseInfoFromMessage(response, url.href);
+      if (REDIRECT_STATUSES.has(responseInfo.status_code)) {
+        response.resume();
+        settle(resolve, { responseInfo, body: "" });
+        return;
+      }
+      if (!isSupportedContentType(responseInfo.content_type, resourceType)) {
+        response.resume();
+        settle(resolve, { responseInfo, body: "", unsupportedContentType: true });
+        return;
+      }
+      response.on("data", (chunk) => {
+        total += chunk.byteLength;
+        if (total > options.maxBodyBytes) {
+          request.destroy(responseError("BODY_TOO_LARGE", responseInfo));
+          return;
+        }
+        chunks.push(Buffer.from(chunk));
+      });
+      response.on("end", () => {
+        settle(resolve, { responseInfo, body: Buffer.concat(chunks).toString("utf8") });
+      });
+      response.on("error", (error) => {
+        settle(reject, error);
+      });
+    });
+    request.on("error", (error) => {
+      if (error?.code === "BODY_TOO_LARGE" && !error.responseInfo) error.responseInfo = responseInfo;
+      settle(reject, error);
+    });
+    request.end();
+  });
+}
+
+async function fetchLimited(url, options, resourceType) {
+  let current = validateCrawlTarget(url);
+  for (let redirect = 0; ; redirect += 1) {
+    const result = await readHttpResource(current, options, resourceType);
+    const response = createResponseLike(result.responseInfo);
+    if (REDIRECT_STATUSES.has(response.status)) {
+      const location = result.responseInfo.location;
+      if (redirect >= options.maxRedirects) throw codedError("TOO_MANY_REDIRECTS");
+      if (!location) return { response, url: current.href, body: "" };
+      current = validateCrawlTarget(new URL(location, current.href).href);
+      continue;
+    }
+    if (result.unsupportedContentType) {
+      return { response, url: current.href, body: "", unsupportedContentType: true };
+    }
+    return { response, url: current.href, body: result.body };
+  }
 }
 
 function matchFirst(text, pattern) {
@@ -307,20 +418,34 @@ function parseTextResource(body, finalUrl, response) {
 }
 
 function failedResource(url, error) {
+  const responseInfo = error?.responseInfo || {};
   return {
-    url: String(url || ""),
-    status_code: 0,
+    url: responseInfo.url || String(url || ""),
+    status_code: responseInfo.status_code || 0,
     ok: false,
-    content_type: "",
+    content_type: responseInfo.content_type || "",
     text_excerpt: "",
     fetched_at: nowIso(),
     error_code: error?.code || error?.message || "FETCH_FAILED"
   };
 }
 
-async function fetchResource(url, parser, options) {
+function unsupportedResource(finalUrl, response) {
+  return {
+    url: finalUrl,
+    status_code: response.status,
+    ok: false,
+    content_type: response.headers.get("content-type") || "",
+    text_excerpt: "",
+    fetched_at: nowIso(),
+    error_code: "UNSUPPORTED_CONTENT_TYPE"
+  };
+}
+
+async function fetchResource(url, parser, options, resourceType) {
   try {
-    const result = await fetchLimited(url, options);
+    const result = await fetchLimited(url, options, resourceType);
+    if (result.unsupportedContentType) return unsupportedResource(result.url, result.response);
     return parser(result.body, result.url, result.response);
   } catch (error) {
     if (error?.code === "CRAWL_TARGET_BLOCKED") throw error;
@@ -338,10 +463,10 @@ export async function crawlInternationalGeoSite(target, options = {}) {
   };
   const origin = homepageUrl.origin;
   const resources = {
-    homepage: await fetchResource(homepageUrl.href, parseHomepage, limits),
-    robots_txt: await fetchResource(resourceUrl(homepageUrl, "/robots.txt"), parseRobots, limits),
-    sitemap_xml: await fetchResource(resourceUrl(homepageUrl, "/sitemap.xml"), parseSitemap, limits),
-    llms_txt: await fetchResource(resourceUrl(homepageUrl, "/llms.txt"), parseTextResource, limits)
+    homepage: await fetchResource(homepageUrl.href, parseHomepage, limits, "homepage"),
+    robots_txt: await fetchResource(resourceUrl(homepageUrl, "/robots.txt"), parseRobots, limits, "robots_txt"),
+    sitemap_xml: await fetchResource(resourceUrl(homepageUrl, "/sitemap.xml"), parseSitemap, limits, "sitemap_xml"),
+    llms_txt: await fetchResource(resourceUrl(homepageUrl, "/llms.txt"), parseTextResource, limits, "llms_txt")
   };
   const values = Object.values(resources);
   const okCount = values.filter((item) => item.ok).length;

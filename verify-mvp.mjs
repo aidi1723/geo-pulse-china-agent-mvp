@@ -1146,6 +1146,16 @@ async function runMockDataChecks() {
     /CRAWL_TARGET_BLOCKED/,
     "loopback IP crawl targets should be blocked"
   );
+  assert.throws(
+    () => validateCrawlTarget("http://[::ffff:127.0.0.1]"),
+    /CRAWL_TARGET_BLOCKED/,
+    "IPv4-mapped IPv6 loopback crawl targets should be blocked"
+  );
+  assert.throws(
+    () => validateCrawlTarget("http://[::ffff:7f00:1]"),
+    /CRAWL_TARGET_BLOCKED/,
+    "Canonical IPv4-mapped IPv6 loopback crawl targets should be blocked"
+  );
 
   const evidencedAudit = applyInternationalGeoSiteAuditCrawlEvidenceAction(siteAudit.id, {
     provider_id: "builtin_safe_fetch",
