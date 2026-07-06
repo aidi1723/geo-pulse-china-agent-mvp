@@ -13,6 +13,7 @@ const {
   createChannelAction,
   createContentTemplateAction,
   createExportJobAction,
+  createInternationalGeoSiteAuditAction,
   createMediaSourceAction,
   createPublishTaskAction,
   createRuntimeBackupAction,
@@ -23,6 +24,7 @@ const {
   createArticleFromTopicAction,
   createTopicIdeasFromKeywords,
   generateInternationalGeoArtifactsAction,
+  generateInternationalGeoSiteAuditAssetsAction,
   generateTopicOutlineAction,
   getArticle,
   getAutomationConnector,
@@ -38,6 +40,7 @@ const {
   getCurrentWorkspace,
   getExportJobDownload,
   getInternationalGeoState,
+  getInternationalGeoSiteAudit,
   getDashboardSummary,
   getKeyword,
   getKeywordAnalytics,
@@ -62,6 +65,7 @@ const {
   listChannels,
   listContentTemplates,
   listInvoices,
+  listInternationalGeoSiteAudits,
   listKeywordCrawlJobs,
   listKeywords,
   listMembers,
@@ -2086,6 +2090,22 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && pathname === "/international-geo/site-audits") {
+    sendJson(res, 200, ok(listInternationalGeoSiteAudits(query)));
+    return;
+  }
+
+  if (req.method === "GET" && pathname.match(/^\/international-geo\/site-audits\/[^/]+$/)) {
+    const id = pathname.split("/")[3];
+    const audit = getInternationalGeoSiteAudit(id);
+    if (!audit) {
+      sendJson(res, 404, error("NOT_FOUND", "Site GEO audit not found", 404).body);
+      return;
+    }
+    sendJson(res, 200, ok(audit));
+    return;
+  }
+
   if (req.method === "PUT" && pathname === "/international-geo/input") {
     const body = await parseBody(req).catch(() => null);
     if (!body) {
@@ -2093,6 +2113,40 @@ async function handleApi(req, res, url) {
       return;
     }
     sendJson(res, 200, ok(saveInternationalGeoInputAction(body)));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/international-geo/site-audits") {
+    const body = await parseBody(req).catch(() => null);
+    if (!body) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    try {
+      sendJson(res, 201, ok(createInternationalGeoSiteAuditAction(body)));
+    } catch (err) {
+      const code = err?.code || err?.message;
+      if (code === "INVALID_SITE_URL") {
+        sendJson(res, 400, error("INVALID_SITE_URL", "Website URL must be a valid http or https URL").body);
+        return;
+      }
+      if (code === "PRODUCT_NAME_REQUIRED") {
+        sendJson(res, 400, error("PRODUCT_NAME_REQUIRED", "Product name is required").body);
+        return;
+      }
+      throw err;
+    }
+    return;
+  }
+
+  if (req.method === "POST" && pathname.match(/^\/international-geo\/site-audits\/[^/]+\/assets$/)) {
+    const id = pathname.split("/")[3];
+    const result = generateInternationalGeoSiteAuditAssetsAction(id);
+    if (!result) {
+      sendJson(res, 404, error("NOT_FOUND", "Site GEO audit not found", 404).body);
+      return;
+    }
+    sendJson(res, 201, ok(result));
     return;
   }
 
