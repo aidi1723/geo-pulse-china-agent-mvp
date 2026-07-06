@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.10.0 - 2026-07-06
+
+Site GEO audit and asset generation.
+
+### Added
+
+- Rule-first International GEO site audit records with stable check ids, score, status, summary, and audit events.
+- API routes for creating, listing, reading, and generating assets from site GEO audits.
+- Copyable GEO asset previews for `llms.txt`, Organization JSON-LD, Product JSON-LD, FAQ JSON-LD, article briefs, and distribution briefs.
+- International GEO UI workflow for site input -> audit -> checks -> generated assets.
+
+### Boundaries
+
+- v0.10 does not perform live crawling, real AI search engine querying, real SERP collection, or automatic third-party publishing.
+
+### Verification
+
+- `npm run check`
+- Static SEO scan
+- GitHub Actions `check`
+
 ## 0.9.1 - 2026-07-06
 
 Minimal CI gate for GitHub-hosted development.

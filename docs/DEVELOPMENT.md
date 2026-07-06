@@ -2,7 +2,7 @@
 
 ## Project Shape
 
-GEO Pulse China Agent v0.9.1 is intentionally small:
+GEO Pulse China Agent v0.10.0 is intentionally small:
 
 - Runtime: Node.js ESM.
 - Dependencies: none.
@@ -70,8 +70,8 @@ This checks:
 - Node syntax for key files.
 - Mock data behavior.
 - API and security behavior through local HTTP tests.
-- UI rendering for the prototype pages.
-- Persistence, scheduler, audit, connector, source adapter, campaign, publishing, and visibility flows.
+- UI rendering for the prototype pages, including International GEO site audit and asset previews.
+- Persistence, scheduler, audit, connector, source adapter, campaign, publishing, visibility, and International GEO site audit flows.
 
 For behavior changes, add focused assertions to `verify-mvp.mjs` before changing implementation.
 
@@ -114,6 +114,7 @@ When behavior changes, update docs in the same change:
 
 - Commands or environment variables: `README.md` and this guide.
 - API routes: `README.md` and `API_REFERENCE.md`.
+- International GEO workflow changes: `README.md`, `API_REFERENCE.md`, `ARCHITECTURE.md`, `ROADMAP.md`, `PRODUCTION_DEPLOYMENT.md`, and the current stage closeout doc.
 - Operational routes or deployment behavior: `README.md`, `PRODUCTION_DEPLOYMENT.md`, and `STAGE_V0_2_CLOSEOUT.md`.
 - Extension seams: `ARCHITECTURE.md` and `EXTENDING.md`.
 - Security behavior: `SECURITY.md`, `MAINTENANCE.md`, and `reports/security-hardening-log.md`.

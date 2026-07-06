@@ -71,6 +71,14 @@ Do this only when the repository owner accepts history rewriting. For establishe
 
 ## Maintenance Log
 
+### 2026-07-06 - v0.10 Site GEO Audit And Asset Generation Closeout
+
+- Scope: added International GEO site audit input, durable rule-first site audit records, generated GEO asset previews, and API routes for audit list/detail/create plus asset generation.
+- Local gate: `npm run check` returned `verify-mvp: OK`.
+- Static SEO gate: required for final closeout before publication.
+- Documentation aligned: README, API reference, architecture guide, development guide, production deployment guide, roadmap, documentation index, changelog, open-source release checklist, and v0.10 closeout docs.
+- Boundary: v0.10 is a rule-first audit and asset preparation tool. It does not add live crawling, real AI search engine querying, real SERP collection, automatic third-party publishing, database persistence, OAuth/SSO, MFA, monitoring, or multi-tenant isolation.
+
 ### 2026-07-06 - v0.9.1 Minimal CI Closeout
 
 - Scope: added GitHub Actions `check` workflow for pushes and pull requests targeting `main`.
@@ -91,15 +99,16 @@ Do this only when the repository owner accepts history rewriting. For establishe
 - No evidence found of real local absolute paths, real personal email addresses, tracked `.env` files, tracked runtime state, or real credential patterns in the current tree or existing Git history.
 - History rewrite: not performed.
 
-## Post-v0.9.1 Production Hardening
+## Post-v0.10 Production Hardening
 
-v0.9.1 is deployable as a controlled one-organization team-access service behind an external access layer. Before treating it as a real SaaS or broadly exposed hosted service, production hardening should include:
+v0.10.0 is deployable as a controlled one-organization team-access service behind an external access layer. Before treating it as a real SaaS, real-time AI search monitoring platform, or broadly exposed hosted service, production hardening should include:
 
 - Database persistence, migrations, and database-grade backup policy.
 - Monitoring and alerting.
 - Durable secret management outside local JSON and source code.
 - OAuth/SSO and MFA if external identity integration is required.
 - Real provider, connector, and source adapter implementations.
+- Live website crawl evidence, measured AI visibility data sources, and external publishing connectors before claiming real engine inclusion, recommendation tracking, or automatic distribution.
 - Security contact ownership and incident response process.
 - Multi-tenant workspace isolation if multiple organizations use the service.
 - Data retention, deletion, and privacy policy.

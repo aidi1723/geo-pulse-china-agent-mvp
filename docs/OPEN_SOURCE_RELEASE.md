@@ -12,7 +12,7 @@ This is a project-owner compliance note, not legal advice.
 
 ## Current Readiness
 
-Ready for GitHub publication as a v0.9.1 one-organization team-access workspace after owner review.
+Ready for GitHub publication as a v0.10.0 one-organization team-access workspace after owner review.
 
 Verified release gate:
 
@@ -43,6 +43,7 @@ GitHub also includes a `check` workflow that runs the same command on pushes and
 - `docs/ROADMAP.md`
 - `docs/OPEN_SOURCE_RELEASE.md`
 - `docs/STAGE_V0_9_1_CLOSEOUT.md`
+- `docs/STAGE_V0_10_CLOSEOUT.md`
 - `.github/workflows/check.yml`
 
 ## Pre-Publish Checklist
@@ -55,7 +56,7 @@ GitHub also includes a `check` workflow that runs the same command on pushes and
 - Confirm `.DS_Store` and local environment files are not committed.
 - Run `npm run check`.
 - Confirm the GitHub `check` workflow passes after pushing.
-- Review [v0.9 Stage Closeout](STAGE_V0_9_CLOSEOUT.md) and [v0.9.1 Stage Closeout](STAGE_V0_9_1_CLOSEOUT.md) for the team-access boundary, CI gate, and remaining SaaS gaps.
+- Review [v0.9 Stage Closeout](STAGE_V0_9_CLOSEOUT.md), [v0.9.1 Stage Closeout](STAGE_V0_9_1_CLOSEOUT.md), and [v0.10 Stage Closeout](STAGE_V0_10_CLOSEOUT.md) for the team-access boundary, CI gate, site GEO audit boundary, and remaining SaaS/live-monitoring gaps.
 - Create a clean Git history from the intended public root.
 
 ## Suggested GitHub Setup
@@ -93,6 +94,6 @@ For a new repository with no external contributors, prefer replacing the public 
 
 ## Release Notes Draft
 
-GEO Pulse China Agent v0.9.1 is a zero-dependency GEO/SEO operations workspace for agent content workflows. It includes built-in login, owner/admin/editor/viewer roles, source ingestion contracts, automation providers, connector governance, connector tests, connector diagnostics, local backup import/restore, launch preflight, publishing operations, visibility metrics, campaign loops, audit logs, international GEO planning, exportable artifacts, production guardrails, local verification, and minimal GitHub CI.
+GEO Pulse China Agent v0.10.0 is a zero-dependency GEO/SEO operations workspace for agent content workflows. It includes built-in login, owner/admin/editor/viewer roles, source ingestion contracts, automation providers, connector governance, connector tests, connector diagnostics, local backup import/restore, launch preflight, publishing operations, visibility metrics, campaign loops, audit logs, International GEO site audit, generated GEO assets, international GEO planning, exportable artifacts, production guardrails, local verification, and minimal GitHub CI.
 
-The current snapshot is suitable for controlled one-organization deployment behind an external access layer. It is not a complete SaaS platform without durable database storage, OAuth/SSO, MFA, real third-party integrations, monitoring, and multi-tenant operations.
+The current snapshot is suitable for controlled one-organization deployment behind an external access layer. It is not a complete SaaS platform or real-time AI search monitoring platform without durable database storage, OAuth/SSO, MFA, real third-party integrations, live crawl evidence, measured AI visibility data, monitoring, and multi-tenant operations.

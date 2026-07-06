@@ -56,7 +56,7 @@ System scripts can still use:
 X-GEO-API-Key: <runtime-key>
 ```
 
-The browser client config endpoint does not expose the mutation API key in v0.9.1. Keep `GEO_INTERNAL_API_KEY` for automation, diagnostics, and controlled scripts.
+The browser client config endpoint does not expose the mutation API key in v0.10.0. Keep `GEO_INTERNAL_API_KEY` for automation, diagnostics, and controlled scripts.
 
 Roles:
 
@@ -192,8 +192,18 @@ Workspace input stores the one-user operating context. Export jobs generate loca
 - `PUT /international-geo/input`
 - `POST /international-geo/audit`
 - `POST /international-geo/artifacts`
+- `GET /international-geo/site-audits`
+- `GET /international-geo/site-audits/:id`
+- `POST /international-geo/site-audits`
+- `POST /international-geo/site-audits/:id/assets`
 
-These routes power local International GEO readiness audits and artifact generation for `llms.txt`, JSON-LD, and distribution briefs.
+These routes power local International GEO readiness audits and artifact generation for `llms.txt`, JSON-LD, FAQ, article briefs, and distribution briefs.
+
+Site audit create requests require `website_url` and `product_name`. The generated audit includes stable checks for URL quality, AI crawler access recommendations, sitemap, `llms.txt`, JSON-LD, direct-answer content, fact density, E-E-A-T, and third-party validation. Asset generation creates copyable previews for `llms.txt`, Organization JSON-LD, Product JSON-LD, FAQ JSON-LD, article brief, and distribution brief.
+
+Mutation routes require an editor/admin/owner browser session or `X-GEO-API-Key`. Viewer sessions can read audits but cannot create audits or generate assets.
+
+Boundary: these routes are rule-first local helpers. They do not perform live crawling, real AI search engine querying, real SERP collection, or automatic third-party publishing.
 
 ### Publishing
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-GEO Pulse China Agent v0.9.1 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes built-in one-organization multi-user access, role-based permissions, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production startup guardrails, health checks, GEO/SEO static files, and minimal GitHub CI for controlled server use.
+GEO Pulse China Agent v0.10.0 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes built-in one-organization multi-user access, role-based permissions, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, International GEO site audit records, generated GEO asset previews, production startup guardrails, health checks, GEO/SEO static files, and minimal GitHub CI for controlled server use.
 
 ## Runtime Components
 
@@ -34,7 +34,7 @@ GEO Pulse China Agent v0.9.1 is a zero-dependency Node.js application with a bro
 | Publishing | Channels, publish tasks, task items, calendar metadata, variants, readiness checks, approval guard, records. | `mock-data.mjs`, `prototype/src/pages/distribution.js` |
 | Automation operations | Provider registry, connector registry, permission matrix, connector health checks, connector diagnostics, automation run steps, scheduler tick, retries. | `automation-providers.mjs`, `mock-data.mjs`, `prototype/src/pages/settings.js` |
 | Analytics | Visibility tracking, SERP snapshots, competitor domains, audience segments, campaign runs. | `mock-data.mjs`, `prototype/src/pages/analytics.js` |
-| International GEO | Overseas AI search readiness, article and distribution planning, engine visibility, community citation surfaces. | `prototype/src/pages/international.js` |
+| International GEO | Overseas AI search readiness, rule-first site audit records, generated GEO assets, article and distribution planning, engine visibility, community citation surfaces. | `mock-data.mjs`, `server.mjs`, `prototype/src/pages/international.js` |
 | Single-user completion | Workspace input, manual topics, outlines, manual articles, templates, exports, local billing plan switch, and logout action. | `mock-data.mjs`, `server.mjs`, `prototype/src/main.js` |
 | Security and governance | Login sessions, local users, role permissions, API key automation guard, audit events, CSV export safety, connector-scoped permissions, endpoint restrictions, local backup/restore audit trail. | `server.mjs`, `mock-data.mjs`, `reports/security-hardening-log.md` |
 
@@ -49,7 +49,7 @@ Persistence is local JSON, not a production database.
 
 ## Security Model
 
-v0.9.1 uses built-in team access plus local-first production guardrails:
+v0.10.0 uses built-in team access plus local-first production guardrails:
 
 - Remote access is disabled unless `GEO_ALLOW_REMOTE_ACCESS=1`.
 - Remote access requires a fixed `GEO_INTERNAL_API_KEY`.
@@ -66,6 +66,12 @@ v0.9.1 uses built-in team access plus local-first production guardrails:
 - Launch preflight summarizes readiness checks, including user auth and session security, without exposing raw API keys, secrets, full env vars, or local file contents.
 
 These safeguards are not a replacement for database controls, multi-tenant isolation, MFA, monitoring, incident response, or an external access layer.
+
+## International GEO Audit Boundary
+
+The v0.10 International GEO workflow stores `site_audits` and `geo_assets` inside the local mock state. It accepts a website URL, product or brand name, target market, target language, primary buyer query, and competitors, then builds deterministic rule-first checks and copyable assets.
+
+The audit is an operational preparation layer, not live monitoring. It does not crawl the submitted site, query ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, SERP APIs, or publish to external platforms. Future live integrations should enter through explicit connectors and preserve the same audit/asset records as the UI contract.
 
 ## Operational Routes
 
