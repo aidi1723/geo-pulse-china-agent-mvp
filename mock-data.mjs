@@ -13,7 +13,8 @@ import {
   maskSecret,
   planTopicsFromKeywords,
   saveAutomationProvider,
-  testAutomationProviderConnection
+  testAutomationProviderConnection,
+  validateProviderEndpoint
 } from "./automation-providers.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1827,6 +1828,7 @@ const automationConnectors = [
 ];
 
 const providerInvocations = [];
+const connectorHealthChecks = [];
 const auditEvents = [];
 const maxAuditEvents = 500;
 
@@ -1859,8 +1861,84 @@ function sanitizeConnectorConfig(config = {}) {
 function sanitizeAutomationConnector(connector = {}) {
   return {
     ...deepClone(connector),
-    config: sanitizeConnectorConfig(connector.config || {})
+    config: sanitizeConnectorConfig(connector.config || {}),
+    last_health_check: connector.last_health_check ? deepClone(connector.last_health_check) : null
   };
+}
+
+function isMaskedConnectorSecret(value) {
+  return /^\*{4,}.{0,8}$/.test(String(value || ""));
+}
+
+function connectorStatusLabel(status) {
+  return (
+    {
+      ready: "可配置",
+      planned: "规划中",
+      disabled: "已停用",
+      error: "异常"
+    }[status] || status || "可配置"
+  );
+}
+
+function connectorCredentialLabel(status) {
+  return (
+    {
+      configured: "已配置",
+      missing: "未配置"
+    }[status] || status || "未配置"
+  );
+}
+
+function connectorHealthLabel(success) {
+  return success ? "测试通过" : "测试失败";
+}
+
+function buildMockConnectorResponse(connector) {
+  return {
+    connector_id: connector.id,
+    connector_type: connector.connector_type,
+    status: "ok",
+    scopes: deepClone(connector.scopes || []),
+    checked_at: nowIso()
+  };
+}
+
+function recordConnectorHealthCheck(connector, result = {}) {
+  const healthCheck = {
+    id: uniqueId("chc"),
+    connector_id: connector.id,
+    connector_label: connector.label,
+    connector_type: connector.connector_type,
+    connector_type_label: connector.connector_type_label,
+    success: Boolean(result.success),
+    success_label: connectorHealthLabel(Boolean(result.success)),
+    endpoint: result.endpoint || connector.config?.endpoint || "",
+    execution_mode: result.execution_mode || "remote",
+    attempts: Number(result.attempts || 1),
+    duration_ms: Number(result.duration_ms || 0),
+    schema_valid: result.schema_valid !== false,
+    error_message: result.error_message || "",
+    sample_response: result.sample_response ? deepClone(result.sample_response) : null,
+    checked_at: nowIso()
+  };
+
+  connector.last_health_check = {
+    success: healthCheck.success,
+    success_label: healthCheck.success_label,
+    endpoint: healthCheck.endpoint,
+    execution_mode: healthCheck.execution_mode,
+    attempts: healthCheck.attempts,
+    duration_ms: healthCheck.duration_ms,
+    schema_valid: healthCheck.schema_valid,
+    error_message: healthCheck.error_message,
+    checked_at: healthCheck.checked_at
+  };
+  connectorHealthChecks.unshift(healthCheck);
+  if (connectorHealthChecks.length > 200) {
+    connectorHealthChecks.length = 200;
+  }
+  return deepClone(healthCheck);
 }
 
 function connectorPermissionRow(connector = {}) {
@@ -1960,15 +2038,36 @@ function getConnectorSummary() {
   const needsReview = automationConnectors.filter(
     (item) => item.last_permission_audit?.status !== "passed"
   ).length;
+  const latestChecks = connectorHealthChecks.slice(0, 6).map((item) => ({
+    id: item.id,
+    connector_id: item.connector_id,
+    connector_label: item.connector_label,
+    connector_type: item.connector_type,
+    success: item.success,
+    success_label: item.success_label,
+    endpoint: item.endpoint,
+    duration_ms: item.duration_ms,
+    error_message: item.error_message,
+    checked_at: item.checked_at
+  }));
   return {
     counts: {
       total: automationConnectors.length,
       enabled: automationConnectors.filter((item) => item.is_enabled).length,
       ready: automationConnectors.filter((item) => item.status === "ready").length,
       planned: automationConnectors.filter((item) => item.status === "planned").length,
-      permission_needs_review: needsReview
+      permission_needs_review: needsReview,
+      health_checks: connectorHealthChecks.length,
+      health_failures: connectorHealthChecks.filter((item) => !item.success).length
     },
-    counts_by_type: countsByType
+    counts_by_type: countsByType,
+    health_summary: {
+      total: connectorHealthChecks.length,
+      success_count: connectorHealthChecks.filter((item) => item.success).length,
+      failure_count: connectorHealthChecks.filter((item) => !item.success).length,
+      latest_checked_at: connectorHealthChecks[0]?.checked_at || null,
+      latest_checks: latestChecks
+    }
   };
 }
 
@@ -1987,6 +2086,8 @@ function getSerializableState() {
   return {
     automationProviderState: getAutomationProviderState(),
     providerInvocations,
+    automationConnectors,
+    connectorHealthChecks,
     auditEvents,
     automationRunSteps,
     keywords,
@@ -2026,6 +2127,8 @@ function getSerializableState() {
 function hydrateRuntimeState(payload = {}) {
   hydrateAutomationProviderState(payload.automationProviderState ?? {});
   replaceArray(providerInvocations, payload.providerInvocations ?? providerInvocations);
+  replaceArray(automationConnectors, payload.automationConnectors ?? automationConnectors);
+  replaceArray(connectorHealthChecks, payload.connectorHealthChecks ?? connectorHealthChecks);
   replaceArray(auditEvents, payload.auditEvents ?? auditEvents);
   replaceArray(automationRunSteps, payload.automationRunSteps ?? automationRunSteps);
   replaceArray(keywords, payload.keywords ?? keywords);
@@ -3311,6 +3414,186 @@ export function listAutomationConnectors(query = {}) {
 export function getAutomationConnector(id) {
   const connector = byId(automationConnectors, id);
   return connector ? sanitizeAutomationConnector(connector) : null;
+}
+
+export function saveAutomationConnectorAction(connectorId, patch = {}) {
+  const connector = byId(automationConnectors, connectorId);
+  if (!connector) {
+    return null;
+  }
+
+  const nextConfig = {
+    ...(connector.config || {})
+  };
+
+  if (Object.prototype.hasOwnProperty.call(patch, "endpoint")) {
+    const endpoint = String(patch.endpoint || "").trim();
+    validateProviderEndpoint(endpoint);
+    nextConfig.endpoint = endpoint;
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "api_key")) {
+    const apiKey = String(patch.api_key || "");
+    if (apiKey && !isMaskedConnectorSecret(apiKey)) {
+      nextConfig.api_key = apiKey;
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "timeout_ms")) {
+    nextConfig.timeout_ms = Math.max(500, Number(patch.timeout_ms || nextConfig.timeout_ms || 10000));
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "retry_count")) {
+    nextConfig.retry_count = Math.max(0, Number(patch.retry_count || 0));
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "notes")) {
+    nextConfig.notes = String(patch.notes || "").trim();
+  }
+
+  connector.config = nextConfig;
+
+  if (Object.prototype.hasOwnProperty.call(patch, "is_enabled")) {
+    connector.is_enabled = Boolean(patch.is_enabled);
+  }
+  if (typeof patch.status === "string" && ["ready", "planned", "disabled", "error"].includes(patch.status)) {
+    connector.status = patch.status;
+    connector.status_label = connectorStatusLabel(patch.status);
+  }
+
+  connector.credential_status = connector.config?.api_key ? "configured" : "missing";
+  connector.credential_status_label = connectorCredentialLabel(connector.credential_status);
+
+  recordAuditEvent("automation_connector.update", "automation_connector", connector.id, {
+    changed_fields: Object.keys(patch).filter((key) => key !== "api_key"),
+    connector_type: connector.connector_type,
+    is_enabled: connector.is_enabled,
+    status: connector.status,
+    endpoint: connector.config?.endpoint || "",
+    credential_status: connector.credential_status
+  });
+  persistState();
+  return sanitizeAutomationConnector(connector);
+}
+
+export async function testAutomationConnectorAction(connectorId) {
+  const connector = byId(automationConnectors, connectorId);
+  if (!connector) {
+    return null;
+  }
+
+  const endpoint = String(connector.config?.endpoint || "").trim();
+  const retryCount = Math.max(0, Number(connector.config?.retry_count || 0));
+  const timeoutMs = Math.max(500, Number(connector.config?.timeout_ms || 10000));
+  const startedAt = Date.now();
+  let result = null;
+
+  try {
+    if (!endpoint) {
+      throw new Error("Connector endpoint is empty");
+    }
+    validateProviderEndpoint(endpoint);
+
+    if (endpoint.startsWith("mock://")) {
+      const sampleResponse = buildMockConnectorResponse(connector);
+      result = {
+        success: true,
+        connector_id: connector.id,
+        connector_label: connector.label,
+        connector_type: connector.connector_type,
+        endpoint,
+        attempts: 1,
+        duration_ms: Date.now() - startedAt,
+        execution_mode: "mock",
+        schema_valid: true,
+        error_message: "",
+        sample_response: sampleResponse
+      };
+    } else {
+      let lastError = null;
+      for (let attempt = 1; attempt <= retryCount + 1; attempt += 1) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const response = await fetch(endpoint, {
+            method: "GET",
+            headers: connector.config?.api_key
+              ? {
+                  Authorization: `Bearer ${connector.config.api_key}`
+                }
+              : {},
+            signal: controller.signal
+          });
+          if (!response.ok) {
+            throw new Error(`Connector endpoint responded with ${response.status}`);
+          }
+          result = {
+            success: true,
+            connector_id: connector.id,
+            connector_label: connector.label,
+            connector_type: connector.connector_type,
+            endpoint,
+            attempts: attempt,
+            duration_ms: Date.now() - startedAt,
+            execution_mode: "remote",
+            schema_valid: true,
+            error_message: "",
+            sample_response: {
+              status: response.status,
+              content_type: response.headers.get("content-type") || ""
+            }
+          };
+          break;
+        } catch (error) {
+          lastError = error;
+          if (attempt >= retryCount + 1) {
+            throw error;
+          }
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+      if (!result && lastError) {
+        throw lastError;
+      }
+    }
+  } catch (error) {
+    result = {
+      success: false,
+      connector_id: connector.id,
+      connector_label: connector.label,
+      connector_type: connector.connector_type,
+      endpoint,
+      attempts: Math.max(1, retryCount + 1),
+      duration_ms: Date.now() - startedAt,
+      execution_mode: endpoint.startsWith("mock://") ? "mock" : "remote",
+      schema_valid: false,
+      error_message: error instanceof Error ? error.message : String(error),
+      sample_response: null
+    };
+  }
+
+  const healthCheck = recordConnectorHealthCheck(connector, result);
+  recordAuditEvent("automation_connector.test", "automation_connector", connector.id, {
+    connector_type: connector.connector_type,
+    endpoint,
+    success: result.success,
+    duration_ms: result.duration_ms,
+    error_message: result.error_message || ""
+  });
+  persistState();
+  return {
+    ...result,
+    health_check_id: healthCheck.id,
+    health_check: healthCheck
+  };
+}
+
+export function listConnectorHealthChecks(query = {}) {
+  let items = connectorHealthChecks.map((item) => deepClone(item));
+  if (query.connector_id) items = items.filter((item) => item.connector_id === query.connector_id);
+  if (query.connector_type) items = items.filter((item) => item.connector_type === query.connector_type);
+  if (query.success !== undefined) {
+    const expected = String(query.success) === "true";
+    items = items.filter((item) => item.success === expected);
+  }
+  return paginate(items, query.page, query.page_size);
 }
 
 function recordProviderInvocation(capability, execution = {}, extra = {}) {

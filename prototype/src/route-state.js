@@ -137,6 +137,7 @@ export function applyRouteState(store, hash = "") {
   const modelId = params.get("modelId");
   const channelId = params.get("channelId");
   const providerId = params.get("providerId");
+  const connectorId = params.get("connectorId");
   const strategyId = params.get("strategyId");
   const runId = params.get("runId");
   const panel = params.get("panel");
@@ -148,6 +149,9 @@ export function applyRouteState(store, hash = "") {
   }
   if (providerId) {
     store.selectedIds.provider = providerId;
+  }
+  if (connectorId) {
+    store.selectedIds.connector = connectorId;
   }
   if (strategyId) {
     store.selectedIds.strategy = strategyId;
@@ -200,6 +204,7 @@ export function serializeRouteState(store) {
     setParam(params, "modelId", store.selectedIds.model);
     setParam(params, "channelId", store.selectedIds.channel);
     setParam(params, "providerId", store.selectedIds.provider);
+    setParam(params, "connectorId", store.selectedIds.connector);
     setParam(params, "strategyId", store.selectedIds.strategy);
     if (store.tabs.settings === "automation") {
       setParam(params, "runId", store.selectedIds.automationRun);

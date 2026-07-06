@@ -37,6 +37,8 @@ function auditActionLabel(value) {
     {
       "runtime.reset": "运行态重置",
       "automation_provider.update": "能力服务更新",
+      "automation_connector.update": "连接器更新",
+      "automation_connector.test": "连接器测试",
       "model_config.update": "模型配置更新",
       "publish_task.start": "发布任务启动",
       "scheduler.tick": "调度轮询",
@@ -583,6 +585,9 @@ function renderProviders(store) {
   const selected =
     store.data.automationProviders.find((item) => item.id === store.selectedIds.provider) ||
     store.data.automationProviders[0];
+  const selectedConnector =
+    (store.data.automationConnectors || []).find((item) => item.id === store.selectedIds.connector) ||
+    (store.data.automationConnectors || [])[0];
   const recentInvocations = (store.data.providerInvocations || []).filter(
     (item) => item.provider_id === selected?.id || item.fallback_provider_id === selected?.id
   ).slice(0, 5);
@@ -591,10 +596,12 @@ function renderProviders(store) {
   );
   const providerSummary = store.data.runtimeStatus?.providers?.invocation_summary || {};
   const connectorSummary = store.data.runtimeStatus?.connectors?.counts || {};
+  const connectorHealth = selectedConnector?.last_health_check || null;
   const protocol = selected?.protocol || null;
 
   return `
     <div class="stack-blocks">
+      <div class="layout-split">
       <section class="surface panel">
         <div class="panel-head">
           <div>
@@ -637,7 +644,7 @@ function renderProviders(store) {
           ["连接器", "类型", "状态", "凭据状态", "权限边界", "允许动作", "危险动作", "审计"],
           (store.data.automationConnectors || []).map(
             (item) => `
-              <tr>
+              <tr data-select-connector="${escapeHtml(item.id)}">
                 <td>
                   <div class="cell-title">${escapeHtml(item.label)}</div>
                   <div class="cell-sub">${escapeHtml(item.id)}</div>
@@ -664,6 +671,99 @@ function renderProviders(store) {
           )
         )}
       </section>
+      <aside class="surface drawer" data-settings-panel="connector">
+        ${
+          selectedConnector
+            ? `
+              <div class="drawer-section">
+                <div class="cell-title" style="font-size:22px">${escapeHtml(selectedConnector.label)}</div>
+                <div class="chip-row" style="margin-top:12px">
+                  <span class="status-pill">${escapeHtml(selectedConnector.connector_type_label || selectedConnector.connector_type || "-")}</span>
+                  ${statusMarkup(selectedConnector.status_label || selectedConnector.status || "-")}
+                  ${statusMarkup(selectedConnector.credential_status_label || selectedConnector.credential_status || "-")}
+                </div>
+                <div class="panel-note" style="margin-top:12px">${escapeHtml(selectedConnector.note || "-")}</div>
+              </div>
+              <div class="form-grid">
+                <div class="form-field">
+                  <label>启用状态</label>
+                  <select data-connector-field="is_enabled">
+                    <option value="true" ${selectedConnector.is_enabled ? "selected" : ""}>启用</option>
+                    <option value="false" ${!selectedConnector.is_enabled ? "selected" : ""}>停用</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label>连接器状态</label>
+                  <select data-connector-field="status">
+                    <option value="ready" ${selectedConnector.status === "ready" ? "selected" : ""}>可配置</option>
+                    <option value="planned" ${selectedConnector.status === "planned" ? "selected" : ""}>规划中</option>
+                    <option value="disabled" ${selectedConnector.status === "disabled" ? "selected" : ""}>已停用</option>
+                    <option value="error" ${selectedConnector.status === "error" ? "selected" : ""}>异常</option>
+                  </select>
+                </div>
+                <div class="form-field full">
+                  <label>接口地址</label>
+                  <input data-connector-field="endpoint" value="${escapeHtml(selectedConnector.config?.endpoint || "")}" />
+                </div>
+                <div class="form-field">
+                  <label>密钥</label>
+                  <input type="password" data-connector-field="api_key" value="" placeholder="${escapeHtml(selectedConnector.config?.masked_api_key || "")}" />
+                </div>
+                <div class="form-field">
+                  <label>超时（毫秒）</label>
+                  <input type="number" min="500" data-connector-field="timeout_ms" value="${escapeHtml(selectedConnector.config?.timeout_ms || 10000)}" />
+                </div>
+                <div class="form-field">
+                  <label>重试次数</label>
+                  <input type="number" min="0" data-connector-field="retry_count" value="${escapeHtml(selectedConnector.config?.retry_count || 0)}" />
+                </div>
+                <div class="form-field full">
+                  <label>备注</label>
+                  <textarea data-connector-field="notes">${escapeHtml(selectedConnector.config?.notes || "")}</textarea>
+                </div>
+              </div>
+              <div class="actions-row" style="margin-top:18px; justify-content:space-between">
+                <span class="cell-sub">连接器测试会先保存当前配置，再执行一次 mock 或 HTTPS 健康检查。</span>
+                <div class="actions-row">
+                  <button class="secondary-btn" data-action="save-connector-config">保存连接器</button>
+                  <button class="secondary-btn" data-action="test-connector-config">连接器测试</button>
+                </div>
+              </div>
+              <div class="drawer-section">
+                <h4>权限边界</h4>
+                <div class="info-list">
+                  <div class="info-row"><span>边界</span><strong>${escapeHtml(selectedConnector.permission_boundary_label || selectedConnector.permission_boundary || "-")}</strong></div>
+                  <div class="info-row"><span>范围</span><strong style="max-width:62%; text-align:right">${escapeHtml((selectedConnector.scopes || []).join(", ") || "-")}</strong></div>
+                  <div class="info-row"><span>允许动作</span><strong style="max-width:62%; text-align:right">${escapeHtml((selectedConnector.allowed_actions || []).join(", ") || "-")}</strong></div>
+                  <div class="info-row"><span>危险动作</span><strong style="max-width:62%; text-align:right">${escapeHtml((selectedConnector.dangerous_actions || []).join(", ") || "-")}</strong></div>
+                </div>
+              </div>
+              <div class="drawer-section">
+                <h4>最近健康检查</h4>
+                ${
+                  connectorHealth
+                    ? `
+                      <div class="info-list">
+                        <div class="info-row"><span>检查时间</span><strong>${escapeHtml(formatDateTime(connectorHealth.checked_at))}</strong></div>
+                        <div class="info-row"><span>结果</span><strong>${escapeHtml(connectorHealth.success_label || (connectorHealth.success ? "测试通过" : "测试失败"))}</strong></div>
+                        <div class="info-row"><span>执行模式</span><strong>${escapeHtml(connectorHealth.execution_mode || "-")}</strong></div>
+                        <div class="info-row"><span>耗时</span><strong>${escapeHtml(`${connectorHealth.duration_ms || 0} 毫秒`)}</strong></div>
+                        <div class="info-row"><span>接口地址</span><strong style="max-width:62%; text-align:right; word-break:break-all">${escapeHtml(connectorHealth.endpoint || "-")}</strong></div>
+                      </div>
+                      ${
+                        connectorHealth.error_message
+                          ? `<div class="cell-sub" style="margin-top:12px; word-break:break-all">${escapeHtml(connectorHealth.error_message)}</div>`
+                          : ""
+                      }
+                    `
+                    : `<div class="cell-sub">当前连接器还没有健康检查记录。</div>`
+                }
+              </div>
+            `
+            : `<div class="cell-sub">暂无连接器。</div>`
+        }
+      </aside>
+      </div>
       <div class="layout-split">
       <section class="surface panel">
         <div class="panel-head">

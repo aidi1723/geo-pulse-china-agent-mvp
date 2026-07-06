@@ -28,6 +28,7 @@ import {
   runInternationalGeoAudit as runInternationalGeoAuditApi,
   runVisibilityCollection as runVisibilityCollectionApi,
   saveAutomationProvider as saveAutomationProviderApi,
+  saveAutomationConnector as saveAutomationConnectorApi,
   saveBrandProfile,
   saveChannel as saveChannelApi,
   saveInternationalGeoInput as saveInternationalGeoInputApi,
@@ -37,6 +38,7 @@ import {
   submitArticleReview,
   takeoverPublishTaskItem as takeoverPublishTaskItemApi,
   testAutomationProvider as testAutomationProviderApi,
+  testAutomationConnector as testAutomationConnectorApi,
   updateBillingPlan as updateBillingPlanApi,
   updateTopic as updateTopicApi,
   retryPublishTask,
@@ -221,6 +223,21 @@ function getAutomationProviderPayload() {
     timeout_ms: Number(container.querySelector('[data-provider-field="timeout_ms"]')?.value || 1000),
     retry_count: Number(container.querySelector('[data-provider-field="retry_count"]')?.value || 0),
     notes: container.querySelector('[data-provider-field="notes"]')?.value?.trim() || ""
+  };
+}
+
+function getAutomationConnectorPayload() {
+  const container = root.querySelector('[data-settings-panel="connector"]');
+  if (!container) return null;
+  return {
+    is_enabled:
+      (container.querySelector('[data-connector-field="is_enabled"]')?.value || "false") === "true",
+    status: container.querySelector('[data-connector-field="status"]')?.value || "ready",
+    endpoint: container.querySelector('[data-connector-field="endpoint"]')?.value?.trim() || "",
+    api_key: container.querySelector('[data-connector-field="api_key"]')?.value?.trim() || "",
+    timeout_ms: Number(container.querySelector('[data-connector-field="timeout_ms"]')?.value || 10000),
+    retry_count: Number(container.querySelector('[data-connector-field="retry_count"]')?.value || 0),
+    notes: container.querySelector('[data-connector-field="notes"]')?.value?.trim() || ""
   };
 }
 
@@ -881,6 +898,43 @@ const actions = {
       );
     } catch (error) {
       setError(error instanceof Error ? error.message : "连接测试失败");
+      rerender();
+    }
+  },
+  async saveAutomationConnector() {
+    const connectorId = store.selectedIds.connector;
+    const payload = getAutomationConnectorPayload();
+    if (!connectorId || !payload) return;
+    try {
+      const saved = await saveAutomationConnectorApi(connectorId, payload);
+      await refreshData();
+      store.page = "settings";
+      store.tabs.settings = "providers";
+      store.selectedIds.connector = saved.id;
+      showNotice("连接器配置已保存。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "保存连接器配置失败");
+      rerender();
+    }
+  },
+  async testAutomationConnector() {
+    const connectorId = store.selectedIds.connector;
+    const payload = getAutomationConnectorPayload();
+    if (!connectorId || !payload) return;
+    try {
+      await saveAutomationConnectorApi(connectorId, payload);
+      const result = await testAutomationConnectorApi(connectorId);
+      await refreshData();
+      store.page = "settings";
+      store.tabs.settings = "providers";
+      store.selectedIds.connector = connectorId;
+      showNotice(
+        result.success
+          ? `连接器测试成功，耗时 ${result.duration_ms || 0} ms。`
+          : `连接器测试失败：${result.error_message || "未知错误"}`
+      );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "连接器测试失败");
       rerender();
     }
   },

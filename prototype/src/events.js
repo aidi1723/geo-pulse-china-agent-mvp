@@ -132,6 +132,13 @@ export function bindEvents(root, store, rerender, actions) {
       return;
     }
 
+    const connectorRow = event.target.closest("[data-select-connector]");
+    if (connectorRow) {
+      store.selectedIds.connector = connectorRow.dataset.selectConnector;
+      rerender();
+      return;
+    }
+
     const mediaSourceRow = event.target.closest("[data-select-media-source]");
     if (mediaSourceRow) {
       store.selectedIds.mediaSource = mediaSourceRow.dataset.selectMediaSource;
@@ -457,6 +464,16 @@ export function bindEvents(root, store, rerender, actions) {
 
     if (action === "test-provider-config") {
       await actions.testAutomationProvider();
+      return;
+    }
+
+    if (action === "save-connector-config") {
+      await actions.saveAutomationConnector();
+      return;
+    }
+
+    if (action === "test-connector-config") {
+      await actions.testAutomationConnector();
       return;
     }
 

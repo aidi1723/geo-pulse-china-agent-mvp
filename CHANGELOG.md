@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.4.0 - 2026-07-06
+
+Single-user integration-readiness snapshot.
+
+### Added
+
+- Editable automation connector configs for endpoint, enabled state, API key, timeout, retry count, status, and notes.
+- Connector connection tests for `mock://` simulations and guarded `https://` endpoints.
+- Connector health-check history, latest health state on connector details, and runtime health summaries.
+- API routes for connector save, connector test, and connector health-check listing.
+- Settings UI connector drawer with masked secrets, permission boundaries, save action, and test action.
+- Audit events for connector updates and connector tests.
+
+### Changed
+
+- Project status is now documented as v0.4 integration-ready for one local/single-tenant operator.
+- Connector state is included in local persistence so saved configs and health checks survive restarts.
+
+### Boundaries
+
+- v0.4 does not add real OAuth, real external publishing, production credential vaults, background queues, or multi-tenant SaaS isolation.
+
+### Verification
+
+- `npm run check`
+
 ## 0.3.0 - 2026-07-06
 
 Single-user complete v0.3 snapshot.

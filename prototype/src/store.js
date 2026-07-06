@@ -17,6 +17,7 @@ export const store = {
     channel: null,
     mediaSource: null,
     provider: null,
+    connector: null,
     strategy: null,
     automationRun: null
   },
@@ -160,6 +161,9 @@ export function hydrateData(payload) {
   }
   if (!store.selectedIds.provider && store.data.automationProviders?.[0]) {
     store.selectedIds.provider = store.data.automationProviders[0].id;
+  }
+  if (!store.selectedIds.connector && store.data.automationConnectors?.[0]) {
+    store.selectedIds.connector = store.data.automationConnectors[0].id;
   }
   if (!store.selectedIds.strategy && store.data.sourceStrategies?.[0]) {
     store.selectedIds.strategy = store.data.sourceStrategies[0].id;

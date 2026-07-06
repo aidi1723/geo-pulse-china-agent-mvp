@@ -45,6 +45,7 @@ import {
   listAutomationRuns,
   listArticles,
   listContentTemplates,
+  listConnectorHealthChecks,
   listMediaSources,
   listProviderInvocations,
   listSourceAdapterContracts,
@@ -65,6 +66,7 @@ import {
   runSourceStrategyAction,
   runMarketingCampaignAction,
   saveAutomationProviderAction,
+  saveAutomationConnectorAction,
   saveBrandProfileAction,
   saveChannelAction,
   saveInternationalGeoInputAction,
@@ -75,6 +77,7 @@ import {
   startPublishTaskAction,
   submitArticleReviewAction,
   takeoverPublishTaskItemAction,
+  testAutomationConnectorAction,
   testAutomationProviderAction,
   updateBillingPlanAction,
   updateArticleAction,
@@ -271,6 +274,86 @@ async function runMockDataChecks() {
   assert.ok(
     getRuntimeStatus().connectors?.counts?.total >= 6,
     "Runtime status should include connector summary"
+  );
+  const savedConnector = saveAutomationConnectorAction("firecrawl_source", {
+    is_enabled: true,
+    status: "ready",
+    endpoint: "mock://source-crawl-v4",
+    api_key: "connector-secret-key",
+    timeout_ms: 9000,
+    retry_count: 1,
+    notes: "验收连接器配置"
+  });
+  assert.equal(savedConnector?.is_enabled, true, "Connector enabled flag should be saved");
+  assert.equal(savedConnector?.config?.endpoint, "mock://source-crawl-v4", "Connector endpoint should be saved");
+  assert.equal(savedConnector?.config?.timeout_ms, 9000, "Connector timeout should be saved");
+  assert.equal(savedConnector?.credential_status, "configured", "Connector key should mark credentials configured");
+  assert.notEqual(
+    getAutomationConnector("firecrawl_source")?.config?.api_key,
+    "connector-secret-key",
+    "Saved connector config should not expose raw API keys"
+  );
+  assert.match(
+    getAutomationConnector("firecrawl_source")?.config?.masked_api_key || "",
+    /\*+key$/,
+    "Saved connector config should expose only a masked key hint"
+  );
+  assert.throws(
+    () =>
+      saveAutomationConnectorAction("firecrawl_source", {
+        endpoint: "http://127.0.0.1:7788/internal"
+      }),
+    /not allowed|private|loopback/i,
+    "Connector config should reject loopback endpoints"
+  );
+  const connectorTestSuccess = await testAutomationConnectorAction("firecrawl_source");
+  assert.equal(connectorTestSuccess?.success, true, "Mock connector test should succeed");
+  assert.equal(connectorTestSuccess?.schema_valid, true, "Mock connector test should validate local schema");
+  assert.equal(
+    getAutomationConnector("firecrawl_source")?.last_health_check?.success,
+    true,
+    "Connector detail should expose the latest successful health check"
+  );
+  const failingConnector = saveAutomationConnectorAction("serpbear_rank_tracker", {
+    is_enabled: true,
+    status: "ready",
+    endpoint: "https://example.invalid/unreachable",
+    timeout_ms: 500,
+    retry_count: 0
+  });
+  assert.equal(failingConnector?.status, "ready", "Connector status should be editable before testing");
+  const connectorTestFailure = await testAutomationConnectorAction("serpbear_rank_tracker");
+  assert.equal(connectorTestFailure?.success, false, "Unreachable connector test should fail");
+  assert.ok(connectorTestFailure?.error_message, "Failed connector test should expose error message");
+  assert.ok(
+    listConnectorHealthChecks().items.some(
+      (item) => item.connector_id === "firecrawl_source" && item.success === true
+    ),
+    "Connector health check list should include successful tests"
+  );
+  assert.ok(
+    listConnectorHealthChecks().items.some(
+      (item) => item.connector_id === "serpbear_rank_tracker" && item.success === false
+    ),
+    "Connector health check list should include failed tests"
+  );
+  assert.ok(
+    listAuditEvents({ action: "automation_connector.update" }).items.some(
+      (item) => item.resource_id === "firecrawl_source"
+    ),
+    "Connector updates should be recorded in the audit log"
+  );
+  assert.ok(
+    listAuditEvents({ action: "automation_connector.test" }).items.some(
+      (item) => item.resource_id === "firecrawl_source"
+    ),
+    "Connector tests should be recorded in the audit log"
+  );
+  assert.ok(
+    getRuntimeStatus().connectors?.health_summary?.latest_checks?.some(
+      (item) => item.connector_id === "firecrawl_source"
+    ),
+    "Runtime status should include latest connector health checks"
   );
   const visibilityAnalytics = getVisibilityAnalytics();
   assert.ok(
@@ -1709,7 +1792,8 @@ function runSettingsConnectorUiChecks() {
       settings: "providers"
     },
     selectedIds: {
-      provider: "local_geo_writer"
+      provider: "local_geo_writer",
+      connector: "firecrawl_source"
     },
     data: {
       automationProviders: [
@@ -1748,7 +1832,18 @@ function runSettingsConnectorUiChecks() {
           scopes: ["crawl", "extract"],
           config: {
             endpoint: "mock://source-crawl",
+            timeout_ms: 12000,
+            retry_count: 2,
             masked_api_key: "********key"
+          },
+          last_health_check: {
+            success: true,
+            success_label: "测试通过",
+            checked_at: "2026-07-05T10:10:00.000Z",
+            duration_ms: 18,
+            endpoint: "mock://source-crawl",
+            schema_valid: true,
+            error_message: ""
           }
         },
         {
@@ -1796,6 +1891,17 @@ function runSettingsConnectorUiChecks() {
       runtimeStatus: {
         providers: {
           invocation_summary: {}
+        },
+        connectors: {
+          health_summary: {
+            latest_checks: [
+              {
+                connector_id: "firecrawl_source",
+                success: true,
+                checked_at: "2026-07-05T10:10:00.000Z"
+              }
+            ]
+          }
         }
       }
     }
@@ -1811,6 +1917,12 @@ function runSettingsConnectorUiChecks() {
   assert.match(html, /危险动作/, "Connector registry should render dangerous action boundaries");
   assert.match(html, /campaign:send/, "Connector registry should render scoped send permissions");
   assert.match(html, /campaign:delete/, "Connector registry should render dangerous denied permissions");
+  assert.match(html, /data-select-connector="firecrawl_source"/, "Connector rows should be selectable");
+  assert.match(html, /data-settings-panel="connector"/, "Settings should render a connector detail drawer");
+  assert.match(html, /data-connector-field="endpoint"/, "Connector drawer should expose endpoint editing");
+  assert.match(html, /data-action="save-connector-config"/, "Connector drawer should expose save action");
+  assert.match(html, /data-action="test-connector-config"/, "Connector drawer should expose test action");
+  assert.match(html, /最近健康检查/, "Connector drawer should render recent health checks");
   assert.doesNotMatch(html, /firecrawl-demo-key|postiz-demo-key/, "Connector registry should not expose raw connector secrets");
 }
 
@@ -2899,6 +3011,51 @@ async function runSingleUserHttpChecks() {
       body: JSON.stringify({ plan_id: "single_user_pro", billing_cycle: "monthly" })
     });
     assert.equal(billingPlan.status, 200, "Billing plan should update over HTTP");
+
+    const savedConnector = await httpRequest(port, "/api/v1/automation-connectors/firecrawl_source", {
+      method: "PUT",
+      headers: mutationHeaders,
+      body: JSON.stringify({
+        is_enabled: true,
+        status: "ready",
+        endpoint: "mock://source-crawl-http",
+        api_key: "http-connector-secret-key",
+        timeout_ms: 9000,
+        retry_count: 1,
+        notes: "HTTP 验收连接器"
+      })
+    });
+    assert.equal(savedConnector.status, 200, "Connector config should be mutable over HTTP");
+    assert.equal(savedConnector.body?.data?.config?.endpoint, "mock://source-crawl-http", "Connector HTTP save should return endpoint");
+    assert.doesNotMatch(
+      JSON.stringify(savedConnector.body?.data || {}),
+      /http-connector-secret-key/,
+      "Connector HTTP save should not expose raw secrets"
+    );
+
+    const connectorTest = await httpRequest(port, "/api/v1/automation-connectors/firecrawl_source/test", {
+      method: "POST",
+      headers: mutationHeaders,
+      body: "{}"
+    });
+    assert.equal(connectorTest.status, 200, "Connector test should run over HTTP");
+    assert.equal(connectorTest.body?.data?.success, true, "Mock connector HTTP test should succeed");
+
+    const connectorHealth = await httpRequest(port, "/api/v1/connector-health-checks");
+    assert.equal(connectorHealth.status, 200, "Connector health checks should be queryable over HTTP");
+    assert.ok(
+      connectorHealth.body?.data?.items?.some((item) => item.connector_id === "firecrawl_source"),
+      "Connector health API should include recent connector tests"
+    );
+
+    const unsafeConnector = await httpRequest(port, "/api/v1/automation-connectors/firecrawl_source", {
+      method: "PUT",
+      headers: mutationHeaders,
+      body: JSON.stringify({
+        endpoint: "http://127.0.0.1:7788/internal"
+      })
+    });
+    assert.equal(unsafeConnector.status, 400, "Connector HTTP save should reject loopback endpoints");
 
     const logout = await httpRequest(port, "/api/v1/session/logout", {
       method: "POST",

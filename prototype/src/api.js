@@ -239,12 +239,20 @@ export function saveAutomationProvider(providerId, payload) {
   return requestJson(`/api/v1/automation-providers/${providerId}`, "PUT", payload);
 }
 
+export function saveAutomationConnector(connectorId, payload) {
+  return requestJson(`/api/v1/automation-connectors/${connectorId}`, "PUT", payload);
+}
+
 export function getAutomationProviderProtocol(providerId) {
   return request(`/api/v1/automation-providers/${providerId}/protocol`);
 }
 
 export function testAutomationProvider(providerId) {
   return requestJson(`/api/v1/automation-providers/${providerId}/test`, "POST", {});
+}
+
+export function testAutomationConnector(connectorId) {
+  return requestJson(`/api/v1/automation-connectors/${connectorId}/test`, "POST", {});
 }
 
 export function retryAutomationRun(runId) {

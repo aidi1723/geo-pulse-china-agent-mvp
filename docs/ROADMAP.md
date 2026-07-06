@@ -2,7 +2,7 @@
 
 ## Current State
 
-The project is a v0.3 single-user complete workspace.
+The project is a v0.4 single-user integration-ready workspace.
 
 Completed mock-first product areas:
 
@@ -16,11 +16,12 @@ Completed mock-first product areas:
 - International GEO workspace for overseas AI search readiness, content generation planning, distribution execution, and AI engine visibility.
 - Production guardrails, `/healthz`, `robots.txt`, `sitemap.xml`, `llms.txt`, `favicon.ico`, Docker, Docker Compose, and deployment documentation.
 - Single-user complete workflows: workspace input, manual topics, topic editing, outline generation, manual articles, templates, exports, International GEO audit/artifacts, local billing plan switch, and logout action.
+- Integration-readiness workflows: connector config editing, connector connection tests, connector health checks, masked secrets, runtime connector health summaries, and connector audit events.
 - Open-source release docs and GPLv3 licensing.
 
 ## Near-Term Maintenance
 
-These items keep v0.3 healthy without changing its architecture:
+These items keep v0.4 healthy without changing its architecture:
 
 - Keep `npm run check` passing.
 - Expand `verify-mvp.mjs` when new behavior is added.
@@ -45,7 +46,7 @@ These can be built mock-first before real integrations:
 4. Minimal CI.
    - Run `npm run check` on pull requests.
 
-## Post-v0.3 Production Hardening
+## Post-v0.4 Production Hardening
 
 These are required before using the project as a real SaaS or broadly exposed hosted service:
 
@@ -59,10 +60,12 @@ These are required before using the project as a real SaaS or broadly exposed ho
 - Incident response owner and security contact.
 - Data retention, deletion, and privacy policy.
 
-## Non-Goals For v0.3
+## Non-Goals For v0.4
 
 - Production multi-tenant hosting.
 - Real third-party credential management.
+- Real OAuth authorization flows.
+- Real external CMS, social, email, SERP, or analytics publishing/collection.
 - Full workflow graph editor.
 - Paid billing integration.
 - Browser extension or crawler deployment.
@@ -70,7 +73,7 @@ These are required before using the project as a real SaaS or broadly exposed ho
 
 ## Release Versioning
 
-Current public snapshot: `0.3.0`.
+Current public snapshot: `0.4.0`.
 
 Suggested version policy:
 

@@ -54,6 +54,7 @@ const {
   listAuditEvents,
   listAutomationProviders,
   listAutomationConnectors,
+  listConnectorHealthChecks,
   listChannels,
   listContentTemplates,
   listInvoices,
@@ -87,9 +88,11 @@ const {
   saveMediaSourceAction,
   saveModelConfigAction,
   saveAutomationProviderAction,
+  saveAutomationConnectorAction,
   saveSourceStrategyAction,
   saveWorkspaceInputAction,
   testAutomationProviderAction,
+  testAutomationConnectorAction,
   retryPublishTaskFailedAction,
   startPublishTaskAction,
   submitArticleReviewAction,
@@ -825,6 +828,38 @@ async function handleApi(req, res, url) {
       return;
     }
     sendJson(res, 200, ok(connector));
+    return;
+  }
+
+  if (req.method === "PUT" && pathname.match(/^\/automation-connectors\/[^/]+$/)) {
+    const id = pathname.split("/")[2];
+    const body = await parseBody(req).catch(() => null);
+    if (!body) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    const connector = saveAutomationConnectorAction(id, body);
+    if (!connector) {
+      sendJson(res, 404, error("NOT_FOUND", "Automation connector not found", 404).body);
+      return;
+    }
+    sendJson(res, 200, ok(connector));
+    return;
+  }
+
+  if (req.method === "POST" && pathname.match(/^\/automation-connectors\/[^/]+\/test$/)) {
+    const id = pathname.split("/")[2];
+    const result = await testAutomationConnectorAction(id);
+    if (!result) {
+      sendJson(res, 404, error("NOT_FOUND", "Automation connector not found", 404).body);
+      return;
+    }
+    sendJson(res, 200, ok(result));
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/connector-health-checks") {
+    sendJson(res, 200, ok(listConnectorHealthChecks(query)));
     return;
   }
 

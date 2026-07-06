@@ -258,6 +258,9 @@ export function normalizeStoreSelections(store) {
   if ((store.data.automationProviders || []).length) {
     setIfChanged("provider", pickExistingId(store.data.automationProviders, store.selectedIds.provider));
   }
+  if ((store.data.automationConnectors || []).length) {
+    setIfChanged("connector", pickExistingId(store.data.automationConnectors, store.selectedIds.connector));
+  }
   if ((store.data.sourceStrategies || []).length) {
     setIfChanged("strategy", pickExistingId(store.data.sourceStrategies, store.selectedIds.strategy));
   }
