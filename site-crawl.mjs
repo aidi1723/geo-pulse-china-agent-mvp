@@ -92,7 +92,12 @@ function expandedIpv6Groups(address) {
 
 export function normalizeCrawlTarget(value) {
   const text = String(value || "").trim();
-  const url = new URL(text);
+  let url;
+  try {
+    url = new URL(text);
+  } catch {
+    throw crawlBlocked("Invalid crawl target URL");
+  }
   if (!["http:", "https:"].includes(url.protocol)) {
     throw crawlBlocked("Only http and https crawl targets are allowed");
   }
@@ -228,6 +233,10 @@ async function safeLookup(hostname, options, callback) {
       return;
     }
     if (net.isIP(host)) {
+      if (options?.all) {
+        callback(null, [{ address: host, family: net.isIP(host) }]);
+        return;
+      }
       callback(null, host, net.isIP(host));
       return;
     }
@@ -238,6 +247,10 @@ async function safeLookup(hostname, options, callback) {
     }
     const preferredFamily = options?.family ? records.find((record) => record.family === options.family) : null;
     const selected = preferredFamily || records[0];
+    if (options?.all) {
+      callback(null, records.map((record) => ({ address: record.address, family: record.family })));
+      return;
+    }
     callback(null, selected.address, selected.family);
   } catch (error) {
     callback(error);
@@ -260,7 +273,7 @@ function readHttpResource(url, options, resourceType) {
     const chunks = [];
     let total = 0;
     const timer = setTimeout(() => {
-      request.destroy(codedError("FETCH_TIMEOUT"));
+      request.destroy(responseError("FETCH_TIMEOUT", responseInfo));
     }, options.timeoutMs);
 
     function settle(callback, value) {
@@ -294,11 +307,13 @@ function readHttpResource(url, options, resourceType) {
         settle(resolve, { responseInfo, body: Buffer.concat(chunks).toString("utf8") });
       });
       response.on("error", (error) => {
+        if (!error.responseInfo) error.responseInfo = responseInfo;
         settle(reject, error);
       });
     });
     request.on("error", (error) => {
       if (error?.code === "BODY_TOO_LARGE" && !error.responseInfo) error.responseInfo = responseInfo;
+      if (responseInfo && !error.responseInfo) error.responseInfo = responseInfo;
       settle(reject, error);
     });
     request.end();
@@ -436,7 +451,6 @@ function unsupportedResource(finalUrl, response) {
     status_code: response.status,
     ok: false,
     content_type: response.headers.get("content-type") || "",
-    text_excerpt: "",
     fetched_at: nowIso(),
     error_code: "UNSUPPORTED_CONTENT_TYPE"
   };
@@ -446,7 +460,11 @@ async function fetchResource(url, parser, options, resourceType) {
   try {
     const result = await fetchLimited(url, options, resourceType);
     if (result.unsupportedContentType) return unsupportedResource(result.url, result.response);
-    return parser(result.body, result.url, result.response);
+    const resource = parser(result.body, result.url, result.response);
+    if (!resource.ok && !resource.error_code) {
+      resource.error_code = resource.status_code ? `HTTP_${resource.status_code}` : "FETCH_FAILED";
+    }
+    return resource;
   } catch (error) {
     if (error?.code === "CRAWL_TARGET_BLOCKED") throw error;
     return failedResource(url, error);

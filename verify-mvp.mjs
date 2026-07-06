@@ -1137,6 +1137,11 @@ async function runMockDataChecks() {
     "file URLs should be blocked for crawling"
   );
   assert.throws(
+    () => validateCrawlTarget("not-a-url"),
+    /CRAWL_TARGET_BLOCKED/,
+    "Malformed crawl targets should be blocked with a stable crawl safety code"
+  );
+  assert.throws(
     () => validateCrawlTarget("http://localhost:3000"),
     /CRAWL_TARGET_BLOCKED/,
     "localhost crawl targets should be blocked"
