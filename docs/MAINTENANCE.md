@@ -71,6 +71,13 @@ Do this only when the repository owner accepts history rewriting. For establishe
 
 ## Maintenance Log
 
+### 2026-07-06 - v0.11 Live Site Crawl Evidence Closeout
+
+- Scope: added guarded International GEO live crawl evidence for homepage, `robots.txt`, `sitemap.xml`, and `/llms.txt`.
+- Local gate: `npm run check` returned `verify-mvp: OK`.
+- Documentation aligned: README, API reference, architecture guide, development guide, production deployment guide, roadmap, documentation index, phase 2 roadmap, changelog, open-source release checklist, and v0.11 closeout docs.
+- Boundary: v0.11 adds safe public-site evidence collection, but it does not add recursive crawling, JavaScript rendering, real AI search engine querying, real SERP collection, automatic third-party publishing, database persistence, OAuth/SSO, MFA, monitoring, or multi-tenant isolation.
+
 ### 2026-07-06 - v0.10 Site GEO Audit And Asset Generation Closeout
 
 - Scope: added International GEO site audit input, durable rule-first site audit records, generated GEO asset previews, and API routes for audit list/detail/create plus asset generation.
@@ -99,16 +106,16 @@ Do this only when the repository owner accepts history rewriting. For establishe
 - No evidence found of real local absolute paths, real personal email addresses, tracked `.env` files, tracked runtime state, or real credential patterns in the current tree or existing Git history.
 - History rewrite: not performed.
 
-## Post-v0.10 Production Hardening
+## Post-v0.11 Production Hardening
 
-v0.10.0 is deployable as a controlled one-organization team-access service behind an external access layer. Before treating it as a real SaaS, real-time AI search monitoring platform, or broadly exposed hosted service, production hardening should include:
+v0.11.0 is deployable as a controlled one-organization team-access service behind an external access layer. Before treating it as a real SaaS, real-time AI search monitoring platform, or broadly exposed hosted service, production hardening should include:
 
 - Database persistence, migrations, and database-grade backup policy.
 - Monitoring and alerting.
 - Durable secret management outside local JSON and source code.
 - OAuth/SSO and MFA if external identity integration is required.
 - Real provider, connector, and source adapter implementations.
-- Live website crawl evidence, measured AI visibility data sources, and external publishing connectors before claiming real engine inclusion, recommendation tracking, or automatic distribution.
+- Measured AI visibility data sources and external publishing connectors before claiming real engine inclusion, recommendation tracking, or automatic distribution.
 - Security contact ownership and incident response process.
 - Multi-tenant workspace isolation if multiple organizations use the service.
 - Data retention, deletion, and privacy policy.

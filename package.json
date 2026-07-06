@@ -1,6 +1,6 @@
 {
   "name": "geo-pulse-china-agent-mvp",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Zero-dependency GEO operations workspace for China and international AI search workflows.",
   "license": "GPL-3.0-only",
   "type": "module",

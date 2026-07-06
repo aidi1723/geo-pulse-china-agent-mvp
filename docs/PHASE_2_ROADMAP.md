@@ -2,21 +2,23 @@
 
 ## Purpose
 
-Phase 2 turns the current v0.10 rule-first GEO audit into an evidence-based and integration-ready GEO operating system.
+Phase 2 turns the current v0.11 crawl-evidenced GEO audit into a broader evidence-based and integration-ready GEO operating system.
 
-The current product can prepare audits and assets from local inputs. Phase 2 should add real site evidence, measured AI visibility data, controlled external distribution, and stronger production foundations before the project claims live engine inclusion or recommendation monitoring.
+The current product can prepare audits and assets from local inputs and attach guarded public-site crawl evidence. Phase 2 should deepen scoring, add measured AI visibility data, controlled external distribution, and stronger production foundations before the project claims live engine inclusion or recommendation monitoring.
 
 ## Phase 2 Direction
 
 Build in this order:
 
-1. Live site crawl and evidence collection.
-2. Evidence-backed GEO scoring.
-3. AI visibility monitoring through approved data sources.
+1. Evidence-backed GEO scoring depth.
+2. AI visibility monitoring through approved data sources.
+3. Content and asset production from evidence.
 4. External distribution connectors with manual guardrails.
 5. Production hardening for hosted team use.
 
 ## Track 1: Live Site Crawl And Evidence Collection
+
+Status: v0.11 baseline complete.
 
 Goal: make site GEO audits depend on real public website evidence instead of local input only.
 
@@ -26,8 +28,7 @@ Scope:
 - Fetch `robots.txt`.
 - Fetch `sitemap.xml`.
 - Fetch `/llms.txt`.
-- Extract page title, meta description, canonical, H1, headings, visible text summary, and internal links.
-- Extract JSON-LD blocks from crawled pages.
+- Extract page title, meta description, canonical, H1, visible text summary, bot mentions, sitemap URLs, and JSON-LD types.
 - Store crawl status, HTTP status, content type, fetch timestamp, and error reason.
 
 Acceptance:
@@ -35,7 +36,7 @@ Acceptance:
 - A user can enter a real URL and receive a crawl evidence snapshot.
 - Failed fetches show clear non-blocking errors.
 - Audit checks reference evidence snippets instead of generic recommendations.
-- The system preserves the v0.10 local-only fallback when crawling is disabled.
+- The system preserves the local rule-first fallback when crawling fails or is unavailable.
 
 ## Track 2: Evidence-Backed GEO Audit Scoring
 
@@ -151,8 +152,8 @@ Acceptance:
 
 ## Suggested Version Slices
 
-- `v0.11`: live site crawl and evidence collection.
-- `v0.12`: evidence-backed GEO scoring and evidence UI.
+- `v0.11`: live site crawl and evidence collection. Complete baseline.
+- `v0.12`: deeper evidence-backed GEO scoring and evidence-driven asset generation.
 - `v0.13`: AI visibility monitoring connectors and measured prompt snapshots.
 - `v0.14`: content and asset production upgrade from evidence.
 - `v0.15`: external distribution connectors with approval gates.

@@ -2,7 +2,7 @@
 
 ## Overview
 
-GEO Pulse China Agent v0.10.0 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes built-in one-organization multi-user access, role-based permissions, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, International GEO site audit records, generated GEO asset previews, production startup guardrails, health checks, GEO/SEO static files, and minimal GitHub CI for controlled server use.
+GEO Pulse China Agent v0.11.0 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes built-in one-organization multi-user access, role-based permissions, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, International GEO site audit records, guarded live crawl evidence, generated GEO asset previews, production startup guardrails, health checks, GEO/SEO static files, and minimal GitHub CI for controlled server use.
 
 ## Runtime Components
 
@@ -10,6 +10,7 @@ GEO Pulse China Agent v0.10.0 is a zero-dependency Node.js application with a br
 | --- | --- | --- |
 | HTTP server | `server.mjs` | Serves the prototype, exposes `/api/v1/*`, applies security headers, session authentication, role authorization, API-key automation access, CORS, rate limiting, body limits, SSRF checks, scheduler controls, health checks, and static GEO/SEO routes. |
 | Mock domain data | `mock-data.mjs` | Stores seed data, local state mutation actions, API read models, persistence hydration, runtime backups, audit events, provider invocation logs, connector permissions, connector diagnostics, source adapter contracts, and workflow actions. |
+| Safe site crawler | `site-crawl.mjs` | Normalizes crawl targets, blocks unsafe protocols/hosts/IP ranges, validates DNS at connection time, limits redirects/time/body size, extracts homepage/robots/sitemap/llms evidence, and returns connector-shaped crawl snapshots. |
 | Provider registry | `automation-providers.mjs` | Defines keyword discovery, topic planning, and article generation provider contracts, local fallback behavior, remote execution validation, masking, and provider config persistence helpers. |
 | Prototype shell | `prototype/` | Browser admin prototype with hash routing, state store, API client, static preview mode, UI pages, and shared utilities. |
 | Regression gate | `verify-mvp.mjs` | Full local verification suite for syntax, data actions, UI rendering, HTTP behavior, security checks, persistence, scheduler, audit, publishing, connectors, and source adapters. |
@@ -34,7 +35,7 @@ GEO Pulse China Agent v0.10.0 is a zero-dependency Node.js application with a br
 | Publishing | Channels, publish tasks, task items, calendar metadata, variants, readiness checks, approval guard, records. | `mock-data.mjs`, `prototype/src/pages/distribution.js` |
 | Automation operations | Provider registry, connector registry, permission matrix, connector health checks, connector diagnostics, automation run steps, scheduler tick, retries. | `automation-providers.mjs`, `mock-data.mjs`, `prototype/src/pages/settings.js` |
 | Analytics | Visibility tracking, SERP snapshots, competitor domains, audience segments, campaign runs. | `mock-data.mjs`, `prototype/src/pages/analytics.js` |
-| International GEO | Overseas AI search readiness, rule-first site audit records, generated GEO assets, article and distribution planning, engine visibility, community citation surfaces. | `mock-data.mjs`, `server.mjs`, `prototype/src/pages/international.js` |
+| International GEO | Overseas AI search readiness, rule-first and crawl-evidenced site audit records, generated GEO assets, article and distribution planning, engine visibility models, community citation surfaces. | `mock-data.mjs`, `site-crawl.mjs`, `server.mjs`, `prototype/src/pages/international.js` |
 | Single-user completion | Workspace input, manual topics, outlines, manual articles, templates, exports, local billing plan switch, and logout action. | `mock-data.mjs`, `server.mjs`, `prototype/src/main.js` |
 | Security and governance | Login sessions, local users, role permissions, API key automation guard, audit events, CSV export safety, connector-scoped permissions, endpoint restrictions, local backup/restore audit trail. | `server.mjs`, `mock-data.mjs`, `reports/security-hardening-log.md` |
 
@@ -49,7 +50,7 @@ Persistence is local JSON, not a production database.
 
 ## Security Model
 
-v0.10.0 uses built-in team access plus local-first production guardrails:
+v0.11.0 uses built-in team access plus local-first production guardrails:
 
 - Remote access is disabled unless `GEO_ALLOW_REMOTE_ACCESS=1`.
 - Remote access requires a fixed `GEO_INTERNAL_API_KEY`.
@@ -60,6 +61,7 @@ v0.10.0 uses built-in team access plus local-first production guardrails:
 - System scripts may still use `X-GEO-API-Key`.
 - Sensitive reads such as audit events require admin/owner session or system API key.
 - Provider endpoints are restricted to `mock://` and `https://`, with loopback/private/link-local targets blocked.
+- International GEO live crawl targets are restricted to `http://` and `https://`, block localhost/private/link-local/multicast/unspecified ranges, validate redirect targets, apply connection-time DNS/IP checks, enforce short timeouts, body limits, and redirect limits.
 - CSV audit export neutralizes spreadsheet formula prefixes.
 - Connector actions are evaluated against scoped permission metadata before visibility collection or campaign execution.
 - Connector diagnostics summarize endpoint safety, credential status, health checks, permission decisions, audit context, and recent run steps without exposing raw secrets.
@@ -69,9 +71,9 @@ These safeguards are not a replacement for database controls, multi-tenant isola
 
 ## International GEO Audit Boundary
 
-The v0.10 International GEO workflow stores `site_audits` and `geo_assets` inside the local mock state. It accepts a website URL, product or brand name, target market, target language, primary buyer query, and competitors, then builds deterministic rule-first checks and copyable assets.
+The v0.11 International GEO workflow stores `site_audits`, `crawl_evidence`, and `geo_assets` inside the local mock state. It accepts a website URL, product or brand name, target market, target language, primary buyer query, and competitors, then builds deterministic rule-first checks and copyable assets. Editors can run a guarded live crawl that fetches only the submitted homepage plus origin `robots.txt`, `sitemap.xml`, and `/llms.txt`, stores the evidence snapshot, and rebuilds checks with `rule_first`, `crawl_evidenced`, or `unavailable` evidence states.
 
-The audit is an operational preparation layer, not live monitoring. It does not crawl the submitted site, query ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, SERP APIs, or publish to external platforms. Future live integrations should enter through explicit connectors and preserve the same audit/asset records as the UI contract.
+The audit is an operational preparation layer, not live AI monitoring. It does not recursively crawl sites, render JavaScript-heavy pages, query ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, SERP APIs, or publish to external platforms. Future AI visibility and publishing integrations should enter through explicit connectors and preserve the same audit/evidence/asset records as the UI contract.
 
 ## Operational Routes
 

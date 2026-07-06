@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.11.0 - 2026-07-06
+
+Live Site Crawl Evidence for International GEO.
+
+### Added
+
+- Built-in zero-dependency safe crawler for International GEO site audits.
+- SSRF guardrails for crawl targets, including protocol checks, localhost/private/link-local/multicast/IP literal blocking, DNS-time connection validation, redirect target validation, timeouts, body limits, and redirect limits.
+- `POST /api/v1/international-geo/site-audits/:id/crawl` for editor/admin/owner sessions or `X-GEO-API-Key`.
+- `crawl_evidence` snapshots on International GEO site audit records for homepage, `robots.txt`, `sitemap.xml`, and `/llms.txt`.
+- Evidence-aware site audit checks with `rule_first`, `crawl_evidenced`, and `unavailable` states.
+- International GEO UI action and compact evidence panel for fetched resources, HTTP status, content type, extracted fields, bot mentions, sitemap counts, and excerpts.
+
+### Boundaries
+
+- v0.11 performs guarded public site crawling only for the submitted audit URL and root evidence resources.
+- v0.11 does not recursively crawl sitemap pages, render JavaScript-heavy pages, query ChatGPT/Gemini/Claude/Perplexity/Google AI Overviews/Copilot, collect real SERP data, or publish to third-party platforms.
+
+### Verification
+
+- `npm run check`
+
 ## 0.10.0 - 2026-07-06
 
 Site GEO audit and asset generation.

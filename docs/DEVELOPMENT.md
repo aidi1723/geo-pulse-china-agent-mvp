@@ -2,12 +2,13 @@
 
 ## Project Shape
 
-GEO Pulse China Agent v0.10.0 is intentionally small:
+GEO Pulse China Agent v0.11.0 is intentionally small:
 
 - Runtime: Node.js ESM.
 - Dependencies: none.
 - Server entry: `server.mjs`.
 - Data and mock actions: `mock-data.mjs`.
+- Safe site crawler: `site-crawl.mjs`.
 - Provider adapter registry: `automation-providers.mjs`.
 - Browser prototype: `prototype/`.
 - Regression gate: `verify-mvp.mjs`.
@@ -70,8 +71,8 @@ This checks:
 - Node syntax for key files.
 - Mock data behavior.
 - API and security behavior through local HTTP tests.
-- UI rendering for the prototype pages, including International GEO site audit and asset previews.
-- Persistence, scheduler, audit, connector, source adapter, campaign, publishing, visibility, and International GEO site audit flows.
+- UI rendering for the prototype pages, including International GEO site audit, crawl evidence, and asset previews.
+- Persistence, scheduler, audit, connector, source adapter, campaign, publishing, visibility, and International GEO site audit/crawl evidence flows.
 
 For behavior changes, add focused assertions to `verify-mvp.mjs` before changing implementation.
 
