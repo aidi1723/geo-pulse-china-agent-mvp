@@ -64,4 +64,4 @@
 - [x] Run `npm run check`.
 - [x] Run the static SEO scan.
 - [x] Run browser smoke on settings connector diagnostics.
-- [ ] Commit v0.5 changes without staging unrelated `docs/MAINTENANCE.md`.
+- [x] Commit v0.5 changes without staging unrelated `docs/MAINTENANCE.md`.
