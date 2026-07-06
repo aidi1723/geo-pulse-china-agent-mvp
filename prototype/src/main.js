@@ -19,6 +19,7 @@ import {
   generateTopicOutline as generateTopicOutlineApi,
   getArticleDetail,
   getRuntimeBackupDownload as getRuntimeBackupDownloadApi,
+  importRuntimeBackup as importRuntimeBackupApi,
   logoutSession as logoutSessionApi,
   resetRuntimeState as resetRuntimeStateApi,
   reconnectChannel as reconnectChannelApi,
@@ -45,6 +46,7 @@ import {
   testAutomationConnector as testAutomationConnectorApi,
   updateBillingPlan as updateBillingPlanApi,
   updateTopic as updateTopicApi,
+  validateRuntimeBackupImport as validateRuntimeBackupImportApi,
   validateRuntimeBackup as validateRuntimeBackupApi,
   retryPublishTask,
   startPublishTask,
@@ -1048,6 +1050,43 @@ const actions = {
       showNotice(result.valid ? "备份校验通过。" : `备份校验未通过：${(result.issues || []).join("、")}`);
     } catch (error) {
       setError(error instanceof Error ? error.message : "校验本地备份失败");
+      rerender();
+    }
+  },
+  async validateRuntimeBackupImport() {
+    try {
+      const rawValue = store.forms.runtimeBackupImport || document.querySelector("[data-runtime-backup-import]")?.value || "";
+      if (!rawValue.trim()) {
+        throw new Error("请先粘贴备份 JSON。");
+      }
+      const artifact = JSON.parse(rawValue);
+      const result = await validateRuntimeBackupImportApi({ artifact });
+      showNotice(result.valid ? "导入备份校验通过。" : `导入备份校验未通过：${(result.issues || []).join("、")}`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "校验导入备份失败");
+      rerender();
+    }
+  },
+  async importRuntimeBackup() {
+    try {
+      const input = document.querySelector("[data-runtime-backup-import]");
+      const rawValue = store.forms.runtimeBackupImport || input?.value || "";
+      if (!rawValue.trim()) {
+        throw new Error("请先粘贴备份 JSON。");
+      }
+      const artifact = JSON.parse(rawValue);
+      const imported = await importRuntimeBackupApi({
+        artifact,
+        name: `导入备份 ${new Date().toLocaleString("zh-CN")}`
+      });
+      store.forms.runtimeBackupImport = "";
+      if (input) input.value = "";
+      await refreshData();
+      store.page = "settings";
+      store.tabs.settings = "brand";
+      showNotice(`已导入本地备份 ${imported.name || imported.id}。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "导入本地备份失败");
       rerender();
     }
   },

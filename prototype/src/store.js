@@ -56,7 +56,8 @@ export const store = {
       require_confirmation: true,
       auto_retry_failed: false,
       article_ids: []
-    }
+    },
+    runtimeBackupImport: ""
   },
   filters: {
     keywords: {

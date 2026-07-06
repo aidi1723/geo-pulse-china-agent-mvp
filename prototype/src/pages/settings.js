@@ -45,6 +45,8 @@ function auditActionLabel(value) {
       "runtime.backup.create": "创建备份",
       "runtime.backup.validate": "校验备份",
       "runtime.backup.restore": "恢复备份",
+      "runtime.backup.import.validate": "校验导入",
+      "runtime.backup.import": "导入备份",
       "auth.failure": "鉴权失败"
     }[value] || value || "-"
   );
@@ -139,7 +141,7 @@ function formatBytes(value) {
   return `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
 
-function renderRuntimeBackups(backups = {}) {
+function renderRuntimeBackups(backups = {}, importValue = "") {
   const items = backups.items || [];
   const latest = backups.latest || items[0] || null;
   const rows = items.length
@@ -189,6 +191,14 @@ function renderRuntimeBackups(backups = {}) {
         <div class="info-row"><span>最新备份</span><strong>${escapeHtml(latest ? formatDateTime(latest.created_at) : "-")}</strong></div>
         <div class="info-row"><span>最新校验摘要</span><strong>${escapeHtml(latest?.checksum ? latest.checksum.slice(0, 16) : "-")}</strong></div>
       </div>
+      <div class="form-field full" style="margin-top:14px">
+        <label>导入备份 JSON</label>
+        <textarea data-runtime-backup-import placeholder="粘贴从本系统下载的 geo-pulse-runtime-backup JSON">${escapeHtml(importValue)}</textarea>
+      </div>
+      <div class="actions-row" style="margin-top:10px; justify-content:flex-end">
+        <button class="secondary-btn" data-action="validate-runtime-backup-import">校验导入</button>
+        <button class="secondary-btn" data-action="import-runtime-backup">导入备份</button>
+      </div>
       ${tableMarkup(["备份", "创建时间", "体积 / 范围", "校验", "动作"], rows)}
     </div>
   `;
@@ -232,7 +242,7 @@ export function renderSettings(store) {
         </div>
       </div>
     </section>
-    ${tab === "brand" ? renderBrand(store.data.brandProfile, store.data.runtimeStatus, store.data.auditEvents, isStaticPreview) : ""}
+    ${tab === "brand" ? renderBrand(store.data.brandProfile, store.data.runtimeStatus, store.data.auditEvents, isStaticPreview, store.forms?.runtimeBackupImport || "") : ""}
     ${tab === "models" ? renderModels(store) : ""}
     ${tab === "channels" ? renderChannels(store) : ""}
     ${tab === "providers" ? renderProviders(store) : ""}
@@ -240,7 +250,7 @@ export function renderSettings(store) {
   `;
 }
 
-function renderBrand(profile, runtimeStatus, auditEvents = [], isStaticPreview = false) {
+function renderBrand(profile, runtimeStatus, auditEvents = [], isStaticPreview = false, runtimeBackupImport = "") {
   const persistence = runtimeStatus?.persistence || {};
   const counts = runtimeStatus?.counts || {};
   const scheduler = runtimeStatus?.scheduler || {};
@@ -301,7 +311,7 @@ function renderBrand(profile, runtimeStatus, auditEvents = [], isStaticPreview =
           <span class="cell-sub">重置会恢复为仓库内置种子数据，并覆盖当前本地持久化文件。</span>
           <button class="danger-btn" data-action="reset-runtime-state">重置运行态</button>
         </div>
-        ${renderRuntimeBackups(backups)}
+        ${renderRuntimeBackups(backups, runtimeBackupImport)}
       </section>
       <section class="surface panel">
         <div class="panel-head">

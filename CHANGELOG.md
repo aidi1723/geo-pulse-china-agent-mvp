@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.7.0 - 2026-07-06
+
+Single-user backup import and recovery snapshot.
+
+### Added
+
+- Import validation for downloaded `geo-pulse-runtime-backup` JSON artifacts.
+- Runtime backup import action that stores imported artifacts under a new local backup id while preserving the source backup id.
+- API routes for `/api/v1/system/backups/import/validate` and `/api/v1/system/backups/import`.
+- Settings UI textarea and actions for validating and importing downloaded backup JSON.
+- Audit events for backup import validation and import.
+
+### Changed
+
+- Restore now preserves backup-related audit events from the current runtime before hydrating a backup snapshot, so import evidence remains visible after restore.
+- Project status is now documented as v0.7 single-user launch-readiness with backup import/restore.
+
+### Boundaries
+
+- v0.7 does not add cloud backup, encrypted archives, streaming file uploads, multi-user restore approval, or production database backups.
+
+### Verification
+
+- `npm run check`
+
 ## 0.6.0 - 2026-07-06
 
 Single-user maintenance backup and restore snapshot.

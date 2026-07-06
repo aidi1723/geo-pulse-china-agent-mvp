@@ -2,7 +2,7 @@
 
 ## Overview
 
-GEO Pulse China Agent v0.6 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes a single-user complete workflow, connector configuration, connector testing, connector diagnostics, local backup/restore, a single-tenant deployment profile, production startup guardrails, health checks, and GEO/SEO static files for controlled server use.
+GEO Pulse China Agent v0.7 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes a single-user complete workflow, connector configuration, connector testing, connector diagnostics, local backup import/restore, a single-tenant deployment profile, production startup guardrails, health checks, and GEO/SEO static files for controlled server use.
 
 ## Runtime Components
 
@@ -21,7 +21,7 @@ GEO Pulse China Agent v0.6 is a zero-dependency Node.js application with a brows
 2. In server mode, requests go to `server.mjs` under `/api/v1/*`.
 3. `server.mjs` delegates reads and mutations to `mock-data.mjs` and `automation-providers.mjs`.
 4. Mutations update in-memory arrays and, when persistence is enabled, write to `data/geo-pulse-state.json`.
-5. Runtime backups capture a non-recursive snapshot of the serializable state; backup metadata is persisted with the local runtime, while downloaded artifacts include the full captured snapshot.
+5. Runtime backups capture a non-recursive snapshot of the serializable state; backup metadata is persisted with the local runtime, while downloaded artifacts include the full captured snapshot. Downloaded artifacts can be imported into a fresh runtime after checksum and schema validation.
 6. Static preview mode uses `prototype/src/static-routes.js` and `prototype/preview-static-global.js` so the prototype can be opened without a server.
 
 ## Domain Boundaries
@@ -48,7 +48,7 @@ Persistence is local JSON, not a production database.
 
 ## Security Model
 
-v0.6 uses local-first safeguards plus production startup guardrails:
+v0.7 uses local-first safeguards plus production startup guardrails:
 
 - Remote access is disabled unless `GEO_ALLOW_REMOTE_ACCESS=1`.
 - Remote access requires a fixed `GEO_INTERNAL_API_KEY`.

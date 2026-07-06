@@ -502,6 +502,16 @@ export function bindEvents(root, store, rerender, actions) {
       return;
     }
 
+    if (action === "validate-runtime-backup-import") {
+      await actions.validateRuntimeBackupImport();
+      return;
+    }
+
+    if (action === "import-runtime-backup") {
+      await actions.importRuntimeBackup();
+      return;
+    }
+
     if (action === "download-runtime-backup") {
       await actions.downloadRuntimeBackup(actionButton.dataset.backupId);
       return;
@@ -606,6 +616,11 @@ export function bindEvents(root, store, rerender, actions) {
       ) {
         store.forms.keywordJob.source_scope = value;
       }
+      return;
+    }
+
+    if (event.target.matches("[data-runtime-backup-import]")) {
+      store.forms.runtimeBackupImport = event.target.value;
       return;
     }
 

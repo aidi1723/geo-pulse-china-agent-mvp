@@ -16,6 +16,7 @@ const {
   createMediaSourceAction,
   createPublishTaskAction,
   createRuntimeBackupAction,
+  importRuntimeBackupAction,
   createModelConfigAction,
   createKeywordCrawlJobAction,
   createTopicIdeaAction,
@@ -110,6 +111,7 @@ const {
   getPersistenceStatus,
   getRuntimeStatus,
   resetRuntimeState,
+  validateRuntimeBackupImportAction,
   validateRuntimeBackupAction,
   restoreRuntimeBackupAction
 } = await import("./mock-data.mjs");
@@ -1039,6 +1041,33 @@ async function handleApi(req, res, url) {
     }
     sendJson(res, 201, ok(createRuntimeBackupAction(body || {})));
     return;
+  }
+
+  if (req.method === "POST" && pathname === "/system/backups/import/validate") {
+    const body = await parseBody(req).catch(() => null);
+    if (body === null) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    sendJson(res, 200, ok(validateRuntimeBackupImportAction(body || {})));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/system/backups/import") {
+    const body = await parseBody(req).catch(() => null);
+    if (body === null) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    try {
+      sendJson(res, 201, ok(importRuntimeBackupAction(body || {})));
+      return;
+    } catch (runtimeError) {
+      const status = Number(runtimeError?.status || 400);
+      const message = runtimeError instanceof Error ? runtimeError.message : String(runtimeError);
+      sendJson(res, status, error("BACKUP_IMPORT_FAILED", message, status).body);
+      return;
+    }
   }
 
   if (req.method === "GET" && pathname.match(/^\/system\/backups\/[^/]+\/download$/)) {

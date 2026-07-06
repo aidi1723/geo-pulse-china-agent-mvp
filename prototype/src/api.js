@@ -410,6 +410,14 @@ export function validateRuntimeBackup(backupId) {
   return requestJson(`/api/v1/system/backups/${backupId}/validate`, "POST", {});
 }
 
+export function validateRuntimeBackupImport(payload = {}) {
+  return requestJson("/api/v1/system/backups/import/validate", "POST", payload);
+}
+
+export function importRuntimeBackup(payload = {}) {
+  return requestJson("/api/v1/system/backups/import", "POST", payload);
+}
+
 export function restoreRuntimeBackup(backupId) {
   return requestJson(`/api/v1/system/backups/${backupId}/restore`, "POST", {});
 }

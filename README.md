@@ -2,7 +2,7 @@
 
 License: GPL-3.0-only
 
-Status: v0.6 single-user launch-ready workspace with local backup/restore, ready for controlled single-tenant deployment after repository owner review.
+Status: v0.7 single-user launch-ready workspace with local backup import/restore, ready for controlled single-tenant deployment after repository owner review.
 
 这个仓库现在包含两部分内容：
 
@@ -111,7 +111,7 @@ GEO_INTERNAL_API_KEY=local-dev-key node server.mjs
 
 ## 生产部署
 
-v0.6 支持单用户、单租户受控部署。生产环境必须配置固定的 `GEO_INTERNAL_API_KEY`，并在公网暴露前增加反向代理认证、VPN、IP allowlist 或其他外部访问控制。
+v0.7 支持单用户、单租户受控部署。生产环境必须配置固定的 `GEO_INTERNAL_API_KEY`，并在公网暴露前增加反向代理认证、VPN、IP allowlist 或其他外部访问控制。
 
 生产部署入口：
 
@@ -121,10 +121,11 @@ v0.6 支持单用户、单租户受控部署。生产环境必须配置固定的
 - v0.4 阶段收口：[docs/STAGE_V0_4_CLOSEOUT.md](docs/STAGE_V0_4_CLOSEOUT.md)
 - v0.5 阶段收口：[docs/STAGE_V0_5_CLOSEOUT.md](docs/STAGE_V0_5_CLOSEOUT.md)
 - v0.6 阶段收口：[docs/STAGE_V0_6_CLOSEOUT.md](docs/STAGE_V0_6_CLOSEOUT.md)
+- v0.7 阶段收口：[docs/STAGE_V0_7_CLOSEOUT.md](docs/STAGE_V0_7_CLOSEOUT.md)
 - 环境变量示例：[.env.example](.env.example)
 - Docker Compose：[docker-compose.yml](docker-compose.yml)
 
-v0.6 不是完整 SaaS：暂不内置多用户登录、RBAC、多租户隔离、真实支付计费、生产数据库迁移、真实第三方发布凭据或 OAuth 授权流。
+v0.7 不是完整 SaaS：暂不内置多用户登录、RBAC、多租户隔离、真实支付计费、生产数据库迁移、真实第三方发布凭据或 OAuth 授权流。
 
 ## 工程校验
 
@@ -198,6 +199,7 @@ npm run check
 - v0.4 连接器集成就绪，包括连接器配置、连接测试、健康检查、密钥脱敏和运行状态汇总
 - v0.5 连接器诊断，包括就绪得分、权限判定、审计上下文、建议动作和关联运行步骤
 - v0.6 单用户本地备份/恢复，包括备份创建、列表、下载、校验、恢复、运行态摘要和审计事件
+- v0.7 备份导入恢复，包括导入校验、导入已下载备份 JSON、源备份 ID 保留和导入审计
 
 ## 当前 API 范围
 
@@ -241,6 +243,8 @@ npm run check
 - `/api/v1/content-quality-traces`
 - `/api/v1/system/runtime`
 - `/api/v1/system/backups`
+- `/api/v1/system/backups/import/validate`
+- `/api/v1/system/backups/import`
 - `/api/v1/system/backups/:id/download`
 - `/api/v1/system/backups/:id/validate`
 - `/api/v1/system/backups/:id/restore`

@@ -88,7 +88,9 @@ import {
   updateArticleAction,
   updateTopicIdeaAction,
   updateKeywordAction,
+  validateRuntimeBackupImportAction,
   validateRuntimeBackupAction,
+  importRuntimeBackupAction,
   restoreRuntimeBackupAction
 } from "./mock-data.mjs";
 import {
@@ -1102,6 +1104,50 @@ async function runMockDataChecks() {
     true,
     "Runtime status should include backup summary"
   );
+
+  saveBrandProfileAction({ brand_name: "导入备份基线品牌" });
+  const exportSourceBackup = createRuntimeBackupAction({ name: "导入源备份" });
+  const exportArtifact = getRuntimeBackupDownload(exportSourceBackup.id);
+  assert.equal(exportArtifact.backup.id, exportSourceBackup.id, "Import source artifact should match source backup");
+
+  resetRuntimeState();
+  const importValidation = validateRuntimeBackupImportAction({ artifact: exportArtifact });
+  assert.equal(importValidation.valid, true, "Downloaded runtime backup artifact should validate for import");
+  assert.equal(
+    importValidation.source_backup_id,
+    exportSourceBackup.id,
+    "Import validation should expose the source backup id"
+  );
+
+  const importedBackup = importRuntimeBackupAction({
+    artifact: exportArtifact,
+    name: "导入后的备份"
+  });
+  assert.match(importedBackup.id, /^bkp-/, "Imported runtime backup should receive a local backup id");
+  assert.notEqual(importedBackup.id, exportSourceBackup.id, "Imported runtime backup should avoid id collision");
+  assert.equal(importedBackup.imported, true, "Imported runtime backup should be marked as imported");
+  assert.equal(
+    importedBackup.source_backup_id,
+    exportSourceBackup.id,
+    "Imported runtime backup should preserve source backup id"
+  );
+  assert.ok(
+    listRuntimeBackups().items.some((item) => item.id === importedBackup.id),
+    "Imported runtime backup should be listable"
+  );
+
+  restoreRuntimeBackupAction(importedBackup.id);
+  assert.equal(
+    getBrandProfile().brand_name,
+    "导入备份基线品牌",
+    "Imported runtime backup should restore the captured state"
+  );
+
+  const importAuditEvents = listAuditEvents({ page_size: 10 }).items;
+  assert.ok(
+    importAuditEvents.some((item) => item.action === "runtime.backup.import" && item.resource_id === importedBackup.id),
+    "Runtime backup import should be recorded in audit events"
+  );
 }
 
 async function runSingleUserCompleteChecks() {
@@ -1759,6 +1805,13 @@ function runSettingsAuditUiChecks() {
   assert.match(html, /data-action="validate-runtime-backup"/, "Settings runtime panel should expose backup validation");
   assert.match(html, /data-action="download-runtime-backup"/, "Settings runtime panel should expose backup download");
   assert.match(html, /data-action="restore-runtime-backup"/, "Settings runtime panel should expose backup restore");
+  assert.match(html, /data-runtime-backup-import/, "Settings runtime panel should expose a backup import textarea");
+  assert.match(
+    html,
+    /data-action="validate-runtime-backup-import"/,
+    "Settings runtime panel should expose backup import validation"
+  );
+  assert.match(html, /data-action="import-runtime-backup"/, "Settings runtime panel should expose backup import");
 
   const staticHtml = renderSettings({
     tabs: {
@@ -3306,6 +3359,46 @@ async function runSingleUserHttpChecks() {
     });
     assert.equal(backupValidation.status, 200, "Runtime backup validation should run over HTTP");
     assert.equal(backupValidation.body?.data?.valid, true, "Runtime backup validation API should mark created backup valid");
+
+    const backupImportValidation = await httpRequest(port, "/api/v1/system/backups/import/validate", {
+      method: "POST",
+      headers: mutationHeaders,
+      body: JSON.stringify({
+        artifact: backupDownload.body.data
+      })
+    });
+    assert.equal(backupImportValidation.status, 200, "Runtime backup import validation should run over HTTP");
+    assert.equal(
+      backupImportValidation.body?.data?.valid,
+      true,
+      `Runtime backup import validation API should mark downloaded artifact valid: ${JSON.stringify(backupImportValidation.body?.data?.issues || [])}`
+    );
+    assert.equal(
+      backupImportValidation.body?.data?.source_backup_id,
+      createdBackup.body.data.id,
+      "Runtime backup import validation API should expose source backup id"
+    );
+
+    const importedBackup = await httpRequest(port, "/api/v1/system/backups/import", {
+      method: "POST",
+      headers: mutationHeaders,
+      body: JSON.stringify({
+        artifact: backupDownload.body.data,
+        name: "HTTP 导入备份"
+      })
+    });
+    assert.equal(importedBackup.status, 201, "Runtime backup import should run over HTTP");
+    assert.notEqual(
+      importedBackup.body?.data?.id,
+      createdBackup.body.data.id,
+      "Runtime backup import API should assign a new local backup id"
+    );
+    assert.equal(importedBackup.body?.data?.imported, true, "Runtime backup import API should mark backups imported");
+    assert.equal(
+      importedBackup.body?.data?.source_backup_id,
+      createdBackup.body.data.id,
+      "Runtime backup import API should preserve source backup id"
+    );
 
     const mutatedBrand = await httpRequest(port, "/api/v1/brand-profile", {
       method: "PUT",
