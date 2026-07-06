@@ -2,7 +2,7 @@
 
 ## Project Shape
 
-GEO Pulse China Agent v0.7 is intentionally small:
+GEO Pulse China Agent v0.8 is intentionally small:
 
 - Runtime: Node.js ESM.
 - Dependencies: none.

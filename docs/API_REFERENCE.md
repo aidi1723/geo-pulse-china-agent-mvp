@@ -208,6 +208,7 @@ Visibility collection and campaign send actions check connector permissions befo
 - `GET /audit-events`
 - `GET /audit-events/export.csv`
 - `GET /system/runtime`
+- `GET /system/preflight`
 - `GET /system/backups`
 - `POST /system/backups`
 - `POST /system/backups/import/validate`
@@ -225,6 +226,8 @@ Visibility collection and campaign send actions check connector permissions befo
 Audit CSV export neutralizes spreadsheet formula prefixes. Runtime reset restores seed state and records an audit event.
 
 Runtime backups are local operator artifacts. Backup list responses expose metadata only. Download responses return a JSON artifact with `kind`, `schema_version`, `backup`, and `snapshot`; the snapshot intentionally excludes `runtimeBackups` so backups do not recursively contain backup history. Import routes accept that downloaded artifact shape, validate checksum and schema, and store the artifact under a new local backup id. Create, import, validate, and restore operations write audit events.
+
+Launch preflight is read-only. It returns overall status, score, summary counts, and check rows for persistence, mutation auth, remote access, backup recovery, connectors, GEO static routes, and scheduler state. It does not expose raw API keys or environment values.
 
 ## Adding Or Changing APIs
 

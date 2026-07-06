@@ -18,6 +18,7 @@ import {
   generateInternationalGeoArtifacts as generateInternationalGeoArtifactsApi,
   generateTopicOutline as generateTopicOutlineApi,
   getArticleDetail,
+  getLaunchPreflight as getLaunchPreflightApi,
   getRuntimeBackupDownload as getRuntimeBackupDownloadApi,
   importRuntimeBackup as importRuntimeBackupApi,
   logoutSession as logoutSessionApi,
@@ -1025,6 +1026,22 @@ const actions = {
       showNotice("运行态已重置为初始种子数据。");
     } catch (error) {
       setError(error instanceof Error ? error.message : "重置运行态失败");
+      rerender();
+    }
+  },
+  async refreshLaunchPreflight() {
+    try {
+      const preflight = await getLaunchPreflightApi();
+      store.data.runtimeStatus = {
+        ...(store.data.runtimeStatus || {}),
+        preflight
+      };
+      store.page = "settings";
+      store.tabs.settings = "brand";
+      rerender();
+      showNotice(`上线预检已刷新：${preflight.status || "review"} / ${preflight.score ?? "-"}。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "刷新上线预检失败");
       rerender();
     }
   },

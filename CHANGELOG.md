@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.8.0 - 2026-07-06
+
+Single-user launch preflight snapshot.
+
+### Added
+
+- Read-only launch preflight route at `/api/v1/system/preflight`.
+- Preflight summary embedded in `/api/v1/system/runtime`.
+- Settings runtime UI section for overall launch status, score, blockers, warnings, and check rows.
+- Preflight checks for persistence, mutation auth, remote access boundary, backup recovery, connectors, GEO static routes, and scheduler state.
+- Browser action to refresh launch preflight from the settings page.
+
+### Changed
+
+- Project status is now documented as v0.8 single-user launch-readiness with launch preflight.
+
+### Boundaries
+
+- v0.8 does not add external network probing, TLS validation, reverse proxy detection, automated remediation, or multi-tenant readiness checks.
+
+### Verification
+
+- `npm run check`
+
 ## 0.7.0 - 2026-07-06
 
 Single-user backup import and recovery snapshot.

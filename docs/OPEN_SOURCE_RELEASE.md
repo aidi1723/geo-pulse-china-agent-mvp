@@ -12,7 +12,7 @@ This is a project-owner compliance note, not legal advice.
 
 ## Current Readiness
 
-Ready for GitHub publication as a v0.7 single-user launch-ready workspace after owner review.
+Ready for GitHub publication as a v0.8 single-user launch-ready workspace after owner review.
 
 Verified release gate:
 
@@ -50,7 +50,7 @@ verify-mvp: OK
 - Confirm `data/geo-pulse-state.json` is not committed.
 - Confirm `.DS_Store` and local environment files are not committed.
 - Run `npm run check`.
-- Review [v0.7 Stage Closeout](STAGE_V0_7_CLOSEOUT.md) for single-user boundary and remaining SaaS gaps.
+- Review [v0.8 Stage Closeout](STAGE_V0_8_CLOSEOUT.md) for single-user boundary and remaining SaaS gaps.
 - Create a clean Git history from the intended public root.
 
 ## Suggested GitHub Setup
@@ -88,6 +88,6 @@ For a new repository with no external contributors, prefer replacing the public 
 
 ## Release Notes Draft
 
-GEO Pulse China Agent v0.7 is a zero-dependency GEO/SEO operations workspace for agent content workflows. It includes source ingestion contracts, automation providers, connector governance, connector tests, connector diagnostics, local backup import/restore, publishing operations, visibility metrics, campaign loops, audit logs, international GEO planning, exportable artifacts, production guardrails, and local verification.
+GEO Pulse China Agent v0.8 is a zero-dependency GEO/SEO operations workspace for agent content workflows. It includes source ingestion contracts, automation providers, connector governance, connector tests, connector diagnostics, local backup import/restore, launch preflight, publishing operations, visibility metrics, campaign loops, audit logs, international GEO planning, exportable artifacts, production guardrails, and local verification.
 
 The current snapshot is suitable for controlled single-tenant deployment behind an external access layer. It is not a complete SaaS platform without built-in login, RBAC, durable database storage, real third-party integrations, monitoring, and multi-tenant operations.

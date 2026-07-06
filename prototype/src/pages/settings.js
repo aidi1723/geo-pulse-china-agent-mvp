@@ -204,6 +204,65 @@ function renderRuntimeBackups(backups = {}, importValue = "") {
   `;
 }
 
+function preflightStatusLabel(value) {
+  return (
+    {
+      ready: "可上线",
+      review: "需复核",
+      blocked: "阻断",
+      passed: "通过",
+      warning: "告警",
+      failed: "失败"
+    }[value] || value || "-"
+  );
+}
+
+function renderLaunchPreflight(preflight = {}) {
+  const summary = preflight.summary || {};
+  const checks = preflight.checks || [];
+  const rows = checks.length
+    ? checks.map((item) => `
+        <tr>
+          <td>
+            <div class="cell-title">${escapeHtml(item.label || item.id)}</div>
+            <div class="cell-sub">${escapeHtml(item.category || "-")} / ${escapeHtml(item.id || "-")}</div>
+          </td>
+          <td>${statusMarkup(preflightStatusLabel(item.status))}</td>
+          <td>
+            <div class="cell-title">${escapeHtml(item.message || "-")}</div>
+            <div class="cell-sub">${escapeHtml(item.recommendation || "-")}</div>
+          </td>
+        </tr>
+      `)
+    : [`
+        <tr>
+          <td colspan="3">
+            <div class="empty-state">暂无上线预检结果。</div>
+          </td>
+        </tr>
+      `];
+
+  return `
+    <div class="section-block" style="margin-top:18px">
+      <div class="panel-head">
+        <div>
+          <h4 class="panel-title" style="font-size:15px">上线预检</h4>
+          <div class="panel-note">部署前集中检查运行态、安全边界、备份恢复、连接器和 GEO 静态入口。</div>
+        </div>
+        <button class="secondary-btn" data-action="refresh-launch-preflight">刷新预检</button>
+      </div>
+      <div class="info-list">
+        <div class="info-row"><span>总体状态</span><strong>${escapeHtml(preflightStatusLabel(preflight.status))}</strong></div>
+        <div class="info-row"><span>预检得分</span><strong>${escapeHtml(preflight.score ?? "-")}</strong></div>
+        <div class="info-row"><span>阻断项</span><strong>${escapeHtml(summary.blockers ?? summary.failed ?? "-")}</strong></div>
+        <div class="info-row"><span>告警项</span><strong>${escapeHtml(summary.warnings ?? "-")}</strong></div>
+        <div class="info-row"><span>生成时间</span><strong>${escapeHtml(formatDateTime(preflight.generated_at))}</strong></div>
+      </div>
+      ${tableMarkup(["检查项", "状态", "说明 / 建议"], rows)}
+    </div>
+  `;
+}
+
 function saveButton(tab) {
   if (tab === "brand") {
     return '<button class="primary-btn" data-action="save-brand-profile">保存品牌知识</button>';
@@ -256,6 +315,7 @@ function renderBrand(profile, runtimeStatus, auditEvents = [], isStaticPreview =
   const scheduler = runtimeStatus?.scheduler || {};
   const providers = runtimeStatus?.providers || {};
   const backups = runtimeStatus?.backups || {};
+  const preflight = runtimeStatus?.preflight || {};
   return `
     <div class="stack-blocks">
       <section class="surface panel" data-settings-panel="brand">
@@ -311,6 +371,7 @@ function renderBrand(profile, runtimeStatus, auditEvents = [], isStaticPreview =
           <span class="cell-sub">重置会恢复为仓库内置种子数据，并覆盖当前本地持久化文件。</span>
           <button class="danger-btn" data-action="reset-runtime-state">重置运行态</button>
         </div>
+        ${renderLaunchPreflight(preflight)}
         ${renderRuntimeBackups(backups, runtimeBackupImport)}
       </section>
       <section class="surface panel">

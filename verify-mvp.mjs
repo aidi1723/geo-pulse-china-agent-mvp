@@ -1739,6 +1739,35 @@ function runSettingsAuditUiChecks() {
           file: "/tmp/geo-pulse-state.json"
         },
         counts: {},
+        preflight: {
+          status: "review",
+          score: 82,
+          summary: {
+            passed: 5,
+            warnings: 2,
+            failed: 0,
+            blockers: 0
+          },
+          checks: [
+            {
+              id: "persistence",
+              category: "data",
+              label: "本地持久化",
+              status: "warning",
+              message: "持久化未开启",
+              recommendation: "开启 GEO_ENABLE_PERSISTENCE=1"
+            },
+            {
+              id: "geo_static",
+              category: "geo",
+              label: "GEO 静态入口",
+              status: "passed",
+              message: "robots/sitemap/llms/favicon 已配置",
+              recommendation: "上线前确认 public URL"
+            }
+          ],
+          generated_at: "2026-07-05T10:03:00.000Z"
+        },
         backups: {
           count: 1,
           latest: {
@@ -1812,6 +1841,10 @@ function runSettingsAuditUiChecks() {
     "Settings runtime panel should expose backup import validation"
   );
   assert.match(html, /data-action="import-runtime-backup"/, "Settings runtime panel should expose backup import");
+  assert.match(html, /上线预检/, "Settings runtime panel should show launch preflight");
+  assert.match(html, /data-action="refresh-launch-preflight"/, "Settings runtime panel should expose preflight refresh");
+  assert.match(html, /本地持久化/, "Settings runtime panel should render preflight check rows");
+  assert.match(html, /GEO 静态入口/, "Settings runtime panel should render GEO static preflight checks");
 
   const staticHtml = renderSettings({
     tabs: {
@@ -2961,6 +2994,49 @@ async function runHttpSecurityChecks() {
       runtime.body?.data?.scheduler?.enabled,
       false,
       "Automation scheduler should be disabled by default"
+    );
+    assert.ok(runtime.body?.data?.preflight, "Runtime status should include launch preflight summary");
+    assert.ok(
+      runtime.body?.data?.preflight?.checks?.some((item) => item.id === "persistence"),
+      "Runtime preflight should include persistence check"
+    );
+
+    const preflight = await httpRequest(port, "/api/v1/system/preflight");
+    assert.equal(preflight.status, 200, "Launch preflight should be queryable over HTTP");
+    assert.match(
+      String(preflight.body?.data?.status || ""),
+      /ready|review|blocked/,
+      "Launch preflight should expose an overall status"
+    );
+    assert.equal(typeof preflight.body?.data?.score, "number", "Launch preflight should expose a numeric score");
+    assert.ok(
+      preflight.body?.data?.summary?.passed >= 0,
+      "Launch preflight should expose summary counts"
+    );
+    assert.ok(
+      preflight.body?.data?.checks?.some((item) => item.id === "mutation_auth"),
+      "Launch preflight should include mutation auth check"
+    );
+    assert.ok(
+      preflight.body?.data?.checks?.some((item) => item.id === "backup_recovery"),
+      "Launch preflight should include backup recovery check"
+    );
+    assert.ok(
+      preflight.body?.data?.checks?.some((item) => item.id === "connectors"),
+      "Launch preflight should include connector readiness check"
+    );
+    assert.ok(
+      preflight.body?.data?.checks?.some((item) => item.id === "geo_static"),
+      "Launch preflight should include GEO static route check"
+    );
+    assert.ok(
+      preflight.body?.data?.checks?.some((item) => item.id === "scheduler"),
+      "Launch preflight should include scheduler check"
+    );
+    assert.doesNotMatch(
+      JSON.stringify(preflight.body?.data || {}),
+      /mutation_api_key|fixed-remote-token|demo-secret-key/,
+      "Launch preflight should not expose secrets"
     );
 
     const unauthorizedReset = await httpRequest(port, "/api/v1/system/runtime/reset", {

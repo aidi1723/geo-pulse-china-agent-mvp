@@ -593,7 +593,161 @@ function getSchedulerStatus() {
 function getAugmentedRuntimeStatus() {
   return {
     ...getRuntimeStatus(),
-    scheduler: getSchedulerStatus()
+    scheduler: getSchedulerStatus(),
+    preflight: getLaunchPreflight()
+  };
+}
+
+function preflightCheck(id, category, label, status, message, recommendation = "") {
+  return {
+    id,
+    category,
+    label,
+    status,
+    message,
+    recommendation
+  };
+}
+
+function getLaunchPreflight() {
+  const runtime = getRuntimeStatus();
+  const scheduler = getSchedulerStatus();
+  const checks = [];
+
+  checks.push(
+    preflightCheck(
+      "persistence",
+      "data",
+      "本地持久化",
+      runtime.persistence?.enabled ? "passed" : "warning",
+      runtime.persistence?.enabled
+        ? "本地 JSON 持久化已开启。"
+        : "当前运行态未开启持久化，重启后会回到种子数据。",
+      runtime.persistence?.enabled
+        ? "上线前确认数据目录已挂载并可备份。"
+        : "设置 GEO_ENABLE_PERSISTENCE=1，并挂载 GEO_DATA_FILE 所在目录。"
+    )
+  );
+
+  const keyLength = explicitInternalApiKey.length;
+  const authStatus = isProduction && keyLength < minProductionApiKeyLength
+    ? "failed"
+    : keyLength >= minProductionApiKeyLength
+      ? "passed"
+      : "warning";
+  checks.push(
+    preflightCheck(
+      "mutation_auth",
+      "security",
+      "写接口鉴权",
+      authStatus,
+      keyLength >= minProductionApiKeyLength
+        ? "已配置固定长度的内部 API key。"
+        : "当前使用启动时生成或长度不足的内部 API key。",
+      keyLength >= minProductionApiKeyLength
+        ? "继续通过外部访问层保护服务。"
+        : "上线前设置至少 24 位的 GEO_INTERNAL_API_KEY。"
+    )
+  );
+
+  checks.push(
+    preflightCheck(
+      "remote_access",
+      "security",
+      "远程访问边界",
+      allowRemoteAccess ? "warning" : "passed",
+      allowRemoteAccess
+        ? "服务允许非本机请求，必须依赖外部访问控制。"
+        : "远程访问默认关闭，仅允许本机受控使用。",
+      allowRemoteAccess
+        ? "确认已配置反向代理认证、VPN、IP allowlist 或等效访问层。"
+        : "如需暴露服务，先配置固定 API key 和外部访问控制。"
+    )
+  );
+
+  const backupCount = runtime.backups?.count || 0;
+  checks.push(
+    preflightCheck(
+      "backup_recovery",
+      "data",
+      "备份恢复",
+      backupCount > 0 ? "passed" : "warning",
+      backupCount > 0
+        ? `已有 ${backupCount} 个本地备份记录。`
+        : "尚未创建本地备份。",
+      backupCount > 0
+        ? "上线前下载一份备份 JSON 并存放到应用主机外。"
+        : "上线前创建、校验并下载至少一份备份。"
+    )
+  );
+
+  const connectorFailureCount = runtime.connectors?.health_summary?.failure_count || 0;
+  const connectorTotal = runtime.connectors?.counts?.total || 0;
+  checks.push(
+    preflightCheck(
+      "connectors",
+      "operations",
+      "连接器状态",
+      connectorFailureCount > 0 || connectorTotal === 0 ? "warning" : "passed",
+      connectorFailureCount > 0
+        ? `最近连接器健康检查存在 ${connectorFailureCount} 个失败。`
+        : `已登记 ${connectorTotal} 个连接器，当前无失败健康检查。`,
+      connectorFailureCount > 0
+        ? "上线前处理失败连接器或保持相关工作流关闭。"
+        : "继续使用连接器诊断检查真实集成前置条件。"
+    )
+  );
+
+  const geoStaticReady =
+    robotsTxt().includes("Sitemap:") &&
+    sitemapXml().includes("<urlset") &&
+    llmsTxt().includes("GEO Pulse") &&
+    faviconIco.length > 0;
+  checks.push(
+    preflightCheck(
+      "geo_static",
+      "geo",
+      "GEO 静态入口",
+      geoStaticReady ? "passed" : "failed",
+      geoStaticReady
+        ? "healthz、robots、sitemap、llms.txt 和 favicon 能由服务生成。"
+        : "至少一个 GEO/SEO 静态入口未能生成。",
+      geoStaticReady
+        ? "上线前确认 GEO_PUBLIC_SITE_URL 指向最终域名。"
+        : "修复静态入口后再上线。"
+    )
+  );
+
+  checks.push(
+    preflightCheck(
+      "scheduler",
+      "operations",
+      "自动调度",
+      scheduler.enabled ? "passed" : "warning",
+      scheduler.enabled
+        ? `调度器已开启，当前状态：${scheduler.status || "unknown"}。`
+        : "自动调度器未开启，策略需要手动触发。",
+      scheduler.enabled
+        ? "确认 GEO_AUTOMATION_TICK_MS 和每轮执行上限符合预期。"
+        : "如需自动运营，设置 GEO_ENABLE_AUTOMATION_SCHEDULER=1。"
+    )
+  );
+
+  const summary = {
+    passed: checks.filter((item) => item.status === "passed").length,
+    warnings: checks.filter((item) => item.status === "warning").length,
+    failed: checks.filter((item) => item.status === "failed").length,
+    blockers: checks.filter((item) => item.status === "failed").length
+  };
+  const score = Math.max(0, Math.min(100, 100 - summary.failed * 30 - summary.warnings * 8));
+  const status = summary.failed > 0 ? "blocked" : summary.warnings > 0 ? "review" : "ready";
+
+  return {
+    status,
+    score,
+    summary,
+    checks,
+    generated_at: isoNow()
   };
 }
 
@@ -1025,6 +1179,11 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && pathname === "/system/runtime") {
     sendJson(res, 200, ok(getAugmentedRuntimeStatus()));
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/system/preflight") {
+    sendJson(res, 200, ok(getLaunchPreflight()));
     return;
   }
 

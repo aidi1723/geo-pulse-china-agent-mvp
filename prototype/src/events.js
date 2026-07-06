@@ -492,6 +492,11 @@ export function bindEvents(root, store, rerender, actions) {
       return;
     }
 
+    if (action === "refresh-launch-preflight") {
+      await actions.refreshLaunchPreflight();
+      return;
+    }
+
     if (action === "create-runtime-backup") {
       await actions.createRuntimeBackup();
       return;

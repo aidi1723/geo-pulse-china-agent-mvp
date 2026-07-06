@@ -394,6 +394,10 @@ export function getRuntimeStatus() {
   return request("/api/v1/system/runtime");
 }
 
+export function getLaunchPreflight() {
+  return request("/api/v1/system/preflight");
+}
+
 export function listRuntimeBackups() {
   return request("/api/v1/system/backups");
 }

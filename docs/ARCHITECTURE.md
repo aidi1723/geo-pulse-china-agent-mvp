@@ -2,7 +2,7 @@
 
 ## Overview
 
-GEO Pulse China Agent v0.7 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes a single-user complete workflow, connector configuration, connector testing, connector diagnostics, local backup import/restore, a single-tenant deployment profile, production startup guardrails, health checks, and GEO/SEO static files for controlled server use.
+GEO Pulse China Agent v0.8 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes a single-user complete workflow, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, a single-tenant deployment profile, production startup guardrails, health checks, and GEO/SEO static files for controlled server use.
 
 ## Runtime Components
 
@@ -48,7 +48,7 @@ Persistence is local JSON, not a production database.
 
 ## Security Model
 
-v0.7 uses local-first safeguards plus production startup guardrails:
+v0.8 uses local-first safeguards plus production startup guardrails:
 
 - Remote access is disabled unless `GEO_ALLOW_REMOTE_ACCESS=1`.
 - Remote access requires a fixed `GEO_INTERNAL_API_KEY`.
@@ -59,6 +59,7 @@ v0.7 uses local-first safeguards plus production startup guardrails:
 - CSV audit export neutralizes spreadsheet formula prefixes.
 - Connector actions are evaluated against scoped permission metadata before visibility collection or campaign execution.
 - Connector diagnostics summarize endpoint safety, credential status, health checks, permission decisions, audit context, and recent run steps without exposing raw secrets.
+- Launch preflight summarizes readiness checks without exposing raw API keys, secrets, full env vars, or local file contents.
 
 These safeguards are not a replacement for built-in user login, RBAC, database controls, monitoring, incident response, or an external access layer.
 
