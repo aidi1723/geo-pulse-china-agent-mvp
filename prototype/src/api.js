@@ -4,6 +4,10 @@ const jsonHeaders = {
   Accept: "application/json"
 };
 
+const fetchOptions = {
+  credentials: "same-origin"
+};
+
 const isStaticPreview =
   typeof window !== "undefined" && window.location?.protocol === "file:";
 
@@ -16,6 +20,7 @@ async function getClientConfig() {
 
   if (!clientConfigPromise) {
     clientConfigPromise = fetch("/api/v1/system/client-config", {
+      ...fetchOptions,
       headers: jsonHeaders
     })
       .then(async (response) => {
@@ -48,6 +53,7 @@ async function request(path) {
 
   try {
     const response = await fetch(path, {
+      ...fetchOptions,
       headers: jsonHeaders
     });
     if (!response.ok) {
@@ -70,6 +76,7 @@ async function requestJson(path, method, body) {
 
   const mutationHeaders = await getMutationHeaders();
   const response = await fetch(path, {
+    ...fetchOptions,
     method,
     headers: {
       ...jsonHeaders,
@@ -139,7 +146,8 @@ export async function bootstrapData() {
     modelConfigsResult,
     promptTemplatesResult,
     contentQualityTracesResult,
-    membersResult
+    membersResult,
+    usersResult
   ] = await Promise.all([
     request("/api/v1/workspaces/current"),
     request("/api/v1/workspace-input"),
@@ -178,7 +186,8 @@ export async function bootstrapData() {
     request("/api/v1/model-configs"),
     request("/api/v1/prompt-templates"),
     request("/api/v1/content-quality-traces?page_size=20"),
-    request("/api/v1/members")
+    request("/api/v1/members"),
+    request("/api/v1/users")
   ]);
 
   return {
@@ -219,8 +228,17 @@ export async function bootstrapData() {
     modelConfigs: extractItems(modelConfigsResult),
     promptTemplates: extractItems(promptTemplatesResult),
     contentQualityTraces: extractItems(contentQualityTracesResult),
-    members: extractItems(membersResult)
+    members: extractItems(membersResult),
+    users: extractItems(usersResult)
   };
+}
+
+export function getCurrentSession() {
+  return request("/api/v1/session/current");
+}
+
+export function loginSession(payload) {
+  return requestJson("/api/v1/session/login", "POST", payload);
 }
 
 export function createKeywordCrawlJob(payload) {
@@ -352,6 +370,18 @@ export function updateBillingPlan(payload) {
 
 export function logoutSession(payload = {}) {
   return requestJson("/api/v1/session/logout", "POST", payload);
+}
+
+export function createUser(payload) {
+  return requestJson("/api/v1/users", "POST", payload);
+}
+
+export function disableUser(userId) {
+  return requestJson(`/api/v1/users/${encodeURIComponent(userId)}/disable`, "POST", {});
+}
+
+export function resetUserPassword(userId) {
+  return requestJson(`/api/v1/users/${encodeURIComponent(userId)}/reset-password`, "POST", {});
 }
 
 export function startPublishTask(taskId) {

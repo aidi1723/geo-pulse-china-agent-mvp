@@ -263,6 +263,79 @@ function renderLaunchPreflight(preflight = {}) {
   `;
 }
 
+function renderCreateUserForm(form = {}) {
+  return `
+    <div class="section-block" style="margin-top:18px">
+      <div class="form-grid">
+        <div class="form-field">
+          <label>用户名</label>
+          <input data-user-field="username" value="${escapeHtml(form.username || "")}" />
+        </div>
+        <div class="form-field">
+          <label>显示名</label>
+          <input data-user-field="display_name" value="${escapeHtml(form.display_name || "")}" />
+        </div>
+        <div class="form-field">
+          <label>角色</label>
+          <select data-user-field="role">
+            ${["viewer", "editor", "admin"].map((role) => `<option value="${role}" ${form.role === role ? "selected" : ""}>${role}</option>`).join("")}
+          </select>
+        </div>
+        <div class="form-field">
+          <label>临时密码</label>
+          <input data-user-field="temporary_password" value="${escapeHtml(form.temporary_password || "")}" />
+        </div>
+      </div>
+      <div class="actions-row" style="margin-top:14px">
+        <button class="secondary-btn" data-action="create-user">创建用户</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderUserManagement(store) {
+  const users = store.data.users || [];
+  const sessionUser = store.session?.current?.user || {};
+  const canManage = ["owner", "admin"].includes(sessionUser.role);
+  const rows = users.length
+    ? users.map((user) => `
+        <tr>
+          <td>
+            <div class="cell-title">${escapeHtml(user.display_name || user.username)}</div>
+            <div class="cell-sub">${escapeHtml(user.username)}</div>
+          </td>
+          <td>${statusMarkup(user.role)}</td>
+          <td>${statusMarkup(user.status)}</td>
+          <td>${escapeHtml(formatDateTime(user.last_login_at))}</td>
+          <td>
+            ${canManage ? `<button class="ghost-btn" data-action="reset-user-password" data-user-id="${escapeHtml(user.id)}">重置密码</button>` : ""}
+            ${canManage && user.status === "active" ? `<button class="danger-btn" data-action="disable-user" data-user-id="${escapeHtml(user.id)}">停用</button>` : ""}
+          </td>
+        </tr>
+      `)
+    : [`
+        <tr>
+          <td colspan="5">
+            <div class="empty-state">暂无用户。</div>
+          </td>
+        </tr>
+      `];
+
+  return `
+    <section class="surface panel" data-settings-panel="users">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">用户管理</h3>
+          <div class="panel-note">管理本组织内部访问账号、角色与状态。</div>
+        </div>
+      </div>
+      ${store.session?.temporaryPasswordNotice ? `<div class="notice" style="margin-bottom:14px">${escapeHtml(store.session.temporaryPasswordNotice)}</div>` : ""}
+      ${tableMarkup(["用户", "角色", "状态", "上次登录", "动作"], rows)}
+      ${canManage ? renderCreateUserForm(store.forms?.user || {}) : ""}
+    </section>
+  `;
+}
+
 function saveButton(tab) {
   if (tab === "brand") {
     return '<button class="primary-btn" data-action="save-brand-profile">保存品牌知识</button>';
@@ -301,7 +374,7 @@ export function renderSettings(store) {
         </div>
       </div>
     </section>
-    ${tab === "brand" ? renderBrand(store.data.brandProfile, store.data.runtimeStatus, store.data.auditEvents, isStaticPreview, store.forms?.runtimeBackupImport || "") : ""}
+    ${tab === "brand" ? renderBrand(store.data.brandProfile, store.data.runtimeStatus, store.data.auditEvents, isStaticPreview, store.forms?.runtimeBackupImport || "", store) : ""}
     ${tab === "models" ? renderModels(store) : ""}
     ${tab === "channels" ? renderChannels(store) : ""}
     ${tab === "providers" ? renderProviders(store) : ""}
@@ -309,7 +382,7 @@ export function renderSettings(store) {
   `;
 }
 
-function renderBrand(profile, runtimeStatus, auditEvents = [], isStaticPreview = false, runtimeBackupImport = "") {
+function renderBrand(profile, runtimeStatus, auditEvents = [], isStaticPreview = false, runtimeBackupImport = "", store = {}) {
   const persistence = runtimeStatus?.persistence || {};
   const counts = runtimeStatus?.counts || {};
   const scheduler = runtimeStatus?.scheduler || {};
@@ -374,6 +447,7 @@ function renderBrand(profile, runtimeStatus, auditEvents = [], isStaticPreview =
         ${renderLaunchPreflight(preflight)}
         ${renderRuntimeBackups(backups, runtimeBackupImport)}
       </section>
+      ${renderUserManagement(store)}
       <section class="surface panel">
         <div class="panel-head">
           <div>

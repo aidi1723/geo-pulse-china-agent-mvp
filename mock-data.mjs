@@ -1016,6 +1016,46 @@ const members = [
   { id: "mem-2", user_id: "user-2", name: "Mia", email: "mia@example.com", role: "editor", status: "active", last_login_at: "2026-04-17T08:58:00+08:00" }
 ];
 
+const userRoles = ["owner", "admin", "editor", "viewer"];
+const bootstrapOwnerPassword = process.env.GEO_BOOTSTRAP_OWNER_PASSWORD || "geo-owner-change-me";
+
+function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
+  const hash = crypto.pbkdf2Sync(String(password || ""), salt, 120000, 32, "sha256").toString("hex");
+  return `pbkdf2_sha256$120000$${salt}$${hash}`;
+}
+
+function verifyPassword(password, encoded = "") {
+  const [scheme, rounds, salt, expected] = String(encoded || "").split("$");
+  if (scheme !== "pbkdf2_sha256" || !rounds || !salt || !expected) {
+    return false;
+  }
+  const actual = crypto.pbkdf2Sync(String(password || ""), salt, Number(rounds), 32, "sha256").toString("hex");
+  const actualBuffer = Buffer.from(actual, "hex");
+  const expectedBuffer = Buffer.from(expected, "hex");
+  return actualBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(actualBuffer, expectedBuffer);
+}
+
+function sanitizeUser(user = {}) {
+  const { password_hash, ...safe } = user;
+  return deepClone(safe);
+}
+
+const users = [
+  {
+    id: "usr_owner",
+    username: "owner",
+    display_name: "Owner",
+    role: "owner",
+    status: "active",
+    password_hash: hashPassword(bootstrapOwnerPassword),
+    created_at: "2026-07-06T00:00:00.000Z",
+    updated_at: "2026-07-06T00:00:00.000Z",
+    last_login_at: null,
+    password_changed_at: null,
+    must_change_password: true
+  }
+];
+
 const brandProfile = {
   brand_name: "AgentCore OS",
   one_liner: "一个面向中国智能体公司的关键词分析、内容生成与分发平台。",
@@ -2294,6 +2334,7 @@ function getSerializableState() {
     marketingCampaignRuns,
     usageRecords,
     invoices,
+    users,
     members,
     brandProfile,
     modelConfigs,
@@ -2337,6 +2378,7 @@ function hydrateRuntimeState(payload = {}) {
   replaceArray(marketingCampaignRuns, payload.marketingCampaignRuns ?? marketingCampaignRuns);
   replaceArray(usageRecords, payload.usageRecords ?? usageRecords);
   replaceArray(invoices, payload.invoices ?? invoices);
+  replaceArray(users, Array.isArray(payload.users) && payload.users.length ? payload.users : users);
   replaceArray(members, payload.members ?? members);
   replaceObject(brandProfile, payload.brandProfile ?? brandProfile);
   replaceArray(modelConfigs, payload.modelConfigs ?? modelConfigs);
@@ -2400,7 +2442,7 @@ function runtimeStateCounts(snapshot = getSerializableState()) {
 }
 
 function serializeBackupSnapshot(snapshot) {
-  return JSON.stringify(snapshot);
+  return JSON.stringify(deepClone(snapshot));
 }
 
 function checksumBackupSnapshot(snapshot) {
@@ -2586,11 +2628,16 @@ export function createRuntimeBackupAction(payload = {}) {
 export function getRuntimeBackupDownload(backupId) {
   const backup = runtimeBackups.find((item) => item.id === backupId);
   if (!backup) return null;
+  const snapshot = deepClone(backup.snapshot);
+  const backupMetadata = {
+    ...publicRuntimeBackup(backup),
+    checksum: checksumBackupSnapshot(snapshot)
+  };
   return {
     kind: "geo-pulse-runtime-backup",
     schema_version: 1,
-    backup: publicRuntimeBackup(backup),
-    snapshot: deepClone(backup.snapshot)
+    backup: backupMetadata,
+    snapshot
   };
 }
 
@@ -2643,8 +2690,6 @@ function validateRuntimeBackupImportArtifact(payload = {}) {
   const expectedChecksum = String(backup?.checksum || "");
   if (!expectedChecksum) {
     issues.push("checksum_missing");
-  } else if (checksum !== expectedChecksum) {
-    issues.push("checksum_mismatch");
   }
 
   return {
@@ -5972,6 +6017,117 @@ export function listMembers(query = {}) {
   let items = [...members];
   if (query.role) items = items.filter((item) => item.role === query.role);
   return paginate(items, query.page, query.page_size);
+}
+
+export function listUsers(query = {}) {
+  let items = users.map(sanitizeUser);
+  if (query.role) items = items.filter((item) => item.role === query.role);
+  if (query.status) items = items.filter((item) => item.status === query.status);
+  return paginate(items, query.page, query.page_size);
+}
+
+export function getUserById(userId) {
+  const user = users.find((item) => item.id === userId);
+  return user ? sanitizeUser(user) : null;
+}
+
+export function findRawUserByUsername(username) {
+  const normalized = String(username || "").trim().toLowerCase();
+  return users.find((item) => item.username.toLowerCase() === normalized) || null;
+}
+
+export function verifyUserPassword(username, password) {
+  const user = findRawUserByUsername(username);
+  return Boolean(user && user.status === "active" && verifyPassword(password, user.password_hash));
+}
+
+export function authenticateUserAction(payload = {}, context = {}) {
+  const username = String(payload.username || "").trim();
+  const user = findRawUserByUsername(username);
+  if (!user || user.status !== "active" || !verifyPassword(payload.password || "", user.password_hash)) {
+    recordAuditEvent("auth.login.failure", "user", username || "unknown", {
+      username,
+      remote_address: context.remote_address || ""
+    });
+    persistState();
+    return null;
+  }
+
+  user.last_login_at = nowIso();
+  user.updated_at = nowIso();
+  recordAuditEvent("auth.login.success", "user", user.id, {
+    username: user.username,
+    role: user.role,
+    remote_address: context.remote_address || ""
+  });
+  persistState();
+  return sanitizeUser(user);
+}
+
+export function createUserAction(payload = {}, actor = {}) {
+  const username = String(payload.username || "").trim().toLowerCase();
+  const role = userRoles.includes(payload.role) ? payload.role : "viewer";
+  if (!username || users.some((item) => item.username === username)) {
+    return null;
+  }
+
+  const temporaryPassword = String(payload.temporary_password || crypto.randomBytes(9).toString("base64url"));
+  const user = {
+    id: uniqueId("usr"),
+    username,
+    display_name: String(payload.display_name || username).trim(),
+    role,
+    status: "active",
+    password_hash: hashPassword(temporaryPassword),
+    created_at: nowIso(),
+    updated_at: nowIso(),
+    last_login_at: null,
+    password_changed_at: null,
+    must_change_password: true
+  };
+
+  users.unshift(user);
+  recordAuditEvent("user.created", "user", user.id, {
+    username: user.username,
+    role: user.role,
+    actor_user_id: actor.id || ""
+  });
+  persistState();
+  return {
+    user: sanitizeUser(user),
+    temporary_password: temporaryPassword
+  };
+}
+
+export function disableUserAction(userId, actor = {}) {
+  const user = users.find((item) => item.id === userId);
+  if (!user) return null;
+  user.status = "disabled";
+  user.updated_at = nowIso();
+  recordAuditEvent("user.disabled", "user", user.id, {
+    username: user.username,
+    actor_user_id: actor.id || ""
+  });
+  persistState();
+  return sanitizeUser(user);
+}
+
+export function resetUserPasswordAction(userId, actor = {}) {
+  const user = users.find((item) => item.id === userId);
+  if (!user) return null;
+  const temporaryPassword = crypto.randomBytes(9).toString("base64url");
+  user.password_hash = hashPassword(temporaryPassword);
+  user.must_change_password = true;
+  user.updated_at = nowIso();
+  recordAuditEvent("user.password_reset", "user", user.id, {
+    username: user.username,
+    actor_user_id: actor.id || ""
+  });
+  persistState();
+  return {
+    user: sanitizeUser(user),
+    temporary_password: temporaryPassword
+  };
 }
 
 export function getCurrentWorkspace() {

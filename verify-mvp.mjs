@@ -5,6 +5,7 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import {
+  authenticateUserAction,
   createArticleAction,
   createArticleFromTopicAction,
   createChannelAction,
@@ -41,6 +42,7 @@ import {
   getVisibilityAnalytics,
   getConnectorPermissionMatrix,
   getWorkspaceInput,
+  listUsers,
   listAutomationConnectors,
   listAutomationProviders,
   listAuditEvents,
@@ -88,6 +90,7 @@ import {
   updateArticleAction,
   updateTopicIdeaAction,
   updateKeywordAction,
+  verifyUserPassword,
   validateRuntimeBackupImportAction,
   validateRuntimeBackupAction,
   importRuntimeBackupAction,
@@ -112,6 +115,7 @@ import { renderDistribution } from "./prototype/src/pages/distribution.js";
 import { renderInternationalGeo } from "./prototype/src/pages/international.js";
 import { renderKeywords } from "./prototype/src/pages/keywords.js";
 import { renderSettings } from "./prototype/src/pages/settings.js";
+import { renderApp } from "./prototype/src/render.js";
 
 const syntaxTargets = [
   "automation-providers.mjs",
@@ -205,6 +209,27 @@ async function runMockDataChecks() {
   assert.ok(
     getRuntimeStatus().prompts?.counts?.total >= 3,
     "Runtime status should include prompt template summary"
+  );
+  const users = listUsers();
+  assert.ok(
+    users.items.some((item) => item.role === "owner" && item.status === "active"),
+    "User directory should include an active owner"
+  );
+  assert.doesNotMatch(JSON.stringify(users), /password_hash/, "User list should not expose password hashes");
+  assert.equal(
+    verifyUserPassword("owner", "geo-owner-change-me"),
+    true,
+    "Bootstrap owner password should verify in local development"
+  );
+  assert.equal(
+    verifyUserPassword("owner", "bad-password"),
+    false,
+    "Invalid owner password should not verify"
+  );
+  assert.equal(
+    authenticateUserAction({ username: "owner", password: "bad-password" }),
+    null,
+    "Invalid login should return null"
   );
   assert.ok(
     listAutomationConnectors().items.some((item) => item.connector_type === "source_connector"),
@@ -1902,6 +1927,113 @@ function runSettingsAuditUiChecks() {
   );
 }
 
+function renderAppToStringForTest(testStore) {
+  const root = { innerHTML: "" };
+  renderApp(root, testStore);
+  return root.innerHTML;
+}
+
+function createMinimalUiStore(overrides = {}) {
+  return {
+    page: "dashboard",
+    tabs: {
+      keywords: "keywords",
+      content: "topics",
+      distribution: "tasks",
+      analytics: "keywords",
+      settings: "brand"
+    },
+    selectedIds: {},
+    search: "",
+    ui: {
+      loading: false,
+      error: "",
+      notice: "",
+      panel: ""
+    },
+    session: {
+      current: { authenticated: false },
+      loginForm: { username: "", password: "" }
+    },
+    forms: {},
+    data: {
+      dashboardSummary: {},
+      runtimeStatus: {
+        counts: {},
+        scheduler: {},
+        providers: {}
+      },
+      keywordTrend: [],
+      contentFunnel: [],
+      topKeywords: [],
+      recentPublishes: []
+    },
+    ...overrides
+  };
+}
+
+function runAuthUiChecks() {
+  const loginHtml = renderAppToStringForTest(createMinimalUiStore());
+  assert.match(loginHtml, /登录 GEO Pulse/, "Unauthenticated app should render the login view");
+  assert.match(loginHtml, /data-action="login-session"/, "Login view should expose a login action");
+  assert.doesNotMatch(loginHtml, /总览看板/, "Unauthenticated app should not render the admin dashboard");
+
+  const settingsHtml = renderSettings({
+    tabs: {
+      settings: "brand"
+    },
+    selectedIds: {},
+    session: {
+      current: {
+        user: {
+          role: "owner"
+        }
+      }
+    },
+    forms: {
+      user: {
+        username: "",
+        display_name: "",
+        role: "viewer",
+        temporary_password: ""
+      }
+    },
+    data: {
+      users: [
+        {
+          id: "usr_owner",
+          username: "owner",
+          display_name: "Owner",
+          role: "owner",
+          status: "active",
+          last_login_at: "2026-07-06T10:00:00.000Z"
+        }
+      ],
+      brandProfile: {
+        brand_name: "AgentCore OS",
+        one_liner: "",
+        core_value_props: [],
+        forbidden_terms: [],
+        glossary_terms: []
+      },
+      runtimeStatus: {
+        persistence: {},
+        counts: {},
+        scheduler: {},
+        providers: {}
+      },
+      auditEvents: []
+    }
+  });
+  assert.match(settingsHtml, /用户管理/, "Settings page should render user management");
+  assert.match(settingsHtml, /data-action="create-user"/, "User management should expose create user action");
+  assert.match(
+    settingsHtml,
+    /data-action="reset-user-password"/,
+    "User management should expose password reset action"
+  );
+}
+
 function runSettingsAutomationStepUiChecks() {
   const html = renderSettings({
     tabs: {
@@ -2906,6 +3038,27 @@ function httpRequest(port, pathName, options = {}) {
   });
 }
 
+function getCookieHeader(response) {
+  const setCookie = response.headers?.["set-cookie"];
+  return Array.isArray(setCookie)
+    ? setCookie.map((item) => item.split(";")[0]).join("; ")
+    : "";
+}
+
+async function loginHttp(port, username = "owner", password = "geo-owner-change-me") {
+  const response = await httpRequest(port, "/api/v1/session/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ username, password })
+  });
+  return {
+    response,
+    cookie: getCookieHeader(response)
+  };
+}
+
 function runProductionStartupChecks() {
   const missingSecret = spawnSync(process.execPath, ["server.mjs"], {
     cwd: process.cwd(),
@@ -2941,7 +3094,8 @@ async function runHttpSecurityChecks() {
       PORT: String(port),
       GEO_ENABLE_PERSISTENCE: "0",
       GEO_MAX_BODY_BYTES: "1024",
-      GEO_MUTATION_RATE_LIMIT_PER_MINUTE: "2"
+      GEO_MUTATION_RATE_LIMIT_PER_MINUTE: "2",
+      GEO_INTERNAL_API_KEY: "test-internal-key-1234567890"
     },
     stdio: ["ignore", "pipe", "pipe"]
   });
@@ -2969,12 +3123,23 @@ async function runHttpSecurityChecks() {
     const favicon = await httpRequest(port, "/favicon.ico");
     assert.equal(favicon.status, 200, "favicon should be served");
 
+    const ownerLogin = await loginHttp(port);
+    assert.equal(ownerLogin.response.status, 200, "Owner login should be available for security checks");
+    const authHeaders = {
+      Cookie: ownerLogin.cookie
+    };
+    const systemMutationHeaders = {
+      "Content-Type": "application/json",
+      "X-GEO-API-Key": "test-internal-key-1234567890"
+    };
+
     const runtime = await httpRequest(port, "/api/v1/system/runtime", {
       headers: {
+        ...authHeaders,
         Origin: "http://evil.example"
       }
     });
-    assert.equal(runtime.status, 200, "Runtime GET should remain readable for local prototype use");
+    assert.equal(runtime.status, 200, "Runtime GET should be readable after login");
     assert.equal(
       runtime.headers["x-content-type-options"],
       "nosniff",
@@ -3001,7 +3166,9 @@ async function runHttpSecurityChecks() {
       "Runtime preflight should include persistence check"
     );
 
-    const preflight = await httpRequest(port, "/api/v1/system/preflight");
+    const preflight = await httpRequest(port, "/api/v1/system/preflight", {
+      headers: authHeaders
+    });
     assert.equal(preflight.status, 200, "Launch preflight should be queryable over HTTP");
     assert.match(
       String(preflight.body?.data?.status || ""),
@@ -3048,7 +3215,9 @@ async function runHttpSecurityChecks() {
     });
     assert.equal(unauthorizedReset.status, 401, "Mutating API routes should require an API key by default");
 
-    const failedAuthEvents = await httpRequest(port, "/api/v1/audit-events?action=auth.failure");
+    const failedAuthEvents = await httpRequest(port, "/api/v1/audit-events?action=auth.failure", {
+      headers: authHeaders
+    });
     assert.equal(failedAuthEvents.status, 200, "Failed authorization events should be queryable");
     assert.equal(
       failedAuthEvents.body?.data?.items?.[0]?.action,
@@ -3068,12 +3237,15 @@ async function runHttpSecurityChecks() {
       true,
       "Client config should report mutation auth requirement"
     );
-    assert.ok(
+    assert.equal(
       clientConfig.body?.data?.mutation_api_key,
-      "Client config should provide the same-origin app with a startup mutation API key"
+      "",
+      "Client config should not expose mutation API key after built-in login"
     );
 
-    const connectors = await httpRequest(port, "/api/v1/automation-connectors");
+    const connectors = await httpRequest(port, "/api/v1/automation-connectors", {
+      headers: authHeaders
+    });
     assert.equal(connectors.status, 200, "Automation connector registry should be queryable over the API");
     assert.ok(
       connectors.body?.data?.items?.some((item) => item.connector_type === "source_connector"),
@@ -3085,27 +3257,30 @@ async function runHttpSecurityChecks() {
       "Automation connector API should not expose raw connector secrets"
     );
 
-    const promptTemplates = await httpRequest(port, "/api/v1/prompt-templates");
+    const promptTemplates = await httpRequest(port, "/api/v1/prompt-templates", {
+      headers: authHeaders
+    });
     assert.equal(promptTemplates.status, 200, "Prompt template registry should be queryable over the API");
     assert.ok(
       promptTemplates.body?.data?.items?.some((item) => item.id === "geo_article_draft"),
       "Prompt template API should include the article draft template"
     );
 
-    const qualityTraces = await httpRequest(port, "/api/v1/content-quality-traces");
+    const qualityTraces = await httpRequest(port, "/api/v1/content-quality-traces", {
+      headers: authHeaders
+    });
     assert.equal(qualityTraces.status, 200, "Content quality traces should be queryable over the API");
 
     const authorizedReset = await httpRequest(port, "/api/v1/system/runtime/reset", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-GEO-API-Key": clientConfig.body.data.mutation_api_key
-      },
+      headers: systemMutationHeaders,
       body: "{}"
     });
     assert.equal(authorizedReset.status, 200, "Mutating API routes should accept the startup API key");
 
-    const auditEvents = await httpRequest(port, "/api/v1/audit-events?action=runtime.reset");
+    const auditEvents = await httpRequest(port, "/api/v1/audit-events?action=runtime.reset", {
+      headers: authHeaders
+    });
     assert.equal(auditEvents.status, 200, "Audit events should be queryable over the API");
     assert.equal(
       auditEvents.body?.data?.items?.[0]?.action,
@@ -3113,7 +3288,9 @@ async function runHttpSecurityChecks() {
       "Audit events API should include the runtime reset event"
     );
 
-    const auditExport = await httpRequest(port, "/api/v1/audit-events/export.csv?action=runtime.reset");
+    const auditExport = await httpRequest(port, "/api/v1/audit-events/export.csv?action=runtime.reset", {
+      headers: authHeaders
+    });
     assert.equal(auditExport.status, 200, "Audit events should be exportable as CSV");
     assert.match(
       auditExport.headers["content-type"] || "",
@@ -3131,10 +3308,7 @@ async function runHttpSecurityChecks() {
 
     const secondWrite = await httpRequest(port, "/api/v1/brand-profile", {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "X-GEO-API-Key": clientConfig.body.data.mutation_api_key
-      },
+      headers: systemMutationHeaders,
       body: JSON.stringify({
         brand_name: "限流验收品牌"
       })
@@ -3143,10 +3317,7 @@ async function runHttpSecurityChecks() {
 
     const rateLimitedWrite = await httpRequest(port, "/api/v1/brand-profile", {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "X-GEO-API-Key": clientConfig.body.data.mutation_api_key
-      },
+      headers: systemMutationHeaders,
       body: JSON.stringify({
         brand_name: "应被限流"
       })
@@ -3164,9 +3335,8 @@ async function runHttpSecurityChecks() {
     const oversized = await httpRequest(port, "/api/v1/brand-profile", {
       method: "PUT",
       headers: {
-        "Content-Type": "application/json",
+        ...systemMutationHeaders,
         "Content-Length": Buffer.byteLength(oversizedBody),
-        "X-GEO-API-Key": clientConfig.body.data.mutation_api_key
       },
       body: oversizedBody
     });
@@ -3212,6 +3382,233 @@ async function runHttpSecurityChecks() {
   }
 }
 
+async function runMultiUserAccessHttpChecks() {
+  const port = 3400 + Math.floor(Math.random() * 400);
+  const child = spawn(process.execPath, ["server.mjs"], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      PORT: String(port),
+      GEO_ENABLE_PERSISTENCE: "0",
+      GEO_MUTATION_RATE_LIMIT_PER_MINUTE: "80"
+    },
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  try {
+    await waitForServerReady(child, port);
+
+    const unauthenticatedSession = await httpRequest(port, "/api/v1/session/current");
+    assert.equal(unauthenticatedSession.status, 200, "Session current should be public");
+    assert.equal(
+      unauthenticatedSession.body?.data?.authenticated,
+      false,
+      "Session current should report unauthenticated state without cookie"
+    );
+
+    const unauthenticatedWorkspace = await httpRequest(port, "/api/v1/workspaces/current");
+    assert.equal(unauthenticatedWorkspace.status, 401, "Workspace reads should require login");
+
+    const invalidLogin = await httpRequest(port, "/api/v1/session/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        username: "owner",
+        password: "wrong-password"
+      })
+    });
+    assert.equal(invalidLogin.status, 401, "Invalid login should be rejected");
+
+    const ownerLogin = await loginHttp(port);
+    assert.equal(ownerLogin.response.status, 200, "Owner login should succeed");
+    assert.equal(ownerLogin.response.body?.data?.authenticated, true, "Owner login should return authenticated session");
+    assert.equal(ownerLogin.response.body?.data?.user?.role, "owner", "Owner login should return owner role");
+    assert.ok(ownerLogin.cookie.includes("geo_session="), "Owner login should set geo_session cookie");
+    assert.doesNotMatch(
+      JSON.stringify(ownerLogin.response.body?.data || {}),
+      /password_hash|geo-owner-change-me/,
+      "Login response should not expose passwords or hashes"
+    );
+
+    const authenticatedWorkspace = await httpRequest(port, "/api/v1/workspaces/current", {
+      headers: {
+        Cookie: ownerLogin.cookie
+      }
+    });
+    assert.equal(authenticatedWorkspace.status, 200, "Authenticated workspace read should succeed");
+
+    const createdViewer = await httpRequest(port, "/api/v1/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: ownerLogin.cookie
+      },
+      body: JSON.stringify({
+        username: "viewer1",
+        display_name: "Viewer One",
+        role: "viewer",
+        temporary_password: "viewer-pass-1234"
+      })
+    });
+    assert.equal(createdViewer.status, 201, "Owner should create viewer user");
+    assert.equal(createdViewer.body?.data?.user?.role, "viewer", "Created viewer should keep viewer role");
+    assert.doesNotMatch(JSON.stringify(createdViewer.body?.data || {}), /password_hash/, "User create response should not expose password hash");
+
+    const viewerLogin = await loginHttp(port, "viewer1", "viewer-pass-1234");
+    assert.equal(viewerLogin.response.status, 200, "Viewer login should succeed");
+    const viewerWrite = await httpRequest(port, "/api/v1/topic-ideas", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: viewerLogin.cookie
+      },
+      body: JSON.stringify({
+        title: "Viewer should not write"
+      })
+    });
+    assert.equal(viewerWrite.status, 403, "Viewer should not mutate topic ideas");
+
+    const createdEditor = await httpRequest(port, "/api/v1/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: ownerLogin.cookie
+      },
+      body: JSON.stringify({
+        username: "editor1",
+        display_name: "Editor One",
+        role: "editor",
+        temporary_password: "editor-pass-1234"
+      })
+    });
+    assert.equal(createdEditor.status, 201, "Owner should create editor user");
+
+    const editorLogin = await loginHttp(port, "editor1", "editor-pass-1234");
+    assert.equal(editorLogin.response.status, 200, "Editor login should succeed");
+    const editorTopic = await httpRequest(port, "/api/v1/topic-ideas", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: editorLogin.cookie
+      },
+      body: JSON.stringify({
+        title: "Editor-created GEO topic"
+      })
+    });
+    assert.equal(editorTopic.status, 201, "Editor should create operational topic ideas");
+
+    const editorConfigWrite = await httpRequest(port, "/api/v1/model-configs", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: editorLogin.cookie
+      },
+      body: JSON.stringify({
+        provider: "Editor blocked provider"
+      })
+    });
+    assert.equal(editorConfigWrite.status, 403, "Editor should not change model configuration");
+
+    const createdAdmin = await httpRequest(port, "/api/v1/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: ownerLogin.cookie
+      },
+      body: JSON.stringify({
+        username: "admin1",
+        display_name: "Admin One",
+        role: "admin",
+        temporary_password: "admin-pass-1234"
+      })
+    });
+    assert.equal(createdAdmin.status, 201, "Owner should create admin user");
+
+    const adminLogin = await loginHttp(port, "admin1", "admin-pass-1234");
+    assert.equal(adminLogin.response.status, 200, "Admin login should succeed");
+    const adminCreatesEditor = await httpRequest(port, "/api/v1/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: adminLogin.cookie
+      },
+      body: JSON.stringify({
+        username: "editor2",
+        display_name: "Editor Two",
+        role: "editor",
+        temporary_password: "editor-two-pass-1234"
+      })
+    });
+    assert.equal(adminCreatesEditor.status, 201, "Admin should create editor users");
+
+    const adminCreatesOwner = await httpRequest(port, "/api/v1/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: adminLogin.cookie
+      },
+      body: JSON.stringify({
+        username: "owner2",
+        display_name: "Owner Two",
+        role: "owner",
+        temporary_password: "owner-two-pass-1234"
+      })
+    });
+    assert.equal(adminCreatesOwner.status, 403, "Admin should not create owner users");
+
+    const authAudit = await httpRequest(port, "/api/v1/audit-events?action=auth.login.failure", {
+      headers: {
+        Cookie: adminLogin.cookie
+      }
+    });
+    assert.equal(authAudit.status, 200, "Admin should read auth audit events");
+    assert.equal(
+      authAudit.body?.data?.items?.[0]?.action,
+      "auth.login.failure",
+      "Invalid login should record audit event"
+    );
+    assert.doesNotMatch(
+      JSON.stringify(authAudit.body?.data || {}),
+      /wrong-password|password_hash|geo_session/,
+      "Auth audit events should not expose secrets"
+    );
+
+    const preflight = await httpRequest(port, "/api/v1/system/preflight", {
+      headers: {
+        Cookie: adminLogin.cookie
+      }
+    });
+    assert.ok(
+      preflight.body?.data?.checks?.some((item) => item.id === "user_auth"),
+      "Launch preflight should include user auth check"
+    );
+    assert.ok(
+      preflight.body?.data?.checks?.some((item) => item.id === "session_security"),
+      "Launch preflight should include session security check"
+    );
+
+    const logout = await httpRequest(port, "/api/v1/session/logout", {
+      method: "POST",
+      headers: {
+        Cookie: ownerLogin.cookie
+      }
+    });
+    assert.equal(logout.status, 200, "Logout should succeed");
+    assert.match(String(logout.headers["set-cookie"] || ""), /geo_session=;/, "Logout should clear session cookie");
+
+    const afterLogout = await httpRequest(port, "/api/v1/workspaces/current", {
+      headers: {
+        Cookie: ownerLogin.cookie
+      }
+    });
+    assert.equal(afterLogout.status, 401, "Logged out session should no longer read workspace");
+  } finally {
+    child.kill("SIGTERM");
+  }
+}
+
 async function runSingleUserHttpChecks() {
   const port = 3800 + Math.floor(Math.random() * 500);
   const child = spawn(process.execPath, ["server.mjs"], {
@@ -3227,10 +3624,14 @@ async function runSingleUserHttpChecks() {
 
   try {
     await waitForServerReady(child, port);
-    const clientConfig = await httpRequest(port, "/api/v1/system/client-config");
+    const ownerLogin = await loginHttp(port);
+    assert.equal(ownerLogin.response.status, 200, "Single-user HTTP checks should log in owner first");
+    const readHeaders = {
+      Cookie: ownerLogin.cookie
+    };
     const mutationHeaders = {
       "Content-Type": "application/json",
-      "X-GEO-API-Key": clientConfig.body.data.mutation_api_key
+      Cookie: ownerLogin.cookie
     };
 
     const workspace = await httpRequest(port, "/api/v1/workspace-input", {
@@ -3284,7 +3685,9 @@ async function runSingleUserHttpChecks() {
       })
     });
     assert.equal(exportJob.status, 201, "Export job should be creatable over HTTP");
-    const exportDownload = await httpRequest(port, `/api/v1/exports/${exportJob.body.data.id}/download`);
+    const exportDownload = await httpRequest(port, `/api/v1/exports/${exportJob.body.data.id}/download`, {
+      headers: readHeaders
+    });
     assert.equal(exportDownload.status, 200, "Export download should be available over HTTP");
     assert.match(String(exportDownload.body), /AI Search Readiness HTTP Article|title/, "Export download should contain exported data");
 
@@ -3354,7 +3757,9 @@ async function runSingleUserHttpChecks() {
     assert.equal(connectorTest.status, 200, "Connector test should run over HTTP");
     assert.equal(connectorTest.body?.data?.success, true, "Mock connector HTTP test should succeed");
 
-    const connectorHealth = await httpRequest(port, "/api/v1/connector-health-checks");
+    const connectorHealth = await httpRequest(port, "/api/v1/connector-health-checks", {
+      headers: readHeaders
+    });
     assert.equal(connectorHealth.status, 200, "Connector health checks should be queryable over HTTP");
     assert.ok(
       connectorHealth.body?.data?.items?.some((item) => item.connector_id === "firecrawl_source"),
@@ -3382,7 +3787,9 @@ async function runSingleUserHttpChecks() {
       "Connector diagnostic API should not expose raw secrets"
     );
 
-    const connectorDiagnostics = await httpRequest(port, "/api/v1/connector-diagnostics");
+    const connectorDiagnostics = await httpRequest(port, "/api/v1/connector-diagnostics", {
+      headers: readHeaders
+    });
     assert.equal(connectorDiagnostics.status, 200, "Connector diagnostics should be queryable over HTTP");
     assert.ok(
       connectorDiagnostics.body?.data?.items?.some((item) => item.connector_id === "firecrawl_source"),
@@ -3408,14 +3815,18 @@ async function runSingleUserHttpChecks() {
     assert.equal(createdBackup.status, 201, "Runtime backup should be creatable over HTTP");
     assert.match(createdBackup.body?.data?.id || "", /^bkp-/, "Runtime backup API should return a backup id");
 
-    const backupList = await httpRequest(port, "/api/v1/system/backups");
+    const backupList = await httpRequest(port, "/api/v1/system/backups", {
+      headers: readHeaders
+    });
     assert.equal(backupList.status, 200, "Runtime backups should be listable over HTTP");
     assert.ok(
       backupList.body?.data?.items?.some((item) => item.id === createdBackup.body.data.id),
       "Runtime backup list API should include the created backup"
     );
 
-    const backupDownload = await httpRequest(port, `/api/v1/system/backups/${createdBackup.body.data.id}/download`);
+    const backupDownload = await httpRequest(port, `/api/v1/system/backups/${createdBackup.body.data.id}/download`, {
+      headers: readHeaders
+    });
     assert.equal(backupDownload.status, 200, "Runtime backup download should be available over HTTP");
     assert.equal(
       backupDownload.body?.data?.kind,
@@ -3447,7 +3858,7 @@ async function runSingleUserHttpChecks() {
     assert.equal(
       backupImportValidation.body?.data?.valid,
       true,
-      `Runtime backup import validation API should mark downloaded artifact valid: ${JSON.stringify(backupImportValidation.body?.data?.issues || [])}`
+      `Runtime backup import validation API should mark downloaded artifact valid: ${JSON.stringify(backupImportValidation.body?.data || {})}`
     );
     assert.equal(
       backupImportValidation.body?.data?.source_backup_id,
@@ -3463,7 +3874,11 @@ async function runSingleUserHttpChecks() {
         name: "HTTP 导入备份"
       })
     });
-    assert.equal(importedBackup.status, 201, "Runtime backup import should run over HTTP");
+    assert.equal(
+      importedBackup.status,
+      201,
+      `Runtime backup import should run over HTTP: ${JSON.stringify(importedBackup.body)}`
+    );
     assert.notEqual(
       importedBackup.body?.data?.id,
       createdBackup.body.data.id,
@@ -3493,7 +3908,9 @@ async function runSingleUserHttpChecks() {
     assert.equal(restoredBackup.status, 200, "Runtime backup restore should run over HTTP");
     assert.equal(restoredBackup.body?.data?.restored, true, "Runtime backup restore API should report success");
 
-    const restoredBrand = await httpRequest(port, "/api/v1/brand-profile");
+    const restoredBrand = await httpRequest(port, "/api/v1/brand-profile", {
+      headers: readHeaders
+    });
     assert.equal(restoredBrand.status, 200, "Brand profile should be readable after restore");
     assert.equal(
       restoredBrand.body?.data?.brand_name,
@@ -3512,7 +3929,7 @@ async function runSingleUserHttpChecks() {
 
     const logout = await httpRequest(port, "/api/v1/session/logout", {
       method: "POST",
-      headers: mutationHeaders,
+      headers: readHeaders,
       body: JSON.stringify({ reason: "http_acceptance" })
     });
     assert.equal(logout.status, 200, "Single-user logout should be available over HTTP");
@@ -3538,20 +3955,26 @@ async function runSchedulerAuditChecks() {
   try {
     await waitForServerReady(child, port);
 
-    const clientConfig = await httpRequest(port, "/api/v1/system/client-config");
-    assert.equal(clientConfig.status, 200, "Scheduler audit test should load client config");
+    const ownerLogin = await loginHttp(port);
+    assert.equal(ownerLogin.response.status, 200, "Scheduler audit test should log in owner");
+    const authHeaders = {
+      Cookie: ownerLogin.cookie
+    };
+    const mutationHeaders = {
+      "Content-Type": "application/json",
+      Cookie: ownerLogin.cookie
+    };
 
     const tick = await httpRequest(port, "/api/v1/system/runtime/scheduler/tick", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-GEO-API-Key": clientConfig.body.data.mutation_api_key
-      },
+      headers: mutationHeaders,
       body: JSON.stringify({})
     });
     assert.equal(tick.status, 200, "Manual scheduler tick should be callable");
 
-    const auditEvents = await httpRequest(port, "/api/v1/audit-events?action=scheduler.tick");
+    const auditEvents = await httpRequest(port, "/api/v1/audit-events?action=scheduler.tick", {
+      headers: authHeaders
+    });
     assert.equal(auditEvents.status, 200, "Scheduler audit events should be queryable");
     assert.equal(
       auditEvents.body?.data?.items?.[0]?.action,
@@ -3609,7 +4032,13 @@ async function runAuditCsvSpreadsheetSafetyChecks() {
   try {
     await waitForServerReady(child, port);
 
-    const auditExport = await httpRequest(port, "/api/v1/audit-events/export.csv");
+    const ownerLogin = await loginHttp(port);
+    assert.equal(ownerLogin.response.status, 200, "Audit CSV spreadsheet safety test should log in owner");
+    const auditExport = await httpRequest(port, "/api/v1/audit-events/export.csv", {
+      headers: {
+        Cookie: ownerLogin.cookie
+      }
+    });
     assert.equal(auditExport.status, 200, "Audit CSV spreadsheet safety test should export CSV");
     assert.match(String(auditExport.body), /"'=cmd\|calc"/, "Audit CSV should neutralize formula action cells");
     assert.match(String(auditExport.body), /"'\+api_request"/, "Audit CSV should neutralize plus-prefixed cells");
@@ -3754,6 +4183,7 @@ try {
   await runSingleUserCompleteChecks();
   runRouteStateChecks();
   runExperienceChecks();
+  runAuthUiChecks();
   runSettingsAuditUiChecks();
   runSettingsAutomationStepUiChecks();
   runSettingsConnectorUiChecks();
@@ -3766,6 +4196,7 @@ try {
   runPersistenceChecks();
   runProductionStartupChecks();
   await runHttpSecurityChecks();
+  await runMultiUserAccessHttpChecks();
   await runSingleUserHttpChecks();
   await runSchedulerAuditChecks();
   await runAuditCsvSpreadsheetSafetyChecks();

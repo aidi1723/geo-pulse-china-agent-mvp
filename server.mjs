@@ -107,6 +107,12 @@ const {
   updateKeywordAction,
   updateTopicIdeaAction,
   updateArticleAction,
+  authenticateUserAction,
+  createUserAction,
+  disableUserAction,
+  getUserById,
+  listUsers,
+  resetUserPasswordAction,
   logoutSessionAction,
   getPersistenceStatus,
   getRuntimeStatus,
@@ -135,10 +141,18 @@ const allowRemoteAccess = process.env.GEO_ALLOW_REMOTE_ACCESS === "1";
 const explicitInternalApiKey = process.env.GEO_INTERNAL_API_KEY || "";
 const internalApiKey = explicitInternalApiKey || crypto.randomBytes(24).toString("hex");
 const minProductionApiKeyLength = 24;
+const sessionCookieName = "geo_session";
+const sessionTtlMs = Math.max(15 * 60 * 1000, Number(process.env.GEO_SESSION_TTL_MS || 8 * 60 * 60 * 1000));
+const sessions = new Map();
 const publicSiteUrl = (process.env.GEO_PUBLIC_SITE_URL || `http://${host || "localhost"}:${port}`).replace(/\/+$/, "");
 
 if (isProduction && explicitInternalApiKey.length < minProductionApiKeyLength) {
   console.error("NODE_ENV=production requires GEO_INTERNAL_API_KEY with at least 24 characters.");
+  process.exit(1);
+}
+
+if (isProduction && !process.env.GEO_BOOTSTRAP_OWNER_PASSWORD) {
+  console.error("NODE_ENV=production requires GEO_BOOTSTRAP_OWNER_PASSWORD for first owner bootstrap.");
   process.exit(1);
 }
 
@@ -423,6 +437,128 @@ function isMutatingMethod(method) {
   return !["GET", "HEAD", "OPTIONS"].includes(method);
 }
 
+function parseCookies(req) {
+  return String(req.headers.cookie || "")
+    .split(";")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .reduce((acc, pair) => {
+      const index = pair.indexOf("=");
+      if (index > -1) {
+        acc[pair.slice(0, index)] = decodeURIComponent(pair.slice(index + 1));
+      }
+      return acc;
+    }, {});
+}
+
+function sessionCookie(token, expiresAt) {
+  const parts = [
+    `${sessionCookieName}=${encodeURIComponent(token)}`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    `Expires=${new Date(expiresAt).toUTCString()}`
+  ];
+  if (isProduction) {
+    parts.push("Secure");
+  }
+  return parts.join("; ");
+}
+
+function clearSessionCookie() {
+  return `${sessionCookieName}=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT${isProduction ? "; Secure" : ""}`;
+}
+
+function createSession(user) {
+  const token = crypto.randomBytes(32).toString("base64url");
+  const expiresAt = Date.now() + sessionTtlMs;
+  sessions.set(token, {
+    user_id: user.id,
+    expires_at: expiresAt
+  });
+  return {
+    token,
+    expires_at: new Date(expiresAt).toISOString()
+  };
+}
+
+function getSessionFromRequest(req) {
+  const token = parseCookies(req)[sessionCookieName];
+  const session = token ? sessions.get(token) : null;
+  if (!session || session.expires_at <= Date.now()) {
+    if (token) {
+      sessions.delete(token);
+    }
+    return {
+      authenticated: false
+    };
+  }
+
+  const user = getUserById(session.user_id);
+  if (!user || user.status !== "active") {
+    sessions.delete(token);
+    return {
+      authenticated: false
+    };
+  }
+
+  return {
+    authenticated: true,
+    token,
+    user,
+    expires_at: new Date(session.expires_at).toISOString()
+  };
+}
+
+const roleRank = {
+  viewer: 0,
+  editor: 1,
+  admin: 2,
+  owner: 3
+};
+
+function hasRoleAtLeast(user, role) {
+  return (roleRank[user?.role] ?? -1) >= (roleRank[role] ?? 999);
+}
+
+function isPublicApiPath(method, pathname) {
+  return (
+    (method === "GET" && pathname === "/session/current") ||
+    (method === "POST" && pathname === "/session/login") ||
+    (method === "GET" && pathname === "/system/client-config")
+  );
+}
+
+function requiredRoleForMutation(method, pathname) {
+  if (!isMutatingMethod(method)) {
+    return "viewer";
+  }
+  if (pathname === "/users" || pathname.startsWith("/users/")) {
+    return "admin";
+  }
+  if (pathname.includes("/restore") || pathname === "/system/runtime/reset") {
+    return "owner";
+  }
+  if (
+    pathname.startsWith("/automation-providers") ||
+    pathname.startsWith("/automation-connectors") ||
+    pathname.startsWith("/model-configs") ||
+    pathname.startsWith("/channels") ||
+    pathname.startsWith("/system/backups") ||
+    pathname === "/brand-profile" ||
+    pathname === "/billing/plan"
+  ) {
+    return "admin";
+  }
+  return "editor";
+}
+
+function canCreateTargetRole(actor, targetRole) {
+  if (actor?.role === "owner") return true;
+  if (actor?.role === "admin") return ["editor", "viewer"].includes(targetRole);
+  return false;
+}
+
 function getAllowedApiOrigins(req) {
   const configured = String(process.env.GEO_ALLOWED_ORIGINS || "")
     .split(",")
@@ -647,6 +783,30 @@ function getLaunchPreflight() {
       keyLength >= minProductionApiKeyLength
         ? "继续通过外部访问层保护服务。"
         : "上线前设置至少 24 位的 GEO_INTERNAL_API_KEY。"
+    )
+  );
+
+  const usersPage = listUsers({ page_size: 100 });
+  const activeOwners = usersPage.items.filter((item) => item.role === "owner" && item.status === "active");
+  checks.push(
+    preflightCheck(
+      "user_auth",
+      "security",
+      "用户认证",
+      activeOwners.length > 0 ? "passed" : "failed",
+      activeOwners.length > 0 ? "存在可用 owner 用户。" : "没有可用 owner 用户。",
+      activeOwners.length > 0 ? "上线前确认已修改 bootstrap 临时密码。" : "创建至少一个 active owner 用户。"
+    )
+  );
+
+  checks.push(
+    preflightCheck(
+      "session_security",
+      "security",
+      "会话安全",
+      isProduction ? "passed" : "warning",
+      isProduction ? "生产环境会话 Cookie 启用 Secure。" : "开发环境会话 Cookie 未启用 Secure。",
+      "生产部署使用 NODE_ENV=production、HTTPS 和固定 bootstrap 密码。"
     )
   );
 
@@ -888,15 +1048,70 @@ async function handleApi(req, res, url) {
     return;
   }
 
-  if (!isMutationAuthorized(req)) {
-    recordAuthFailure(req, pathname, "invalid_or_missing_api_key");
-    sendJson(res, internalApiKey ? 401 : 403, error("UNAUTHORIZED", "Mutation is not authorized", internalApiKey ? 401 : 403).body);
+  const session = getSessionFromRequest(req);
+  const apiKeyAuthorized = req.headers["x-geo-api-key"] === internalApiKey;
+
+  if (req.method === "GET" && pathname === "/session/current") {
+    const safeSession = session.authenticated
+      ? {
+          authenticated: true,
+          user: session.user,
+          expires_at: session.expires_at
+        }
+      : { authenticated: false };
+    sendJson(res, 200, ok(safeSession));
     return;
   }
 
-  if (!isSensitiveReadAuthorized(req, pathname)) {
-    recordAuthFailure(req, pathname, "invalid_or_missing_api_key");
-    sendJson(res, 401, error("UNAUTHORIZED", "Request is not authorized", 401).body);
+  if (req.method === "POST" && pathname === "/session/login") {
+    const body = await parseBody(req).catch(() => null);
+    const user = authenticateUserAction(body || {}, {
+      remote_address: req.socket.remoteAddress || ""
+    });
+    if (!user) {
+      sendJson(res, 401, error("UNAUTHENTICATED", "Invalid username or password", 401).body);
+      return;
+    }
+    const nextSession = createSession(user);
+    res.setHeader("Set-Cookie", sessionCookie(nextSession.token, Date.parse(nextSession.expires_at)));
+    sendJson(res, 200, ok({
+      authenticated: true,
+      user,
+      expires_at: nextSession.expires_at
+    }));
+    return;
+  }
+
+  if (!isPublicApiPath(req.method, pathname) && !session.authenticated && !apiKeyAuthorized) {
+    recordAuthFailure(req, pathname, "missing_or_expired_session");
+    sendJson(res, 401, error("UNAUTHENTICATED", "Login is required", 401).body);
+    return;
+  }
+
+  if (!apiKeyAuthorized && !isPublicApiPath(req.method, pathname)) {
+    if (isSensitiveReadPath(req.method, pathname) && !hasRoleAtLeast(session.user, "admin")) {
+      recordAuthFailure(req, pathname, "insufficient_role");
+      sendJson(res, 403, error("FORBIDDEN", "Permission denied", 403).body);
+      return;
+    }
+
+    const requiredRole = requiredRoleForMutation(req.method, pathname);
+    if (!hasRoleAtLeast(session.user, requiredRole)) {
+      recordAuthFailure(req, pathname, "insufficient_role");
+      sendJson(res, 403, error("FORBIDDEN", "Permission denied", 403).body);
+      return;
+    }
+  }
+
+  if (req.method === "POST" && pathname === "/session/logout") {
+    if (session.token) {
+      sessions.delete(session.token);
+    }
+    res.setHeader("Set-Cookie", clearSessionCookie());
+    recordAuditEventAction("auth.logout", "user", session.user?.id || "anonymous", {
+      username: session.user?.username || ""
+    });
+    sendJson(res, 200, ok({ success: true }));
     return;
   }
 
@@ -922,6 +1137,62 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && pathname === "/members") {
     sendJson(res, 200, ok(listMembers(query)));
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/users") {
+    sendJson(res, 200, ok(listUsers(query)));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/users") {
+    const body = await parseBody(req).catch(() => null);
+    const targetRole = body?.role || "viewer";
+    if (!apiKeyAuthorized && !canCreateTargetRole(session.user, targetRole)) {
+      recordAuthFailure(req, pathname, "insufficient_role");
+      sendJson(res, 403, error("FORBIDDEN", "Permission denied", 403).body);
+      return;
+    }
+    const result = createUserAction(body || {}, session.user || { id: "api-key" });
+    if (!result) {
+      sendJson(res, 400, error("VALIDATION_ERROR", "User could not be created").body);
+      return;
+    }
+    sendJson(res, 201, ok(result));
+    return;
+  }
+
+  if (req.method === "POST" && pathname.match(/^\/users\/[^/]+\/disable$/)) {
+    const userId = decodeURIComponent(pathname.split("/")[2]);
+    const targetUser = getUserById(userId);
+    if (!targetUser) {
+      sendJson(res, 404, error("NOT_FOUND", "User not found", 404).body);
+      return;
+    }
+    if (!apiKeyAuthorized && targetUser.role === "owner" && session.user?.role !== "owner") {
+      recordAuthFailure(req, pathname, "insufficient_role");
+      sendJson(res, 403, error("FORBIDDEN", "Permission denied", 403).body);
+      return;
+    }
+    const result = disableUserAction(userId, session.user || { id: "api-key" });
+    sendJson(res, 200, ok(result));
+    return;
+  }
+
+  if (req.method === "POST" && pathname.match(/^\/users\/[^/]+\/reset-password$/)) {
+    const userId = decodeURIComponent(pathname.split("/")[2]);
+    const targetUser = getUserById(userId);
+    if (!targetUser) {
+      sendJson(res, 404, error("NOT_FOUND", "User not found", 404).body);
+      return;
+    }
+    if (!apiKeyAuthorized && targetUser.role === "owner" && session.user?.role !== "owner") {
+      recordAuthFailure(req, pathname, "insufficient_role");
+      sendJson(res, 403, error("FORBIDDEN", "Permission denied", 403).body);
+      return;
+    }
+    const result = resetUserPasswordAction(userId, session.user || { id: "api-key" });
+    sendJson(res, 200, ok(result));
     return;
   }
 
@@ -1273,7 +1544,7 @@ async function handleApi(req, res, url) {
     sendJson(res, 200, ok({
       mutation_auth_required: true,
       mutation_header_name: "X-GEO-API-Key",
-      mutation_api_key: allowRemoteAccess ? "" : internalApiKey
+      mutation_api_key: ""
     }));
     return;
   }
@@ -1853,12 +2124,6 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && pathname === "/billing/invoices") {
     sendJson(res, 200, ok(listInvoices(query)));
-    return;
-  }
-
-  if (req.method === "POST" && pathname === "/session/logout") {
-    const body = await parseBody(req).catch(() => ({}));
-    sendJson(res, 200, ok(logoutSessionAction(body || {})));
     return;
   }
 

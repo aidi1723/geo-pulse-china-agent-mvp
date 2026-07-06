@@ -29,7 +29,8 @@ function primaryActionAttrs(currentPage) {
   return "disabled";
 }
 
-export function sidebarMarkup(currentPage) {
+export function sidebarMarkup(currentPage, session = {}) {
+  const user = session?.user || {};
   return `
     <aside class="sidebar">
       <div class="brand">
@@ -60,8 +61,8 @@ export function sidebarMarkup(currentPage) {
         <div class="profile">
           <div class="avatar">AI</div>
           <div>
-            <div style="font-weight: 800">极脉交付环境</div>
-            <div class="plan-badge">专业版演示</div>
+            <div style="font-weight: 800">${escapeHtml(user.display_name || user.username || "未登录")}</div>
+            <div class="plan-badge">${escapeHtml(user.role || "visitor")}</div>
           </div>
         </div>
         <button class="ghost-btn" style="width:100%" data-action="logout-session">退出登录</button>

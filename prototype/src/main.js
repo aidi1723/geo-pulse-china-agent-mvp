@@ -11,6 +11,8 @@ import {
   createMediaSource as createMediaSourceApi,
   createModelConfig as createModelConfigApi,
   createRuntimeBackup as createRuntimeBackupApi,
+  createUser as createUserApi,
+  disableUser as disableUserApi,
   createPublishTask as createPublishTaskApi,
   createKeywordCrawlJob,
   createTopicsFromKeywords,
@@ -18,9 +20,11 @@ import {
   generateInternationalGeoArtifacts as generateInternationalGeoArtifactsApi,
   generateTopicOutline as generateTopicOutlineApi,
   getArticleDetail,
+  getCurrentSession as getCurrentSessionApi,
   getLaunchPreflight as getLaunchPreflightApi,
   getRuntimeBackupDownload as getRuntimeBackupDownloadApi,
   importRuntimeBackup as importRuntimeBackupApi,
+  loginSession as loginSessionApi,
   logoutSession as logoutSessionApi,
   resetRuntimeState as resetRuntimeStateApi,
   reconnectChannel as reconnectChannelApi,
@@ -49,6 +53,7 @@ import {
   updateTopic as updateTopicApi,
   validateRuntimeBackupImport as validateRuntimeBackupImportApi,
   validateRuntimeBackup as validateRuntimeBackupApi,
+  resetUserPassword as resetUserPasswordApi,
   retryPublishTask,
   startPublishTask,
   updateKeyword,
@@ -64,7 +69,7 @@ import {
   normalizeStoreSelections,
   resolvePublishPanelState
 } from "./experience-utils.js?v=20260418-3";
-import { hydrateData, setError, setLoading, setNotice, store } from "./store.js?v=20260417-5";
+import { clearSession, hydrateData, setError, setLoading, setNotice, setSession, store } from "./store.js?v=20260417-5";
 
 const root = document.getElementById("app");
 let noticeTimer = null;
@@ -313,7 +318,70 @@ async function refreshData(options = {}) {
   }
 }
 
+async function loadCurrentSession() {
+  const session = await getCurrentSessionApi();
+  setSession(session);
+  return session;
+}
+
 const actions = {
+  async loginSession() {
+    try {
+      setError("");
+      const session = await loginSessionApi(store.session.loginForm);
+      setSession(session);
+      store.session.loginForm.password = "";
+      await refreshData({ loading: true });
+      showNotice("已登录。");
+    } catch (error) {
+      setError("用户名或密码不正确");
+      rerender();
+    }
+  },
+  async createUser() {
+    try {
+      const result = await createUserApi(store.forms.user);
+      store.session.temporaryPasswordNotice = result.temporary_password
+        ? `临时密码：${result.temporary_password}`
+        : "";
+      store.forms.user = {
+        username: "",
+        display_name: "",
+        role: "viewer",
+        temporary_password: ""
+      };
+      await refreshData();
+      showNotice("用户已创建。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "创建用户失败");
+      rerender();
+    }
+  },
+  async disableUser(userId) {
+    if (!userId) return;
+    try {
+      await disableUserApi(userId);
+      await refreshData();
+      showNotice("用户已停用。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "停用用户失败");
+      rerender();
+    }
+  },
+  async resetUserPassword(userId) {
+    if (!userId) return;
+    try {
+      const result = await resetUserPasswordApi(userId);
+      store.session.temporaryPasswordNotice = result.temporary_password
+        ? `临时密码：${result.temporary_password}`
+        : "";
+      await refreshData();
+      showNotice("临时密码已生成。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "重置密码失败");
+      rerender();
+    }
+  },
   async submitKeywordPanel() {
     if (store.ui.panel === "expand") {
       await actions.expandQuestions(store.forms.keywordExpansion);
@@ -1237,11 +1305,12 @@ const actions = {
   async logoutSession() {
     try {
       await logoutSessionApi({ reason: "single_user_ui" });
+      clearSession();
       store.search = "";
       store.ui.panel = "";
+      store.ui.error = "";
       store.page = "dashboard";
       rerender();
-      showNotice("已退出当前单用户操作视图。");
     } catch (error) {
       setError(error instanceof Error ? error.message : "退出失败");
       rerender();
@@ -1249,11 +1318,29 @@ const actions = {
   }
 };
 
-applyHashState();
-bindEvents(root, store, rerender, actions);
-window.addEventListener("hashchange", () => {
+async function startApp() {
   applyHashState();
-  rerender();
-});
-rerender();
-refreshData({ loading: true });
+  bindEvents(root, store, rerender, actions);
+  window.addEventListener("hashchange", () => {
+    applyHashState();
+    rerender();
+  });
+
+  try {
+    setLoading(true);
+    rerender();
+    const session = await loadCurrentSession();
+    if (session.authenticated) {
+      await refreshData({ loading: true });
+      return;
+    }
+    setLoading(false);
+    rerender();
+  } catch (error) {
+    setLoading(false);
+    setError(error instanceof Error ? error.message : "加载会话失败");
+    rerender();
+  }
+}
+
+startApp();

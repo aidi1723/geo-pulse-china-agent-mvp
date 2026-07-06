@@ -7,17 +7,23 @@ import { renderAnalytics } from "./pages/analytics.js?v=20260418-3";
 import { renderInternationalGeo } from "./pages/international.js?v=20260418-3";
 import { renderBilling } from "./pages/billing.js?v=20260418-3";
 import { renderSettings } from "./pages/settings.js?v=20260418-3";
+import { escapeHtml } from "./utils.js";
 
 export function renderApp(root, store) {
   const isStaticPreview =
     typeof window !== "undefined" && window.location?.protocol === "file:";
+  if (!isStaticPreview && !store.session?.current?.authenticated) {
+    root.innerHTML = renderLogin(store);
+    return;
+  }
+
   const environmentNotice = isStaticPreview
     ? "当前为静态预览模式，已加载本地只读演示数据。若需保存或执行动作，请通过 http://localhost:3000/ 打开。"
     : "当前为本地演示环境，前后端已接入本地接口服务。";
 
   root.innerHTML = `
     <div class="app-shell">
-      ${sidebarMarkup(store.page)}
+      ${sidebarMarkup(store.page, store.session?.current)}
       <main class="content-shell">
         <div class="mobile-top">
           <div class="notice">${environmentNotice}</div>
@@ -30,6 +36,35 @@ export function renderApp(root, store) {
       </main>
       ${renderPanel(store)}
     </div>
+  `;
+}
+
+function renderLogin(store) {
+  return `
+    <main class="login-shell">
+      <section class="surface panel login-panel">
+        <div class="panel-head">
+          <div>
+            <h1 class="page-title">登录 GEO Pulse</h1>
+            <div class="panel-note">使用团队账号进入 GEO 运营工作台。</div>
+          </div>
+        </div>
+        ${store.ui.error ? `<div class="notice" style="margin-top:14px">${escapeHtml(store.ui.error)}</div>` : ""}
+        <div class="form-grid" style="margin-top:18px">
+          <div class="form-field full">
+            <label>用户名</label>
+            <input data-login-field="username" value="${escapeHtml(store.session?.loginForm?.username || "")}" />
+          </div>
+          <div class="form-field full">
+            <label>密码</label>
+            <input type="password" data-login-field="password" value="${escapeHtml(store.session?.loginForm?.password || "")}" />
+          </div>
+        </div>
+        <div class="actions-row" style="margin-top:18px">
+          <button class="primary-btn" data-action="login-session">登录</button>
+        </div>
+      </section>
+    </main>
   `;
 }
 

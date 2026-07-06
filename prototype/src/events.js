@@ -428,8 +428,28 @@ export function bindEvents(root, store, rerender, actions) {
       return;
     }
 
+    if (action === "login-session") {
+      await actions.loginSession();
+      return;
+    }
+
     if (action === "logout-session") {
       await actions.logoutSession();
+      return;
+    }
+
+    if (action === "create-user") {
+      await actions.createUser();
+      return;
+    }
+
+    if (action === "disable-user") {
+      await actions.disableUser(actionButton.dataset.userId);
+      return;
+    }
+
+    if (action === "reset-user-password") {
+      await actions.resetUserPassword(actionButton.dataset.userId);
       return;
     }
 
@@ -597,6 +617,11 @@ export function bindEvents(root, store, rerender, actions) {
       return;
     }
 
+    if (event.target.matches("[data-login-field]")) {
+      store.session.loginForm[event.target.dataset.loginField] = event.target.value;
+      return;
+    }
+
     if (event.target.matches("[data-form][data-field]")) {
       const formType = event.target.dataset.form;
       const formName =
@@ -626,6 +651,11 @@ export function bindEvents(root, store, rerender, actions) {
 
     if (event.target.matches("[data-runtime-backup-import]")) {
       store.forms.runtimeBackupImport = event.target.value;
+      return;
+    }
+
+    if (event.target.matches("[data-user-field]")) {
+      store.forms.user[event.target.dataset.userField] = event.target.value;
       return;
     }
 

@@ -28,6 +28,16 @@ export const store = {
     notice: "",
     panel: ""
   },
+  session: {
+    current: {
+      authenticated: false
+    },
+    loginForm: {
+      username: "owner",
+      password: ""
+    },
+    temporaryPasswordNotice: ""
+  },
   forms: {
     keywordExpansion: {
       name: "中国智能体 问题裂变",
@@ -56,6 +66,12 @@ export const store = {
       require_confirmation: true,
       auto_retry_failed: false,
       article_ids: []
+    },
+    user: {
+      username: "",
+      display_name: "",
+      role: "viewer",
+      temporary_password: ""
     },
     runtimeBackupImport: ""
   },
@@ -113,7 +129,8 @@ export const store = {
     modelConfigs: [],
     promptTemplates: [],
     contentQualityTraces: [],
-    members: []
+    members: [],
+    users: []
   }
 };
 
@@ -127,6 +144,15 @@ export function setError(message) {
 
 export function setNotice(message) {
   store.ui.notice = message;
+}
+
+export function setSession(session) {
+  store.session.current = session || { authenticated: false };
+}
+
+export function clearSession() {
+  store.session.current = { authenticated: false };
+  store.session.temporaryPasswordNotice = "";
 }
 
 export function hydrateData(payload) {
