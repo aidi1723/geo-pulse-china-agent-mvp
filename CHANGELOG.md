@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.12.0 - 2026-07-07
+
+Evidence-backed scoring depth for International GEO site audits.
+
+### Added
+
+- Deterministic 100-point scoring rubric across URL quality, AI crawler access, sitemap, `llms.txt`, JSON-LD, direct answer, fact density, E-E-A-T, and third-party validation checks.
+- Check-level scoring fields: `score_weight`, `score_awarded`, `score_deduction`, `confidence`, `priority`, `deduction_reasons`, and `next_actions`.
+- Audit-level `score_breakdown` with total weight, awarded points, deducted points, confidence, priority counts, and category groups.
+- Legacy-safe score hydration for older site audit records without scoring fields.
+- International GEO UI `评分拆解` panel and expanded check table columns for score, priority, confidence, deduction reason, and next action.
+
+### Boundaries
+
+- v0.12 deepens scoring from existing local input and v0.11 crawl evidence.
+- v0.12 still does not query ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, or SERP providers; engine inclusion and recommendation rank remain unmeasured until approved visibility connectors exist.
+- v0.12 does not add recursive crawling, browser rendering, automatic third-party publishing, database migrations, or SaaS multi-tenant isolation.
+
+### Verification
+
+- `npm run check`
+
 ## 0.11.0 - 2026-07-06
 
 Live Site Crawl Evidence for International GEO.

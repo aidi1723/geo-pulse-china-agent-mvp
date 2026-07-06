@@ -2,19 +2,18 @@
 
 ## Purpose
 
-Phase 2 turns the current v0.11 crawl-evidenced GEO audit into a broader evidence-based and integration-ready GEO operating system.
+Phase 2 turns the current v0.12 evidence-scored GEO audit into a broader measured and integration-ready GEO operating system.
 
-The current product can prepare audits and assets from local inputs and attach guarded public-site crawl evidence. Phase 2 should deepen scoring, add measured AI visibility data, controlled external distribution, and stronger production foundations before the project claims live engine inclusion or recommendation monitoring.
+The current product can prepare audits and assets from local inputs, attach guarded public-site crawl evidence, and explain a deterministic 100-point scoring breakdown. Phase 2 should next add measured AI visibility data, controlled external distribution, and stronger production foundations before the project claims live engine inclusion or recommendation monitoring.
 
 ## Phase 2 Direction
 
 Build in this order:
 
-1. Evidence-backed GEO scoring depth.
-2. AI visibility monitoring through approved data sources.
-3. Content and asset production from evidence.
-4. External distribution connectors with manual guardrails.
-5. Production hardening for hosted team use.
+1. AI visibility monitoring through approved data sources.
+2. Content and asset production from evidence.
+3. External distribution connectors with manual guardrails.
+4. Production hardening for hosted team use.
 
 ## Track 1: Live Site Crawl And Evidence Collection
 
@@ -40,6 +39,8 @@ Acceptance:
 
 ## Track 2: Evidence-Backed GEO Audit Scoring
 
+Status: v0.12 baseline complete.
+
 Goal: upgrade the audit from rule recommendations to check-level proof.
 
 Scope:
@@ -54,9 +55,15 @@ Scope:
 
 Acceptance:
 
-- Each audit check has status, evidence, recommendation, and source URL.
-- Audit scoring explains why points were gained or lost.
-- UI includes a compact evidence drawer or evidence table.
+- Each audit check has status, evidence, recommendation, scoring fields, confidence, priority, deduction reasons, and next actions.
+- Audit scoring explains why points were gained or lost through `score_breakdown`.
+- UI includes a compact `评分拆解` panel and scored check table.
+
+Remaining future depth:
+
+- Validate full robots allow/disallow semantics instead of only crawler mentions.
+- Expand fact-density extraction beyond homepage excerpts.
+- Add recursive sitemap page evidence and browser rendering only after crawler scope is explicitly approved.
 
 ## Track 3: AI Engine Visibility Monitoring
 
@@ -153,7 +160,7 @@ Acceptance:
 ## Suggested Version Slices
 
 - `v0.11`: live site crawl and evidence collection. Complete baseline.
-- `v0.12`: deeper evidence-backed GEO scoring and evidence-driven asset generation.
+- `v0.12`: deeper evidence-backed GEO scoring. Complete baseline.
 - `v0.13`: AI visibility monitoring connectors and measured prompt snapshots.
 - `v0.14`: content and asset production upgrade from evidence.
 - `v0.15`: external distribution connectors with approval gates.

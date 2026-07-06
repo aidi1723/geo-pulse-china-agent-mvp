@@ -5698,6 +5698,13 @@ function ensureInternationalGeoStateShape() {
   if (!internationalGeoState.site_audits.latest && internationalGeoState.site_audits.items.length > 0) {
     internationalGeoState.site_audits.latest = internationalGeoState.site_audits.items[0];
   }
+  internationalGeoState.site_audits.items = internationalGeoState.site_audits.items.map(hydrateSiteAuditScoring);
+  if (internationalGeoState.site_audits.latest) {
+    const latest = internationalGeoState.site_audits.items.find(
+      (item) => item.id === internationalGeoState.site_audits.latest.id
+    );
+    internationalGeoState.site_audits.latest = latest || hydrateSiteAuditScoring(internationalGeoState.site_audits.latest);
+  }
   if (!Array.isArray(internationalGeoState.geo_assets)) {
     internationalGeoState.geo_assets = [];
   }
@@ -5740,11 +5747,170 @@ function siteAuditSummary(checks = [], generatedAssetCount = 0) {
   };
 }
 
+const SITE_AUDIT_SCORE_RUBRIC = {
+  url_quality: { weight: 10, category: "technical" },
+  robots_ai_access: { weight: 12, category: "crawler_access" },
+  sitemap: { weight: 10, category: "technical" },
+  llms_txt: { weight: 12, category: "ai_readability" },
+  json_ld: { weight: 14, category: "structured_data" },
+  direct_answer: { weight: 12, category: "content" },
+  fact_density: { weight: 10, category: "content" },
+  eeat: { weight: 10, category: "trust" },
+  third_party_validation: { weight: 10, category: "entity_validation" }
+};
+
+const SITE_AUDIT_NEXT_ACTIONS = {
+  url_quality: "Fix homepage reachability and enforce HTTPS canonical URLs before public GEO monitoring.",
+  robots_ai_access: "Publish robots.txt crawler policy for Googlebot, GPTBot, ClaudeBot, PerplexityBot, and Bingbot.",
+  sitemap: "Publish sitemap.xml with canonical public pages and submit it to search webmaster tools.",
+  llms_txt: "Publish /llms.txt with product, audience, canonical pages, and entity summary.",
+  json_ld: "Add validated Organization, Product or SoftwareApplication, FAQPage, Article, or BreadcrumbList JSON-LD.",
+  direct_answer: "Place a direct product/query answer in the first 100 words of the target page.",
+  fact_density: "Add specs, comparison tables, percentages, benchmarks, and sourced buyer proof.",
+  eeat: "Expose company proof, contact paths, authorship, cases, support, security, or privacy signals.",
+  third_party_validation: "Build third-party entity proof on partner pages, directories, Reddit, Quora, LinkedIn, or industry forums."
+};
+
+const SITE_AUDIT_PASS_SCHEMA_TYPES = new Set([
+  "Organization",
+  "Product",
+  "SoftwareApplication",
+  "FAQPage",
+  "Article",
+  "BreadcrumbList"
+]);
+
+function siteAuditWeight(check = {}) {
+  return SITE_AUDIT_SCORE_RUBRIC[check.id]?.weight || 0;
+}
+
+function scoreConfidence(check = {}) {
+  if (check.evidence_status === "rule_first") return "low";
+  if (check.evidence_status === "unavailable") return check.evidence_source ? "high" : "low";
+  if (["url_quality", "robots_ai_access", "sitemap", "llms_txt"].includes(check.id)) return "high";
+  return "medium";
+}
+
+function scoreAwardForCheck(check = {}, weight = 0) {
+  if (check.status === "passed") return weight;
+  if (check.status === "failed") return 0;
+  if (check.id === "llms_txt" && check.evidence_status === "unavailable") return Math.min(2, weight);
+  if (check.id === "json_ld") {
+    const schemaTypes = String(check.evidence || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    if (schemaTypes.some((type) => SITE_AUDIT_PASS_SCHEMA_TYPES.has(type))) return weight;
+  }
+  return Math.floor(weight / 2);
+}
+
+function scoreDeductionReason(check = {}, deducted = 0) {
+  if (deducted <= 0) return "";
+  if (check.id === "llms_txt" && check.evidence_status === "unavailable") {
+    return "Missing /llms.txt on crawled site.";
+  }
+  if (check.id === "robots_ai_access" && check.evidence_status === "unavailable") {
+    return "robots.txt was unavailable during live crawl.";
+  }
+  if (check.id === "robots_ai_access" && check.status !== "passed") {
+    return "robots.txt does not mention known AI/search crawlers.";
+  }
+  if (check.id === "sitemap" && check.evidence_status === "unavailable") {
+    return "sitemap.xml was unavailable during live crawl.";
+  }
+  if (check.id === "json_ld" && check.status !== "passed") {
+    return "Required GEO-friendly JSON-LD types were not detected.";
+  }
+  if (check.id === "url_quality" && check.status === "failed") {
+    return "Homepage was unreachable during live crawl.";
+  }
+  if (check.status === "warning") return check.message || "Check is incomplete and needs review.";
+  if (check.status === "failed") return check.message || "Check failed and blocks GEO readiness.";
+  return "";
+}
+
+function scorePriority(check = {}, deducted = 0, weight = 0) {
+  const deductionRatio = weight ? deducted / weight : 0;
+  if (
+    check.status === "failed" ||
+    (["url_quality", "robots_ai_access", "llms_txt", "json_ld"].includes(check.id) && deductionRatio >= 0.6)
+  ) {
+    return "high";
+  }
+  if (deducted > 0) return "medium";
+  return "low";
+}
+
+function scoreSiteAuditCheck(check = {}) {
+  const rubric = SITE_AUDIT_SCORE_RUBRIC[check.id] || {};
+  const weight = siteAuditWeight(check);
+  const scoreAwarded = Math.max(0, Math.min(weight, scoreAwardForCheck(check, weight)));
+  const scoreDeduction = Math.max(0, weight - scoreAwarded);
+  const deductionReason = scoreDeductionReason(check, scoreDeduction);
+  return {
+    ...check,
+    category: check.category || rubric.category || "other",
+    score_weight: weight,
+    score_awarded: scoreAwarded,
+    score_deduction: scoreDeduction,
+    confidence: scoreConfidence(check),
+    priority: scorePriority(check, scoreDeduction, weight),
+    deduction_reasons: deductionReason ? [deductionReason] : [],
+    next_actions: scoreDeduction > 0 ? [SITE_AUDIT_NEXT_ACTIONS[check.id] || check.recommendation || "Review this check."] : []
+  };
+}
+
+function siteAuditScoreBreakdown(checks = []) {
+  const scoredChecks = checks.map(scoreSiteAuditCheck);
+  const groupsMap = new Map();
+  const priorityCounts = { high: 0, medium: 0, low: 0 };
+  let crawlEvidencedWeight = 0;
+  let totalWeight = 0;
+  let awarded = 0;
+
+  scoredChecks.forEach((check) => {
+    const weight = Number(check.score_weight || 0);
+    const checkAwarded = Number(check.score_awarded || 0);
+    const checkDeducted = Number(check.score_deduction || 0);
+    totalWeight += weight;
+    awarded += checkAwarded;
+    priorityCounts[check.priority] = (priorityCounts[check.priority] || 0) + 1;
+    if (check.evidence_status === "crawl_evidenced") crawlEvidencedWeight += weight;
+    const category = check.category || SITE_AUDIT_SCORE_RUBRIC[check.id]?.category || "other";
+    const group = groupsMap.get(category) || { category, weight: 0, awarded: 0, deducted: 0 };
+    group.weight += weight;
+    group.awarded += checkAwarded;
+    group.deducted += checkDeducted;
+    groupsMap.set(category, group);
+  });
+
+  const roundedAwarded = Math.round(awarded);
+  const evidenceRatio = totalWeight ? crawlEvidencedWeight / totalWeight : 0;
+  return {
+    total_weight: totalWeight,
+    awarded: roundedAwarded,
+    deducted: Math.max(0, totalWeight - roundedAwarded),
+    confidence: evidenceRatio >= 0.75 ? "high" : evidenceRatio >= 0.4 ? "medium" : "low",
+    priority_counts: priorityCounts,
+    groups: [...groupsMap.values()]
+  };
+}
+
+function hydrateSiteAuditScoring(audit = {}) {
+  if (!audit || typeof audit !== "object") return audit;
+  const checks = Array.isArray(audit.checks) ? audit.checks.map(scoreSiteAuditCheck) : [];
+  const score_breakdown = siteAuditScoreBreakdown(checks);
+  return {
+    ...audit,
+    checks,
+    score_breakdown,
+    score: score_breakdown.total_weight > 0 ? score_breakdown.awarded : audit.score
+  };
+}
+
 function siteAuditScore(checks = []) {
-  const score =
-    100 -
-    checks.filter((item) => item.status === "warning").length * 6 -
-    checks.filter((item) => item.status === "failed").length * 18;
+  const score = siteAuditScoreBreakdown(checks).awarded;
   return Math.max(0, Math.min(100, score));
 }
 
@@ -5928,7 +6094,7 @@ function buildEvidenceAwareSiteAuditChecks(input, crawlEvidence = null) {
       });
     }
     return mergeCheckEvidence(check);
-  });
+  }).map(scoreSiteAuditCheck);
 }
 
 function buildSiteAuditChecks(input) {
@@ -6072,18 +6238,20 @@ export function createInternationalGeoSiteAuditAction(payload = {}) {
     competitors: normalizeStringArray(directPayload.competitors || internationalGeoState.input?.competitors || [])
   };
   const checks = buildEvidenceAwareSiteAuditChecks(input);
-  const score = siteAuditScore(checks);
+  const scoreBreakdown = siteAuditScoreBreakdown(checks);
+  const score = scoreBreakdown.awarded;
   const status = siteAuditStatusFromChecks(checks);
-  const audit = {
+  const audit = hydrateSiteAuditScoring({
     id: uniqueId("sga"),
     ...input,
     score,
     status,
     summary: siteAuditSummary(checks, 0),
+    score_breakdown: scoreBreakdown,
     checks,
     crawl_evidence: null,
     created_at: nowIso()
-  };
+  });
 
   internationalGeoState.input = { ...internationalGeoState.input, ...input };
   internationalGeoState.site_audits.items.unshift(audit);
@@ -6112,8 +6280,13 @@ export function applyInternationalGeoSiteAuditCrawlEvidenceAction(auditId, crawl
   const audit = internationalGeoState.site_audits.items.find((item) => item.id === auditId);
   if (!audit) return null;
   audit.crawl_evidence = deepClone(crawlEvidence);
-  audit.checks = buildEvidenceAwareSiteAuditChecks(audit, audit.crawl_evidence);
-  audit.score = siteAuditScore(audit.checks);
+  const hydratedAudit = hydrateSiteAuditScoring({
+    ...audit,
+    checks: buildEvidenceAwareSiteAuditChecks(audit, audit.crawl_evidence)
+  });
+  audit.checks = hydratedAudit.checks;
+  audit.score_breakdown = hydratedAudit.score_breakdown;
+  audit.score = hydratedAudit.score;
   audit.status = siteAuditStatusFromChecks(audit.checks);
   audit.summary = siteAuditSummary(audit.checks, audit.summary?.generated_assets || 0);
   audit.updated_at = nowIso();

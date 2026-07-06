@@ -1117,6 +1117,27 @@ async function runMockDataChecks() {
   assert.ok(siteAudit.checks.some((item) => item.id === "llms_txt"), "Site audit should check llms.txt");
   assert.ok(siteAudit.checks.some((item) => item.id === "json_ld"), "Site audit should check JSON-LD");
   assert.ok(siteAudit.summary.warnings >= 0, "Site audit summary should expose warnings");
+  assert.equal(siteAudit.score_breakdown?.total_weight, 100, "Site audit should expose a 100-point score breakdown");
+  assert.ok(
+    siteAudit.checks.every((item) => Number.isFinite(item.score_weight)),
+    "Every site audit check should expose score_weight"
+  );
+  assert.ok(
+    siteAudit.checks.every((item) => Number.isFinite(item.score_awarded)),
+    "Every site audit check should expose score_awarded"
+  );
+  assert.ok(
+    siteAudit.checks.every((item) => Number.isFinite(item.score_deduction)),
+    "Every site audit check should expose score_deduction"
+  );
+  assert.ok(
+    siteAudit.checks.every((item) => ["high", "medium", "low"].includes(item.confidence)),
+    "Every site audit check should expose confidence"
+  );
+  assert.ok(
+    siteAudit.checks.every((item) => ["high", "medium", "low"].includes(item.priority)),
+    "Every site audit check should expose remediation priority"
+  );
   assert.equal(
     getInternationalGeoSiteAudit(siteAudit.id)?.id,
     siteAudit.id,
@@ -1218,20 +1239,56 @@ async function runMockDataChecks() {
     issues: []
   });
   assert.equal(evidencedAudit.crawl_evidence.status, "completed", "Audit should store crawl evidence");
+  assert.ok(evidencedAudit.score > siteAudit.score, "Crawl evidence should change weighted site audit score");
   assert.equal(
     evidencedAudit.checks.find((item) => item.id === "llms_txt")?.evidence_status,
     "crawl_evidenced",
     "llms.txt check should become crawl-evidenced"
   );
   assert.equal(
+    evidencedAudit.checks.find((item) => item.id === "llms_txt")?.confidence,
+    "high",
+    "Fetched llms.txt should create a high-confidence scored check"
+  );
+  assert.equal(
     evidencedAudit.checks.find((item) => item.id === "json_ld")?.evidence_status,
     "crawl_evidenced",
     "JSON-LD check should become crawl-evidenced"
+  );
+  assert.equal(
+    evidencedAudit.checks.find((item) => item.id === "json_ld")?.score_awarded,
+    14,
+    "Relevant JSON-LD types should award full JSON-LD points"
   );
   assert.match(
     evidencedAudit.checks.find((item) => item.id === "robots_ai_access")?.evidence || "",
     /OAI-SearchBot/,
     "Robots check should include bot evidence"
+  );
+  const missingLlmsAudit = applyInternationalGeoSiteAuditCrawlEvidenceAction(siteAudit.id, {
+    provider_id: "test",
+    status: "partial",
+    resources: {
+      homepage: {
+        ok: true,
+        status_code: 200,
+        url: "https://example.com",
+        text_excerpt: "Example GEO Platform has contact and privacy details."
+      },
+      llms_txt: {
+        ok: false,
+        status_code: 404,
+        error_code: "HTTP_404"
+      }
+    },
+    issues: []
+  });
+  const missingLlmsCheck = missingLlmsAudit.checks.find((item) => item.id === "llms_txt");
+  assert.equal(missingLlmsCheck.priority, "high", "Missing llms.txt should be high priority");
+  assert.match(
+    missingLlmsCheck.deduction_reasons.join(" "),
+    /Missing \/llms\.txt/,
+    "Missing llms.txt should expose a concrete deduction reason"
   );
   await assert.rejects(
     () => crawlInternationalGeoSite("http://127.0.0.1"),
@@ -3084,6 +3141,14 @@ function runInternationalGeoUiChecks() {
   assert.match(siteAuditHtml, /抓取证据/);
   assert.match(siteAuditHtml, /robots\.txt/);
   assert.match(siteAuditHtml, /sitemap\.xml/);
+  assert.match(siteAuditHtml, /评分拆解/, "International GEO page should render score breakdown");
+  assert.match(siteAuditHtml, /得分 \/ 权重/, "International GEO checks should show score awarded over weight");
+  assert.match(siteAuditHtml, /优先级/, "International GEO checks should show remediation priority");
+  assert.match(siteAuditHtml, /置信度/, "International GEO checks should show scoring confidence");
+  assert.doesNotThrow(
+    () => renderInternationalGeo({ site_audits: { latest: { checks: [{ id: "legacy", label: "Legacy" }] } } }),
+    "Legacy audit objects without scoring fields should render safely"
+  );
   assert.match(siteAuditHtml, /GEO 资产/, "International GEO page should render GEO assets");
   assert.match(siteAuditHtml, /llms\.txt/, "International GEO page should render llms.txt assets");
 }
@@ -3791,6 +3856,15 @@ async function runMultiUserAccessHttpChecks() {
       })
     });
     assert.equal(ownerAudit.status, 201, "Owner should create a site audit");
+    assert.equal(
+      ownerAudit.body?.data?.score_breakdown?.total_weight,
+      100,
+      "Owner-created site audit should expose weighted score breakdown"
+    );
+    assert.ok(
+      ownerAudit.body?.data?.checks?.every((item) => Number.isFinite(item.score_awarded)),
+      "Owner-created site audit checks should expose awarded points"
+    );
     assert.ok(
       ownerAudit.body?.data?.checks?.some((item) => item.id === "robots_ai_access"),
       "Owner-created site audit should include AI crawler robots access checks"

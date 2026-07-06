@@ -679,36 +679,110 @@ function renderSiteAuditPanel(data = {}) {
   `;
 }
 
+function scoreValue(value, fallback = "-") {
+  return Number.isFinite(Number(value)) ? String(Number(value)) : fallback;
+}
+
+function priorityLabel(value) {
+  return (
+    {
+      high: "高",
+      medium: "中",
+      low: "低"
+    }[value] || "-"
+  );
+}
+
+function confidenceLabel(value) {
+  return (
+    {
+      high: "高",
+      medium: "中",
+      low: "低"
+    }[value] || "-"
+  );
+}
+
+function renderScoreBreakdownPanel(audit = {}) {
+  const breakdown = audit?.score_breakdown || {};
+  const groups = Array.isArray(breakdown.groups) ? breakdown.groups : [];
+  const priorityCounts = breakdown.priority_counts || {};
+  const rows = groups.length
+    ? groups.map(
+        (item) => `
+          <tr>
+            <td><div class="cell-title">${escapeHtml(item.category || "-")}</div></td>
+            <td>${escapeHtml(scoreValue(item.weight))}</td>
+            <td>${escapeHtml(scoreValue(item.awarded))}</td>
+            <td>${escapeHtml(scoreValue(item.deducted))}</td>
+          </tr>
+        `
+      )
+    : [`<tr><td colspan="4"><div class="empty-state">暂无评分拆解。</div></td></tr>`];
+
+  return `
+    <section class="surface panel">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">评分拆解</h3>
+          <div class="panel-note">基于规则输入与站点抓取证据的确定性 GEO 审计评分。</div>
+        </div>
+      </div>
+      <div class="info-grid">
+        <div class="info-row"><span>总分</span><strong>${escapeHtml(scoreValue(breakdown.awarded, scoreValue(audit.score)))}</strong></div>
+        <div class="info-row"><span>总权重</span><strong>${escapeHtml(scoreValue(breakdown.total_weight))}</strong></div>
+        <div class="info-row"><span>扣分</span><strong>${escapeHtml(scoreValue(breakdown.deducted))}</strong></div>
+        <div class="info-row"><span>置信度</span><strong>${escapeHtml(confidenceLabel(breakdown.confidence))}</strong></div>
+        <div class="info-row"><span>高优先级</span><strong>${escapeHtml(scoreValue(priorityCounts.high, "0"))}</strong></div>
+        <div class="info-row"><span>中优先级</span><strong>${escapeHtml(scoreValue(priorityCounts.medium, "0"))}</strong></div>
+        <div class="info-row"><span>低优先级</span><strong>${escapeHtml(scoreValue(priorityCounts.low, "0"))}</strong></div>
+      </div>
+      ${tableMarkup(["类别", "权重", "已得", "扣分"], rows)}
+    </section>
+  `;
+}
+
 function renderSiteAuditChecks(audit = {}) {
   const checks = audit?.checks || [];
   const rows = checks.length
     ? checks.map(
-        (item) => `
-          <tr>
-            <td>
-              <div class="cell-title">${escapeHtml(item.label || item.id)}</div>
-              <div class="cell-sub">${escapeHtml(item.category || "-")}</div>
-            </td>
-            <td>${statusMarkup(auditStatusLabel(item.status))}</td>
-            <td>
-              <div class="cell-title">${escapeHtml(item.message || "-")}</div>
-              <div class="cell-sub">${escapeHtml(evidenceStatusLabel(item.evidence_status))}${item.evidence_source ? ` / ${escapeHtml(item.evidence_source)}` : ""}${item.evidence ? ` / ${escapeHtml(item.evidence)}` : ""}</div>
-              <div class="cell-sub">${escapeHtml(item.recommendation || "-")}</div>
-            </td>
-          </tr>
-        `
+        (item) => {
+          const firstDeduction = Array.isArray(item.deduction_reasons) ? item.deduction_reasons[0] : "";
+          const firstAction = Array.isArray(item.next_actions) ? item.next_actions[0] : "";
+          return `
+            <tr>
+              <td>
+                <div class="cell-title">${escapeHtml(item.label || item.id)}</div>
+                <div class="cell-sub">${escapeHtml(item.category || "-")}</div>
+              </td>
+              <td>${statusMarkup(auditStatusLabel(item.status))}</td>
+              <td>
+                <div class="cell-title">${escapeHtml(scoreValue(item.score_awarded))}</div>
+                <div class="cell-sub">/ ${escapeHtml(scoreValue(item.score_weight))}</div>
+              </td>
+              <td>${statusMarkup(priorityLabel(item.priority))}</td>
+              <td>${statusMarkup(confidenceLabel(item.confidence))}</td>
+              <td>
+                <div class="cell-title">${escapeHtml(item.message || "-")}</div>
+                <div class="cell-sub">${escapeHtml(evidenceStatusLabel(item.evidence_status))}${item.evidence_source ? ` / ${escapeHtml(item.evidence_source)}` : ""}${item.evidence ? ` / ${escapeHtml(item.evidence)}` : ""}</div>
+                <div class="cell-sub">${escapeHtml(firstDeduction || item.recommendation || "-")}</div>
+                <div class="cell-sub">${escapeHtml(firstAction || item.recommendation || "-")}</div>
+              </td>
+            </tr>
+          `;
+        }
       )
-    : [`<tr><td colspan="3"><div class="empty-state">暂无审计检查项。</div></td></tr>`];
+    : [`<tr><td colspan="6"><div class="empty-state">暂无审计检查项。</div></td></tr>`];
 
   return `
     <section class="surface panel">
       <div class="panel-head">
         <div>
           <h3 class="panel-title">审计检查项</h3>
-          <div class="panel-note">v0.10 是规则优先审计；live robots、sitemap、Schema 和 AI 引擎收录仍需上线后核验。</div>
+          <div class="panel-note">规则优先审计会结合抓取证据补齐得分、优先级和置信度；AI 引擎收录仍需上线后核验。</div>
         </div>
       </div>
-      ${tableMarkup(["检查项", "状态", "证据 / 建议"], rows)}
+      ${tableMarkup(["检查项", "状态", "得分 / 权重", "优先级", "置信度", "证据 / 建议"], rows)}
     </section>
   `;
 }
@@ -841,6 +915,7 @@ export function renderInternationalGeo(data = internationalGeo) {
     </div>
 
     ${renderSiteAuditPanel(data)}
+    ${renderScoreBreakdownPanel(latestAudit)}
     ${renderSiteAuditChecks(latestAudit)}
     ${renderCrawlEvidencePanel(latestAudit)}
     ${renderSiteAuditHistory(data.site_audits || {})}

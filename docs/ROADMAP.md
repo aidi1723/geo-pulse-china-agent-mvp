@@ -2,7 +2,7 @@
 
 ## Current State
 
-The project is a v0.11.0 one-organization team-access workspace with built-in login, RBAC, connector diagnostics, local backup import/restore, launch preflight, International GEO site audit, guarded live crawl evidence, generated GEO assets, and minimal GitHub CI.
+The project is a v0.12.0 one-organization team-access workspace with built-in login, RBAC, connector diagnostics, local backup import/restore, launch preflight, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, generated GEO assets, and minimal GitHub CI.
 
 Completed mock-first product areas:
 
@@ -24,11 +24,12 @@ Completed mock-first product areas:
 - Minimal CI: GitHub Actions runs `npm run check` on pushes and pull requests targeting `main`.
 - Site GEO audit and assets: website/product input, deterministic check-level recommendations, durable audit records, and copyable `llms.txt`, JSON-LD, FAQ, article brief, and distribution brief assets.
 - Live site crawl evidence: guarded homepage, `robots.txt`, `sitemap.xml`, and `/llms.txt` fetches with evidence snapshots and evidence-aware check rows.
+- Evidence-backed GEO scoring: deterministic 100-point rubric, check-level awarded/deducted points, confidence, priority, deduction reasons, next actions, audit-level `score_breakdown`, and International GEO `评分拆解` UI.
 - Open-source release docs and GPLv3 licensing.
 
 ## Near-Term Maintenance
 
-These items keep v0.11.0 healthy without changing its architecture:
+These items keep v0.12.0 healthy without changing its architecture:
 
 - Keep `npm run check` passing.
 - Expand `verify-mvp.mjs` when new behavior is added.
@@ -40,29 +41,24 @@ These items keep v0.11.0 healthy without changing its architecture:
 
 These are the immediate product slices. The full second-stage direction is tracked in [Phase 2 Roadmap](PHASE_2_ROADMAP.md).
 
-1. Evidence-backed scoring depth for International GEO.
-   - Turn existing crawl evidence into more precise check weights and remediation priorities.
-   - Keep `rule_first`, `crawl_evidenced`, and `unavailable` states visible.
-
-2. AI visibility monitoring connector.
+1. AI visibility monitoring connector.
    - Add explicit connectors for approved SERP or AI visibility providers before claiming real engine inclusion.
    - Track ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, and Copilot prompts as measured snapshots.
 
-3. Source adapter implementation stubs per contract.
+2. Source adapter implementation stubs per contract.
    - Add explicit adapter runners behind `sourceAdapterContracts`.
    - Keep evidence and error taxonomy visible in crawl jobs.
 
-4. Connector run detail drawer.
+3. Connector run detail drawer.
    - Expand from connector-level diagnostics into per-run drilldown when a workflow has multiple connectors.
 
-5. Prompt regression dataset.
+4. Prompt regression dataset.
    - Store sample inputs, expected criteria, generated outputs, and quality score history.
 
 ## Phase 2 Direction
 
-Phase 2 should move the product from v0.11 crawl-evidenced audit preparation to broader evidence-backed GEO operations:
+Phase 2 should move the product from v0.12 evidence-scored audit preparation to broader measured GEO operations:
 
-- Deeper evidence-backed GEO scoring.
 - AI visibility monitoring through approved data sources.
 - Content and GEO asset generation from crawl evidence and prompt gaps.
 - External distribution connectors with manual approval gates.
@@ -71,7 +67,7 @@ Phase 2 should move the product from v0.11 crawl-evidenced audit preparation to 
 
 Phase 2 must preserve a clear distinction between rule-first recommendations, crawl-evidenced findings, and measured external visibility data.
 
-## Post-v0.11 Production Hardening
+## Post-v0.12 Production Hardening
 
 These are required before using the project as a real SaaS or broadly exposed hosted service:
 
@@ -86,7 +82,7 @@ These are required before using the project as a real SaaS or broadly exposed ho
 - Incident response owner and security contact.
 - Data retention, deletion, and privacy policy.
 
-## Non-Goals For v0.11
+## Non-Goals For v0.12
 
 - Production multi-tenant hosting.
 - Real third-party credential management.
@@ -102,7 +98,7 @@ These are required before using the project as a real SaaS or broadly exposed ho
 
 ## Release Versioning
 
-Current public snapshot: `0.11.0`.
+Current public snapshot: `0.12.0`.
 
 Suggested version policy:
 

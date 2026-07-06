@@ -86,9 +86,9 @@ It should not be marketed as a real-time AI search monitoring platform. v0.11 do
 
 ## Next Stage
 
-Recommended v0.12 direction:
+v0.12 evidence-backed scoring has now been completed in [v0.12 Stage Closeout](STAGE_V0_12_CLOSEOUT.md).
 
-- improve evidence-backed scoring weights,
-- generate assets from crawl evidence gaps,
+Recommended v0.13 direction:
+
 - add measured AI visibility connectors only when approved data sources are configured,
 - keep measured, crawl-evidenced, simulated, and rule-first states clearly separated.

@@ -71,6 +71,13 @@ Do this only when the repository owner accepts history rewriting. For establishe
 
 ## Maintenance Log
 
+### 2026-07-07 - v0.12 Evidence-Backed GEO Scoring Closeout
+
+- Scope: added deterministic International GEO scoring fields, audit-level `score_breakdown`, legacy-safe score hydration, and UI `评分拆解`.
+- Local gate: `npm run check` returned `verify-mvp: OK`.
+- Documentation aligned: README, API reference, architecture guide, development guide, production deployment guide, roadmap, documentation index, phase 2 roadmap, changelog, and v0.12 closeout docs.
+- Boundary: v0.12 deepens scoring from local input and guarded crawl evidence, but it does not add real AI search engine querying, measured engine inclusion/rank tracking, recursive crawling, JavaScript rendering, automatic third-party publishing, database persistence, OAuth/SSO, MFA, monitoring, or multi-tenant isolation.
+
 ### 2026-07-06 - v0.11 Live Site Crawl Evidence Closeout
 
 - Scope: added guarded International GEO live crawl evidence for homepage, `robots.txt`, `sitemap.xml`, and `/llms.txt`.
@@ -106,9 +113,9 @@ Do this only when the repository owner accepts history rewriting. For establishe
 - No evidence found of real local absolute paths, real personal email addresses, tracked `.env` files, tracked runtime state, or real credential patterns in the current tree or existing Git history.
 - History rewrite: not performed.
 
-## Post-v0.11 Production Hardening
+## Post-v0.12 Production Hardening
 
-v0.11.0 is deployable as a controlled one-organization team-access service behind an external access layer. Before treating it as a real SaaS, real-time AI search monitoring platform, or broadly exposed hosted service, production hardening should include:
+v0.12.0 is deployable as a controlled one-organization team-access service behind an external access layer. Before treating it as a real SaaS, real-time AI search monitoring platform, or broadly exposed hosted service, production hardening should include:
 
 - Database persistence, migrations, and database-grade backup policy.
 - Monitoring and alerting.
