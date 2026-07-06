@@ -17,6 +17,7 @@ import {
   testAutomationProviderConnection,
   validateProviderEndpoint
 } from "./automation-providers.mjs";
+import { crawlInternationalGeoSite } from "./site-crawl.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const persistenceEnabled = process.env.GEO_ENABLE_PERSISTENCE === "1";
@@ -5747,6 +5748,189 @@ function siteAuditScore(checks = []) {
   return Math.max(0, Math.min(100, score));
 }
 
+function evidenceStatus(resource) {
+  if (!resource) return "rule_first";
+  return resource.ok ? "crawl_evidenced" : "unavailable";
+}
+
+function resourceStatusText(resource) {
+  if (!resource) return "No crawl evidence.";
+  if (resource.ok) return `HTTP ${resource.status_code || 200}`;
+  return resource.error_code || `HTTP ${resource.status_code || 0}`;
+}
+
+function mergeCheckEvidence(check, evidencePatch = {}) {
+  return {
+    ...check,
+    ...evidencePatch,
+    evidence_status: evidencePatch.evidence_status || check.evidence_status || "rule_first",
+    evidence_source: evidencePatch.evidence_source || check.evidence_source || "",
+    evidence: evidencePatch.evidence || check.evidence || check.message || ""
+  };
+}
+
+function countFactSignals(text) {
+  const value = String(text || "");
+  const numberMatches = value.match(/\b\d+(?:[.,]\d+)?%?\b/g) || [];
+  const tableTerms = value.match(/\b(price|pricing|spec|specification|compare|comparison|metric|case|study|benchmark)\b/gi) || [];
+  return numberMatches.length + tableTerms.length;
+}
+
+function buildEvidenceAwareSiteAuditChecks(input, crawlEvidence = null) {
+  const checks = buildSiteAuditChecks(input);
+  const resources = crawlEvidence?.resources || {};
+  return checks.map((check) => {
+    if (check.id === "url_quality") {
+      const homepage = resources.homepage;
+      if (!homepage) return mergeCheckEvidence(check);
+      return mergeCheckEvidence(check, {
+        status: homepage.ok ? "passed" : "failed",
+        message: homepage.ok
+          ? `Homepage fetched: ${resourceStatusText(homepage)}.`
+          : `Homepage fetch failed: ${resourceStatusText(homepage)}.`,
+        recommendation: homepage.ok
+          ? "Use the fetched homepage evidence to validate visible entity signals."
+          : "Fix homepage reachability before live GEO monitoring.",
+        evidence_status: evidenceStatus(homepage),
+        evidence_source: "homepage",
+        evidence: homepage.ok ? `${homepage.url} ${homepage.title || homepage.h1 || ""}`.trim() : resourceStatusText(homepage)
+      });
+    }
+    if (check.id === "robots_ai_access") {
+      const robots = resources.robots_txt;
+      if (!robots) return mergeCheckEvidence(check);
+      const bots = robots.mentioned_bots || [];
+      return mergeCheckEvidence(check, {
+        status: robots.ok && bots.length > 0 ? "passed" : "warning",
+        message: robots.ok
+          ? `robots.txt fetched with ${bots.length} known bot mentions.`
+          : `robots.txt unavailable: ${resourceStatusText(robots)}.`,
+        recommendation: bots.length > 0
+          ? "Review bot-specific allow/disallow lines before production launch."
+          : "Document intended AI/search crawler access in robots.txt.",
+        evidence_status: evidenceStatus(robots),
+        evidence_source: "robots_txt",
+        evidence: bots.length ? bots.join(", ") : robots.text_excerpt || resourceStatusText(robots)
+      });
+    }
+    if (check.id === "sitemap") {
+      const sitemap = resources.sitemap_xml;
+      if (!sitemap) return mergeCheckEvidence(check);
+      return mergeCheckEvidence(check, {
+        status: sitemap.ok && sitemap.url_count > 0 ? "passed" : "warning",
+        message: sitemap.ok
+          ? `sitemap.xml fetched with ${sitemap.url_count || 0} URLs.`
+          : `sitemap.xml unavailable: ${resourceStatusText(sitemap)}.`,
+        recommendation: sitemap.url_count > 0
+          ? "Keep sitemap submitted to Google Search Console and Bing Webmaster Tools."
+          : "Publish sitemap.xml with canonical public pages.",
+        evidence_status: evidenceStatus(sitemap),
+        evidence_source: "sitemap_xml",
+        evidence: `${sitemap.url_count || 0} URLs${sitemap.sample_urls?.[0] ? `; sample ${sitemap.sample_urls[0]}` : ""}`
+      });
+    }
+    if (check.id === "llms_txt") {
+      const llms = resources.llms_txt;
+      if (!llms) return mergeCheckEvidence(check);
+      return mergeCheckEvidence(check, {
+        status: llms.ok ? "passed" : "warning",
+        message: llms.ok ? "/llms.txt fetched from live site." : `/llms.txt unavailable: ${resourceStatusText(llms)}.`,
+        recommendation: llms.ok
+          ? "Keep llms.txt concise and aligned with canonical product pages."
+          : "Install /llms.txt with product, audience, core pages, and canonical entity summary.",
+        evidence_status: evidenceStatus(llms),
+        evidence_source: "llms_txt",
+        evidence: llms.text_excerpt || resourceStatusText(llms)
+      });
+    }
+    if (check.id === "json_ld") {
+      const homepage = resources.homepage;
+      if (!homepage) return mergeCheckEvidence(check);
+      const types = homepage.json_ld_types || [];
+      return mergeCheckEvidence(check, {
+        status: homepage.ok && types.length > 0 && !types.includes("Invalid JSON-LD") ? "passed" : "warning",
+        message: types.length
+          ? `Detected JSON-LD types: ${types.join(", ")}.`
+          : "No JSON-LD types detected on fetched homepage.",
+        recommendation: types.length
+          ? "Validate JSON-LD and fill Organization/Product/FAQ gaps."
+          : "Add Organization, Product/SoftwareApplication, and FAQPage JSON-LD.",
+        evidence_status: evidenceStatus(homepage),
+        evidence_source: "homepage",
+        evidence: types.join(", ") || homepage.text_excerpt || resourceStatusText(homepage)
+      });
+    }
+    if (check.id === "direct_answer") {
+      const homepage = resources.homepage;
+      if (!homepage) return mergeCheckEvidence(check);
+      const excerpt = String(homepage.text_excerpt || "").toLowerCase();
+      const product = String(input.product_name || "").toLowerCase();
+      const query = String(input.primary_query || "").toLowerCase();
+      const hasProduct = Boolean(product && excerpt.includes(product));
+      const hasQuery = Boolean(query && excerpt.includes(query));
+      return mergeCheckEvidence(check, {
+        status: homepage.ok && (hasProduct || hasQuery) ? "passed" : "warning",
+        message: hasProduct || hasQuery
+          ? "Fetched homepage text includes the product/query signal."
+          : "Fetched homepage excerpt does not clearly include the product/query signal.",
+        recommendation: "Place a direct answer and entity definition near the start of target pages.",
+        evidence_status: evidenceStatus(homepage),
+        evidence_source: "homepage",
+        evidence: homepage.text_excerpt || resourceStatusText(homepage)
+      });
+    }
+    if (check.id === "fact_density") {
+      const homepage = resources.homepage;
+      if (!homepage) return mergeCheckEvidence(check);
+      const signalCount = countFactSignals(homepage.text_excerpt);
+      return mergeCheckEvidence(check, {
+        status: homepage.ok && signalCount >= 3 ? "passed" : "warning",
+        message: `Fetched homepage excerpt contains ${signalCount} measurable fact signals.`,
+        recommendation: "Add specs, tables, percentages, benchmarks, and sourced claims where buyer decisions need proof.",
+        evidence_status: evidenceStatus(homepage),
+        evidence_source: "homepage",
+        evidence: homepage.text_excerpt || resourceStatusText(homepage)
+      });
+    }
+    if (check.id === "eeat") {
+      const homepage = resources.homepage;
+      if (!homepage) return mergeCheckEvidence(check);
+      const text = String(homepage.text_excerpt || "").toLowerCase();
+      const trustTerms = ["about", "contact", "case", "customer", "security", "privacy", "certified", "author", "support"]
+        .filter((term) => text.includes(term));
+      return mergeCheckEvidence(check, {
+        status: homepage.ok && trustTerms.length >= 2 ? "passed" : "warning",
+        message: trustTerms.length
+          ? `Fetched homepage includes trust terms: ${trustTerms.join(", ")}.`
+          : "Fetched homepage excerpt has limited visible trust signals.",
+        recommendation: "Expose company proof, contact paths, author or case evidence, and support/security signals.",
+        evidence_status: evidenceStatus(homepage),
+        evidence_source: "homepage",
+        evidence: trustTerms.join(", ") || homepage.text_excerpt || resourceStatusText(homepage)
+      });
+    }
+    if (check.id === "third_party_validation") {
+      const homepage = resources.homepage;
+      if (!homepage) return mergeCheckEvidence(check);
+      const text = String(homepage.text_excerpt || "").toLowerCase();
+      const hasExternalProof = ["reddit", "quora", "linkedin", "github", "g2", "capterra", "partner"].some((term) =>
+        text.includes(term)
+      );
+      return mergeCheckEvidence(check, {
+        status: hasExternalProof ? "passed" : check.status,
+        message: hasExternalProof
+          ? "Fetched homepage references third-party proof surfaces."
+          : check.message,
+        recommendation: check.recommendation,
+        evidence_status: homepage.ok ? "crawl_evidenced" : evidenceStatus(homepage),
+        evidence_source: "homepage",
+        evidence: hasExternalProof ? homepage.text_excerpt : check.message
+      });
+    }
+    return mergeCheckEvidence(check);
+  });
+}
+
 function buildSiteAuditChecks(input) {
   const isHttps = String(input.website_url || "").startsWith("https://");
   const competitorCount = normalizeStringArray(input.competitors).length;
@@ -5887,7 +6071,7 @@ export function createInternationalGeoSiteAuditAction(payload = {}) {
     primary_query: String(directPayload.primary_query || internationalGeoState.input?.primary_query || "").trim(),
     competitors: normalizeStringArray(directPayload.competitors || internationalGeoState.input?.competitors || [])
   };
-  const checks = buildSiteAuditChecks(input);
+  const checks = buildEvidenceAwareSiteAuditChecks(input);
   const score = siteAuditScore(checks);
   const status = siteAuditStatusFromChecks(checks);
   const audit = {
@@ -5897,6 +6081,7 @@ export function createInternationalGeoSiteAuditAction(payload = {}) {
     status,
     summary: siteAuditSummary(checks, 0),
     checks,
+    crawl_evidence: null,
     created_at: nowIso()
   };
 
@@ -5920,6 +6105,44 @@ export function createInternationalGeoSiteAuditAction(payload = {}) {
   });
   persistState();
   return deepClone(audit);
+}
+
+export function applyInternationalGeoSiteAuditCrawlEvidenceAction(auditId, crawlEvidence = {}) {
+  ensureInternationalGeoStateShape();
+  const audit = internationalGeoState.site_audits.items.find((item) => item.id === auditId);
+  if (!audit) return null;
+  audit.crawl_evidence = deepClone(crawlEvidence);
+  audit.checks = buildEvidenceAwareSiteAuditChecks(audit, audit.crawl_evidence);
+  audit.score = siteAuditScore(audit.checks);
+  audit.status = siteAuditStatusFromChecks(audit.checks);
+  audit.summary = siteAuditSummary(audit.checks, audit.summary?.generated_assets || 0);
+  audit.updated_at = nowIso();
+  internationalGeoState.site_audits.latest = audit;
+  internationalGeoState.summary = {
+    ...internationalGeoState.summary,
+    ai_ready_score: audit.score,
+    crawler_access: audit.status === "blocked" ? "需复核" : "建议复核"
+  };
+  internationalGeoState.updated_at = nowIso();
+  persistState();
+  return deepClone(audit);
+}
+
+export async function crawlInternationalGeoSiteAuditAction(auditId) {
+  ensureInternationalGeoStateShape();
+  const audit = internationalGeoState.site_audits.items.find((item) => item.id === auditId);
+  if (!audit) return null;
+  const evidence = await crawlInternationalGeoSite(audit.website_url);
+  const updatedAudit = applyInternationalGeoSiteAuditCrawlEvidenceAction(audit.id, evidence);
+  recordAuditEvent("international_geo.site_crawl.run", "international_geo_site_audit", audit.id, {
+    audit_id: audit.id,
+    website_url: audit.website_url,
+    status: evidence.status,
+    resource_count: Object.keys(evidence.resources || {}).length,
+    issue_count: evidence.issues?.length || 0
+  });
+  persistState();
+  return { audit: updatedAudit, crawl_evidence: deepClone(evidence) };
 }
 
 export function generateInternationalGeoSiteAuditAssetsAction(auditId) {
