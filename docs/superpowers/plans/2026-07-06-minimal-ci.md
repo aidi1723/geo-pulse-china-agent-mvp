@@ -21,7 +21,7 @@ Add a workflow named `check` that runs on push and pull request events targeting
 
 - [x] **Step 2: Configure Node**
 
-Use `actions/checkout@v4` and `actions/setup-node@v4` with `node-version: 20`.
+Use `actions/checkout@v7` and `actions/setup-node@v6` with `node-version: 20`.
 
 - [x] **Step 3: Run project gate**
 

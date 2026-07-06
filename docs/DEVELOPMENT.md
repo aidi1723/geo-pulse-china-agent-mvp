@@ -82,8 +82,8 @@ The repository includes `.github/workflows/check.yml`.
 It runs on pushes and pull requests targeting `main`:
 
 ```text
-actions/checkout@v4
-actions/setup-node@v4 with Node.js 20
+actions/checkout@v7
+actions/setup-node@v6 with Node.js 20
 npm run check
 ```
 
