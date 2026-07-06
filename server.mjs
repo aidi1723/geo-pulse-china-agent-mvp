@@ -13,6 +13,7 @@ const {
   createChannelAction,
   createContentTemplateAction,
   createExportJobAction,
+  createInternationalGeoVisibilityPromptSetAction,
   createInternationalGeoSiteAuditAction,
   createMediaSourceAction,
   createPublishTaskAction,
@@ -41,6 +42,7 @@ const {
   getCurrentWorkspace,
   getExportJobDownload,
   getInternationalGeoState,
+  getInternationalGeoVisibilityState,
   getInternationalGeoSiteAudit,
   getDashboardSummary,
   getKeyword,
@@ -86,6 +88,7 @@ const {
   listUsageRecords,
   reviewArticleAction,
   runInternationalGeoAuditAction,
+  runInternationalGeoVisibilityMeasurementAction,
   reconnectChannelAction,
   recordAuditEventAction,
   runSourceStrategyAction,
@@ -2088,6 +2091,46 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && pathname === "/international-geo") {
     sendJson(res, 200, ok(getInternationalGeoState()));
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/international-geo/visibility") {
+    sendJson(res, 200, ok(getInternationalGeoVisibilityState()));
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/international-geo/visibility/runs") {
+    sendJson(res, 200, ok({ items: getInternationalGeoVisibilityState().runs }));
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/international-geo/visibility/snapshots") {
+    sendJson(res, 200, ok({ items: getInternationalGeoVisibilityState().snapshots }));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/international-geo/visibility/prompt-sets") {
+    const body = await parseBody(req).catch(() => null);
+    if (!body) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    try {
+      sendJson(res, 201, ok(createInternationalGeoVisibilityPromptSetAction(body)));
+    } catch (err) {
+      if ((err?.code || err?.message) === "VALIDATION_ERROR") {
+        const message = err.field_errors?.[0]?.message || err.message || "Invalid visibility prompt set";
+        sendJson(res, 400, error("VALIDATION_ERROR", message).body);
+        return;
+      }
+      throw err;
+    }
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/international-geo/visibility/run") {
+    const body = await parseBody(req).catch(() => ({}));
+    sendJson(res, 200, ok(runInternationalGeoVisibilityMeasurementAction(body || {})));
     return;
   }
 
