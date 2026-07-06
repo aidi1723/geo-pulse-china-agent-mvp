@@ -18,6 +18,7 @@ const {
   createPublishTaskAction,
   createRuntimeBackupAction,
   importRuntimeBackupAction,
+  crawlInternationalGeoSiteAuditAction,
   createModelConfigAction,
   createKeywordCrawlJobAction,
   createTopicIdeaAction,
@@ -2147,6 +2148,26 @@ async function handleApi(req, res, url) {
       return;
     }
     sendJson(res, 201, ok(result));
+    return;
+  }
+
+  if (req.method === "POST" && pathname.match(/^\/international-geo\/site-audits\/[^/]+\/crawl$/)) {
+    const id = pathname.split("/")[3];
+    try {
+      const result = await crawlInternationalGeoSiteAuditAction(id);
+      if (!result) {
+        sendJson(res, 404, error("NOT_FOUND", "Site GEO audit not found", 404).body);
+        return;
+      }
+      sendJson(res, 200, ok(result));
+    } catch (err) {
+      const code = err?.code || err?.message;
+      if (code === "CRAWL_TARGET_BLOCKED") {
+        sendJson(res, 400, error("CRAWL_TARGET_BLOCKED", err.message || "Crawl target is blocked by safety policy").body);
+        return;
+      }
+      throw err;
+    }
     return;
   }
 
