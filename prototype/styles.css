@@ -270,6 +270,7 @@ a {
 
 .content-shell {
   padding: 26px 28px;
+  min-width: 0;
 }
 
 .stack-blocks {
@@ -374,9 +375,16 @@ a {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  min-width: 0;
 }
 
 .grid-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.metric-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px;
@@ -1147,6 +1155,7 @@ tbody tr:hover {
   }
 
   .grid-cards,
+  .metric-grid,
   .grid-two,
   .layout-split,
   .hero-panel,
