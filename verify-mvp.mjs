@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import {
   authenticateUserAction,
+  applyInternationalGeoSiteAuditCrawlEvidenceAction,
   createArticleAction,
   createArticleFromTopicAction,
   createChannelAction,
@@ -70,6 +71,7 @@ import {
   resetRuntimeState,
   reviewArticleAction,
   approvePublishTaskAction,
+  crawlInternationalGeoSiteAuditAction,
   runInternationalGeoAuditAction,
   retryAutomationRunAction,
   runVisibilityCollectionAction,
@@ -100,6 +102,11 @@ import {
   importRuntimeBackupAction,
   restoreRuntimeBackupAction
 } from "./mock-data.mjs";
+import {
+  crawlInternationalGeoSite,
+  normalizeCrawlTarget,
+  validateCrawlTarget
+} from "./site-crawl.mjs";
 import {
   applyPageSearch,
   buildReviewPayload,
@@ -1118,6 +1125,103 @@ async function runMockDataChecks() {
   assert.ok(
     listInternationalGeoSiteAudits().items.some((item) => item.id === siteAudit.id),
     "Created site audit should be listable"
+  );
+  assert.equal(
+    normalizeCrawlTarget("https://example.com/path?x=1")?.href,
+    "https://example.com/path?x=1",
+    "Safe crawl target should normalize https URLs"
+  );
+  assert.throws(
+    () => validateCrawlTarget("file:///tmp/a"),
+    /CRAWL_TARGET_BLOCKED/,
+    "file URLs should be blocked for crawling"
+  );
+  assert.throws(
+    () => validateCrawlTarget("http://localhost:3000"),
+    /CRAWL_TARGET_BLOCKED/,
+    "localhost crawl targets should be blocked"
+  );
+  assert.throws(
+    () => validateCrawlTarget("http://127.0.0.1"),
+    /CRAWL_TARGET_BLOCKED/,
+    "loopback IP crawl targets should be blocked"
+  );
+
+  const evidencedAudit = applyInternationalGeoSiteAuditCrawlEvidenceAction(siteAudit.id, {
+    provider_id: "builtin_safe_fetch",
+    execution_mode: "live_fetch",
+    status: "completed",
+    started_at: "2026-07-06T00:00:00.000Z",
+    completed_at: "2026-07-06T00:00:01.000Z",
+    origin: "https://example.com",
+    resources: {
+      homepage: {
+        url: "https://example.com",
+        status_code: 200,
+        ok: true,
+        content_type: "text/html",
+        title: "Example GEO Platform",
+        meta_description: "Example GEO Platform for B2B teams.",
+        canonical_url: "https://example.com",
+        h1: "Example GEO Platform",
+        text_excerpt: "Example GEO Platform helps B2B teams compare GEO platforms with facts and FAQ.",
+        json_ld_types: ["Organization", "SoftwareApplication"],
+        fetched_at: "2026-07-06T00:00:00.000Z",
+        error_code: ""
+      },
+      robots_txt: {
+        url: "https://example.com/robots.txt",
+        status_code: 200,
+        ok: true,
+        content_type: "text/plain",
+        text_excerpt: "User-agent: Googlebot\nAllow: /\nUser-agent: OAI-SearchBot\nAllow: /",
+        mentioned_bots: ["Googlebot", "OAI-SearchBot"],
+        fetched_at: "2026-07-06T00:00:00.000Z",
+        error_code: ""
+      },
+      sitemap_xml: {
+        url: "https://example.com/sitemap.xml",
+        status_code: 200,
+        ok: true,
+        content_type: "application/xml",
+        url_count: 2,
+        sample_urls: ["https://example.com/", "https://example.com/pricing"],
+        text_excerpt: "<urlset><url><loc>https://example.com/</loc></url></urlset>",
+        fetched_at: "2026-07-06T00:00:00.000Z",
+        error_code: ""
+      },
+      llms_txt: {
+        url: "https://example.com/llms.txt",
+        status_code: 200,
+        ok: true,
+        content_type: "text/markdown",
+        text_excerpt: "# Example GEO Platform",
+        fetched_at: "2026-07-06T00:00:00.000Z",
+        error_code: ""
+      }
+    },
+    issues: []
+  });
+  assert.equal(evidencedAudit.crawl_evidence.status, "completed", "Audit should store crawl evidence");
+  assert.equal(
+    evidencedAudit.checks.find((item) => item.id === "llms_txt")?.evidence_status,
+    "crawl_evidenced",
+    "llms.txt check should become crawl-evidenced"
+  );
+  assert.equal(
+    evidencedAudit.checks.find((item) => item.id === "json_ld")?.evidence_status,
+    "crawl_evidenced",
+    "JSON-LD check should become crawl-evidenced"
+  );
+  assert.match(
+    evidencedAudit.checks.find((item) => item.id === "robots_ai_access")?.evidence || "",
+    /OAI-SearchBot/,
+    "Robots check should include bot evidence"
+  );
+  await assert.rejects(
+    () => crawlInternationalGeoSite("http://127.0.0.1"),
+    /CRAWL_TARGET_BLOCKED/,
+    "Unsafe live crawl targets should reject before network fetch"
   );
 
   const siteAssets = generateInternationalGeoSiteAuditAssetsAction(siteAudit.id);
@@ -2901,7 +3005,40 @@ function runInternationalGeoUiChecks() {
         score: 82,
         status: "review",
         summary: { passed: 6, warnings: 3, failed: 0, blockers: 0, generated_assets: 6 },
-        checks: []
+        checks: [],
+        crawl_evidence: {
+          provider_id: "builtin_safe_fetch",
+          execution_mode: "live_fetch",
+          status: "completed",
+          origin: "https://example.com",
+          resources: {
+            homepage: {
+              ok: true,
+              status_code: 200,
+              title: "Example GEO Platform",
+              json_ld_types: ["Organization"],
+              text_excerpt: "Example text"
+            },
+            robots_txt: {
+              ok: true,
+              status_code: 200,
+              mentioned_bots: ["Googlebot"],
+              text_excerpt: "User-agent: *"
+            },
+            sitemap_xml: {
+              ok: true,
+              status_code: 200,
+              url_count: 3,
+              sample_urls: ["https://example.com/"]
+            },
+            llms_txt: {
+              ok: true,
+              status_code: 200,
+              text_excerpt: "# Example GEO Platform"
+            }
+          },
+          issues: []
+        }
       }
     },
     geo_assets: [
@@ -2927,6 +3064,11 @@ function runInternationalGeoUiChecks() {
     /data-action="international-site-assets"/,
     "International GEO page should expose site asset generation action"
   );
+  assert.match(siteAuditHtml, /data-action="international-site-crawl"/);
+  assert.match(siteAuditHtml, /抓取站点证据/);
+  assert.match(siteAuditHtml, /抓取证据/);
+  assert.match(siteAuditHtml, /robots\.txt/);
+  assert.match(siteAuditHtml, /sitemap\.xml/);
   assert.match(siteAuditHtml, /GEO 资产/, "International GEO page should render GEO assets");
   assert.match(siteAuditHtml, /llms\.txt/, "International GEO page should render llms.txt assets");
 }
@@ -3638,6 +3780,68 @@ async function runMultiUserAccessHttpChecks() {
       ownerAudit.body?.data?.checks?.some((item) => item.id === "robots_ai_access"),
       "Owner-created site audit should include AI crawler robots access checks"
     );
+
+    const unauthCrawl = await httpRequest(
+      port,
+      `/api/v1/international-geo/site-audits/${ownerAudit.body?.data?.id}/crawl`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}"
+      }
+    );
+    assert.equal(unauthCrawl.status, 401, "Unauthenticated site crawl should be denied");
+
+    const viewerCrawl = await httpRequest(
+      port,
+      `/api/v1/international-geo/site-audits/${ownerAudit.body?.data?.id}/crawl`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: viewerLogin.cookie
+        },
+        body: "{}"
+      }
+    );
+    assert.equal(viewerCrawl.status, 403, "Viewer should not crawl site audit evidence");
+
+    const missingCrawl = await httpRequest(port, "/api/v1/international-geo/site-audits/missing/crawl", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: ownerLogin.cookie
+      },
+      body: "{}"
+    });
+    assert.equal(missingCrawl.status, 404, "Unknown site crawl audit should return 404");
+
+    const blockedAudit = await httpRequest(port, "/api/v1/international-geo/site-audits", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: ownerLogin.cookie
+      },
+      body: JSON.stringify({
+        website_url: "http://127.0.0.1",
+        product_name: "Blocked Crawl Target"
+      })
+    });
+    assert.equal(blockedAudit.status, 201, "Audit can store a URL that live crawler later blocks");
+    const blockedCrawl = await httpRequest(
+      port,
+      `/api/v1/international-geo/site-audits/${blockedAudit.body?.data?.id}/crawl`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: ownerLogin.cookie
+        },
+        body: "{}"
+      }
+    );
+    assert.equal(blockedCrawl.status, 400, "Blocked crawl target should return 400");
+    assert.equal(blockedCrawl.body?.error?.code, "CRAWL_TARGET_BLOCKED");
 
     const viewerAssets = await httpRequest(
       port,
