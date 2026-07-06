@@ -285,6 +285,10 @@ function readHttpResource(url, options, resourceType) {
 
     request.on("response", (response) => {
       responseInfo = responseInfoFromMessage(response, url.href);
+      response.on("error", (error) => {
+        if (!error.responseInfo) error.responseInfo = responseInfo;
+        if (!settled) settle(reject, error);
+      });
       if (REDIRECT_STATUSES.has(responseInfo.status_code)) {
         response.resume();
         settle(resolve, { responseInfo, body: "" });
@@ -305,10 +309,6 @@ function readHttpResource(url, options, resourceType) {
       });
       response.on("end", () => {
         settle(resolve, { responseInfo, body: Buffer.concat(chunks).toString("utf8") });
-      });
-      response.on("error", (error) => {
-        if (!error.responseInfo) error.responseInfo = responseInfo;
-        settle(reject, error);
       });
     });
     request.on("error", (error) => {
