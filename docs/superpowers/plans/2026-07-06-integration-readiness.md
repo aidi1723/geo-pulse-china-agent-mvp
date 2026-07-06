@@ -66,4 +66,4 @@
 - [x] Run `npm run check`.
 - [x] Run the Google SEO/static scan command used by the repo if available.
 - [x] Run browser smoke on settings connectors.
-- [ ] Commit v0.4 changes without staging unrelated `docs/MAINTENANCE.md`.
+- [x] Commit v0.4 changes without staging unrelated `docs/MAINTENANCE.md`.
