@@ -42,6 +42,7 @@ GitHub also includes a `check` workflow that runs the same command on pushes and
 - `docs/MAINTENANCE.md`
 - `docs/ROADMAP.md`
 - `docs/OPEN_SOURCE_RELEASE.md`
+- `docs/STAGE_V0_9_1_CLOSEOUT.md`
 - `.github/workflows/check.yml`
 
 ## Pre-Publish Checklist
@@ -54,7 +55,7 @@ GitHub also includes a `check` workflow that runs the same command on pushes and
 - Confirm `.DS_Store` and local environment files are not committed.
 - Run `npm run check`.
 - Confirm the GitHub `check` workflow passes after pushing.
-- Review [v0.9 Stage Closeout](STAGE_V0_9_CLOSEOUT.md) for multi-user access boundary and remaining SaaS gaps.
+- Review [v0.9 Stage Closeout](STAGE_V0_9_CLOSEOUT.md) and [v0.9.1 Stage Closeout](STAGE_V0_9_1_CLOSEOUT.md) for the team-access boundary, CI gate, and remaining SaaS gaps.
 - Create a clean Git history from the intended public root.
 
 ## Suggested GitHub Setup

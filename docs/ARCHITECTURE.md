@@ -2,7 +2,7 @@
 
 ## Overview
 
-GEO Pulse China Agent v0.9 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes built-in one-organization multi-user access, role-based permissions, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production startup guardrails, health checks, and GEO/SEO static files for controlled server use.
+GEO Pulse China Agent v0.9.1 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes built-in one-organization multi-user access, role-based permissions, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production startup guardrails, health checks, GEO/SEO static files, and minimal GitHub CI for controlled server use.
 
 ## Runtime Components
 
@@ -13,6 +13,7 @@ GEO Pulse China Agent v0.9 is a zero-dependency Node.js application with a brows
 | Provider registry | `automation-providers.mjs` | Defines keyword discovery, topic planning, and article generation provider contracts, local fallback behavior, remote execution validation, masking, and provider config persistence helpers. |
 | Prototype shell | `prototype/` | Browser admin prototype with hash routing, state store, API client, static preview mode, UI pages, and shared utilities. |
 | Regression gate | `verify-mvp.mjs` | Full local verification suite for syntax, data actions, UI rendering, HTTP behavior, security checks, persistence, scheduler, audit, publishing, connectors, and source adapters. |
+| GitHub CI | `.github/workflows/check.yml` | Runs the local `npm run check` gate on pushes and pull requests targeting `main`. |
 | Documentation | `README.md`, `docs/`, `reports/` | Public usage docs, maintainer guides, release checklist, benchmark notes, and security hardening record. |
 
 ## Data Flow
@@ -48,7 +49,7 @@ Persistence is local JSON, not a production database.
 
 ## Security Model
 
-v0.9 uses built-in team access plus local-first production guardrails:
+v0.9.1 uses built-in team access plus local-first production guardrails:
 
 - Remote access is disabled unless `GEO_ALLOW_REMOTE_ACCESS=1`.
 - Remote access requires a fixed `GEO_INTERNAL_API_KEY`.

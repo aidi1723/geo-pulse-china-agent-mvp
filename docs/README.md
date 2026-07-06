@@ -6,7 +6,7 @@ This directory contains the maintainer-facing documentation for GEO Pulse China 
 
 - [Development Guide](DEVELOPMENT.md): local setup, test gate, environment variables, UI rules, and contribution workflow.
 - [Architecture Guide](ARCHITECTURE.md): runtime structure, module boundaries, data flow, security model, and extension points.
-- [Production Deployment Guide](PRODUCTION_DEPLOYMENT.md): one-organization v0.9 deployment, built-in login, roles, environment, Docker, health checks, launch preflight, backup, import, and rollback.
+- [Production Deployment Guide](PRODUCTION_DEPLOYMENT.md): one-organization v0.9.1 deployment, built-in login, roles, environment, Docker, health checks, launch preflight, backup, import, CI gate, and rollback.
 - [v0.2 Stage Closeout](STAGE_V0_2_CLOSEOUT.md): stage result, launch boundary, verification evidence, and closing copy.
 - [v0.3 Stage Closeout](STAGE_V0_3_CLOSEOUT.md): single-user complete stage result, launch boundary, verification evidence, and closing copy.
 - [v0.4 Stage Closeout](STAGE_V0_4_CLOSEOUT.md): connector integration-readiness stage result, launch boundary, verification evidence, and closing copy.
@@ -15,6 +15,7 @@ This directory contains the maintainer-facing documentation for GEO Pulse China 
 - [v0.7 Stage Closeout](STAGE_V0_7_CLOSEOUT.md): backup import/recovery stage result, launch boundary, verification evidence, and closing copy.
 - [v0.8 Stage Closeout](STAGE_V0_8_CLOSEOUT.md): launch preflight stage result, launch boundary, verification evidence, and closing copy.
 - [v0.9 Stage Closeout](STAGE_V0_9_CLOSEOUT.md): multi-user access stage result, launch boundary, verification evidence, and closing copy.
+- [v0.9.1 Stage Closeout](STAGE_V0_9_1_CLOSEOUT.md): minimal CI stage result, launch boundary, verification evidence, and closing copy.
 - [API Reference](API_REFERENCE.md): current mock API groups, route behavior, mutation requirements, and response shape.
 - [Extension Guide](EXTENDING.md): how to add providers, connectors, source adapters, UI pages, tests, and static preview data.
 - [Maintenance Guide](MAINTENANCE.md): routine maintenance, release gate, runtime state, security defaults, and production backlog.
@@ -45,4 +46,4 @@ The root-level Chinese product documents are retained as product context:
 - `AgentCoreOS-GEO-Suite-产品拆解方案.md`
 - `AgentCoreOS-GEO-网站优化与内容方案.md`
 
-The `reports/` directory contains audit, benchmark, and security hardening notes used during MVP, v0.2, v0.3, v0.4, v0.5, v0.6, v0.7, v0.8, and v0.9 preparation.
+The `reports/` directory contains audit, benchmark, and security hardening notes used during MVP, v0.2, v0.3, v0.4, v0.5, v0.6, v0.7, v0.8, v0.9, and v0.9.1 preparation.

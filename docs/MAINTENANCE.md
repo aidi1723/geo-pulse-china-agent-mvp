@@ -2,13 +2,15 @@
 
 ## Release Gate
 
-Use this gate before every public update:
+Use this local gate before every public update:
 
 ```bash
 npm run check
 ```
 
 Do not mark a release ready unless the command exits successfully.
+
+For GitHub-hosted work, also confirm the `check` workflow passes on the pushed branch or pull request. The workflow is defined in `.github/workflows/check.yml` and runs the same `npm run check` gate.
 
 ## Routine Maintenance
 
@@ -20,6 +22,7 @@ Weekly or before a release:
 - Review `docs/ROADMAP.md` when a planned slice lands or scope changes.
 - Review `CHANGELOG.md` for user-visible changes.
 - Run `npm run check`.
+- Confirm GitHub Actions `check` passes after pushing.
 - Confirm `.gitignore` still excludes local state, credentials, generated build output, and logs.
 - Run the privacy release review in `docs/PRIVACY_RELEASE_REVIEW.md`.
 - Review `reports/security-hardening-log.md` after security-related changes.
@@ -48,6 +51,10 @@ Keep these defaults intact unless there is a documented replacement:
 
 - Remote access off by default.
 - Fixed API key required when remote access is enabled.
+- Production startup requires a fixed `GEO_BOOTSTRAP_OWNER_PASSWORD`.
+- Browser users authenticate through HTTP-only `geo_session` cookies.
+- Owner/admin/editor/viewer permissions remain enforced by the server.
+- Audit reads remain limited to admin/owner sessions or the system API key.
 - Scheduler off by default.
 - Audit events enabled for sensitive actions.
 - CSV export neutralizes spreadsheet formula prefixes.
@@ -62,17 +69,40 @@ Key rule: if private content was already pushed to a public branch, a normal cle
 
 Do this only when the repository owner accepts history rewriting. For established repositories with external contributors, coordinate first.
 
-## Productionization Backlog
+## Maintenance Log
 
-The MVP is open-source-ready as a local prototype, not as a hosted production service. Production work should include:
+### 2026-07-06 - v0.9.1 Minimal CI Closeout
 
-- Real authentication and authorization.
-- Database persistence and backup policy.
-- Deployment configuration.
+- Scope: added GitHub Actions `check` workflow for pushes and pull requests targeting `main`.
+- Local gate: `npm run check` returned `verify-mvp: OK`.
+- Static SEO gate: 82 files scanned, 0 errors, 0 warnings.
+- Remote gate: GitHub Actions `check` completed successfully on `main` after the minimal CI workflow was pushed.
+- Documentation aligned: README, development guide, contributing guide, roadmap, open-source release checklist, changelog, and v0.9.1 closeout docs.
+- Boundary unchanged: v0.9.1 adds CI only; it does not add database persistence, OAuth/SSO, MFA, real integrations, monitoring, or multi-tenant isolation.
+
+### 2026-07-05 - Public Repository Privacy Check
+
+- Scope: public GitHub repository metadata, current tracked files, ignored local files, Git commit history, and the generated PNG asset metadata.
+- Repository state: `main` branch was clean before review; public remote is `https://github.com/aidi1723/geo-pulse-china-agent-mvp.git`.
+- Public metadata: repository visibility is public; repository owner/login is `aidi1723`; commit author email uses GitHub noreply.
+- Checks run: local path scans for `/Users/`, `/home/`, and `C:\Users\`; secret-pattern scans for common API keys, GitHub tokens, AWS keys, private-key blocks, and demo/test key strings; email, phone, private endpoint, and ignored-file checks; Git history scans across all commits.
+- Findings accepted as safe: local development URLs such as `localhost` and `127.0.0.1`; example emails under `example.com`; obvious fake/demo keys used by docs and tests; ignored local files `.DS_Store` and `data/geo-pulse-state.json` are not tracked.
+- Finding cleaned before the v0.9.1 public update: `reports/agentcoreos-geo-report.md` now uses `demo-contact-placeholder` instead of the previous phone-shaped demo string.
+- No evidence found of real local absolute paths, real personal email addresses, tracked `.env` files, tracked runtime state, or real credential patterns in the current tree or existing Git history.
+- History rewrite: not performed.
+
+## Post-v0.9.1 Production Hardening
+
+v0.9.1 is deployable as a controlled one-organization team-access service behind an external access layer. Before treating it as a real SaaS or broadly exposed hosted service, production hardening should include:
+
+- Database persistence, migrations, and database-grade backup policy.
 - Monitoring and alerting.
-- Operator runbooks.
+- Durable secret management outside local JSON and source code.
+- OAuth/SSO and MFA if external identity integration is required.
 - Real provider, connector, and source adapter implementations.
 - Security contact ownership and incident response process.
+- Multi-tenant workspace isolation if multiple organizations use the service.
+- Data retention, deletion, and privacy policy.
 
 ## Dependency Policy
 

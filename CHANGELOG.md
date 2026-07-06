@@ -7,7 +7,8 @@ Minimal CI gate for GitHub-hosted development.
 ### Added
 
 - GitHub Actions workflow that runs `npm run check` on pushes and pull requests targeting `main`.
-- Development and roadmap documentation for the CI quality gate.
+- Development, maintenance, deployment, architecture, roadmap, and closeout documentation for the CI quality gate.
+- Public-release hygiene cleanup for a phone-shaped demo contact placeholder in `reports/agentcoreos-geo-report.md`.
 
 ### Verification
 

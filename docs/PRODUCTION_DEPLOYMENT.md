@@ -1,8 +1,8 @@
 # Production Deployment Guide
 
-This guide covers the v0.9 one-organization team-access deployment profile for GEO Pulse.
+This guide covers the v0.9.1 one-organization team-access deployment profile for GEO Pulse.
 
-For stage-level scope and closing language, see [v0.9 Stage Closeout](STAGE_V0_9_CLOSEOUT.md).
+For stage-level scope and closing language, see [v0.9 Stage Closeout](STAGE_V0_9_CLOSEOUT.md) and [v0.9.1 Stage Closeout](STAGE_V0_9_1_CLOSEOUT.md).
 
 ## Scope
 
@@ -115,7 +115,7 @@ curl -f http://localhost:3000/favicon.ico
 
 ## Backup And Restore
 
-The v0.9 deployment stores state in a local JSON file and provides built-in local backup controls in Settings -> Brand Knowledge -> Runtime and Data.
+The v0.9.1 deployment stores state in a local JSON file and provides built-in local backup controls in Settings -> Brand Knowledge -> Runtime and Data.
 
 Preferred operator flow:
 
@@ -178,12 +178,12 @@ curl -f -H "X-GEO-API-Key: $GEO_INTERNAL_API_KEY" http://localhost:3000/api/v1/s
 If Docker is available:
 
 ```bash
-docker build -t geo-pulse:v0.9 .
+docker build -t geo-pulse:v0.9.1 .
 ```
 
 ## Stage Closeout Language
 
-GEO Pulse v0.9 is ready for controlled one-organization team deployment. It includes built-in login, role-based access, local workflows, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production startup guardrails, health checks, GEO/SEO static files, Docker packaging, and documentation for rollback. It must still be protected by an external access layer and should not be presented as a complete SaaS platform until durable database storage, OAuth/SSO, MFA, real integrations, monitoring, and multi-tenant controls are implemented.
+GEO Pulse v0.9.1 is ready for controlled one-organization team deployment. It includes built-in login, role-based access, local workflows, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production startup guardrails, health checks, GEO/SEO static files, Docker packaging, minimal GitHub CI, and documentation for rollback. It must still be protected by an external access layer and should not be presented as a complete SaaS platform until durable database storage, OAuth/SSO, MFA, real integrations, monitoring, and multi-tenant controls are implemented.
 
 ## Rollback
 

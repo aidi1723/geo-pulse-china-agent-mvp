@@ -26,7 +26,7 @@ Completed mock-first product areas:
 
 ## Near-Term Maintenance
 
-These items keep v0.9 healthy without changing its architecture:
+These items keep v0.9.1 healthy without changing its architecture:
 
 - Keep `npm run check` passing.
 - Expand `verify-mvp.mjs` when new behavior is added.
