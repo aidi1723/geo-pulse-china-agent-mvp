@@ -213,11 +213,11 @@ Mutation routes require an editor/admin/owner browser session or `X-GEO-API-Key`
 
 ### International GEO Evidence Assets
 
-- `GET /api/v1/international-geo/evidence-assets`: returns `{ summary, opportunities, queue, assets }`.
-- `GET /api/v1/international-geo/evidence-assets/opportunities`: returns evidence-driven opportunity rows.
-- `GET /api/v1/international-geo/evidence-assets/queue`: returns local generation queue rows.
-- `POST /api/v1/international-geo/evidence-assets/generate`: owner/editor/admin action that derives opportunities and generates local reviewable assets.
-- `POST /api/v1/international-geo/evidence-assets/:id/review`: owner/editor/admin action with `{ "action": "approve" }` or `{ "action": "reject", "human_notes": "..." }`.
+- `GET /international-geo/evidence-assets`: returns `{ summary, opportunities, queue, assets }`.
+- `GET /international-geo/evidence-assets/opportunities`: returns evidence-driven opportunity rows.
+- `GET /international-geo/evidence-assets/queue`: returns local generation queue rows.
+- `POST /international-geo/evidence-assets/generate`: owner/editor/admin action that derives opportunities and generates local reviewable assets.
+- `POST /international-geo/evidence-assets/:id/review`: owner/editor/admin action with `{ "action": "approve" }` or `{ "action": "reject", "human_notes": "..." }`.
 
 Evidence assets are local review artifacts. They are not automatically published and do not represent measured AI engine inclusion.
 
@@ -241,7 +241,7 @@ Default local visibility runs create `unavailable` snapshots only. They do not c
 
 Visibility mutations require an editor/admin/owner browser session or `X-GEO-API-Key`. Viewer sessions can read visibility overview, runs, and snapshots but cannot create prompt sets or runs.
 
-Boundary: v0.13 includes guarded public site crawling, deterministic evidence-backed scoring, and an AI visibility measurement foundation. It does not perform recursive crawling, browser rendering, real AI search engine querying, real SERP collection, measured engine inclusion/rank tracking, recommendation-rank tracking, or automatic third-party publishing.
+Visibility foundation boundary: guarded public site crawling, deterministic evidence-backed scoring, and the AI visibility measurement foundation do not perform recursive crawling, browser rendering, real AI search engine querying, real SERP collection, measured engine inclusion/rank tracking, recommendation-rank tracking, or automatic third-party publishing.
 
 ### Publishing
 
