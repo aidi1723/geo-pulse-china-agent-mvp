@@ -957,6 +957,216 @@ function renderPublishingPlatformMatrix(publishing = {}) {
   `;
 }
 
+function contentGenerationStatusLabel(value) {
+  return (
+    {
+      active: "active",
+      reserved: "reserved",
+      pending_review: "待审核",
+      approved: "已通过",
+      rejected: "已驳回",
+      draft: "草稿",
+      approved_article: "已通过",
+      rejected_article: "已驳回",
+      approved_rewrite: "已通过",
+      rejected_rewrite: "已驳回",
+      completed: "已完成",
+      blocked: "已阻塞"
+    }[value] || value || "-"
+  );
+}
+
+function runTypeLabel(value) {
+  return (
+    {
+      article_generation: "文章生成",
+      platform_rewrite_generation: "平台改写"
+    }[value] || value || "-"
+  );
+}
+
+function renderContentGenerationProviderSummary(contentGeneration = {}) {
+  const providers = contentGeneration.providers || [];
+  return providers.length
+    ? providers
+        .map(
+          (item) => `
+            <div class="info-row">
+              <span>${escapeHtml(item.provider_name || item.id || "-")}</span>
+              <strong>${escapeHtml(item.id || "-")} ${statusMarkup(contentGenerationStatusLabel(item.status))}</strong>
+            </div>
+          `
+        )
+        .join("")
+    : `<div class="info-row"><span>Provider</span><strong>local_rules ${statusMarkup("active")}</strong></div>`;
+}
+
+function renderContentGenerationSummary(contentGeneration = {}) {
+  const summary = contentGeneration.summary || {};
+  return `
+    <div class="info-grid">
+      <div class="info-row"><span>生成 Provider</span><strong>${escapeHtml(summary.active_provider || "local_rules")}</strong></div>
+      <div class="info-row"><span>文章草稿</span><strong>${escapeHtml(summary.article_count ?? 0)} / 已审 ${escapeHtml(summary.approved_article_count ?? 0)}</strong></div>
+      <div class="info-row"><span>改写稿</span><strong>${escapeHtml(summary.rewrite_count ?? 0)} / 已审 ${escapeHtml(summary.approved_rewrite_count ?? 0)}</strong></div>
+      <div class="info-row"><span>生成记录</span><strong>${escapeHtml(summary.run_count ?? 0)}</strong></div>
+      ${renderContentGenerationProviderSummary(contentGeneration)}
+    </div>
+  `;
+}
+
+function renderGeneratedArticleQueue(contentGeneration = {}) {
+  const articles = contentGeneration.articles || [];
+  const rows = articles.length
+    ? articles.slice(0, 8).map(
+        (item) => `
+          <tr>
+            <td>
+              <div class="cell-title">${escapeHtml(item.title || item.id || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.id || "-")}</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml(item.target_prompt || "-")}</div>
+              <div class="cell-sub">${item.canonical_url ? renderSafeExternalLink(item.canonical_url) : escapeHtml(item.target_url || "-")}</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml(item.generator_provider || "local_rules")}</div>
+              <div class="cell-sub">${escapeHtml((item.source_asset_types || []).map(assetLabel).join(" / ") || "-")}</div>
+            </td>
+            <td>
+              ${statusMarkup(contentGenerationStatusLabel(item.article_status))}
+              ${statusMarkup(contentGenerationStatusLabel(item.review_status))}
+            </td>
+            <td>
+              <div class="actions-row">
+                <button class="ghost-btn" data-action="international-content-article-reject" data-article-id="${escapeHtml(item.id || "")}">驳回</button>
+                <button class="secondary-btn" data-action="international-content-article-approve" data-article-id="${escapeHtml(item.id || "")}">审核通过</button>
+              </div>
+            </td>
+          </tr>
+        `
+      )
+    : [
+        `<tr><td colspan="5">
+          <div class="empty-state">暂无文章草稿。请先审核通过证据资产，再生成文章。</div>
+          <div class="actions-row">
+            <button class="ghost-btn" data-action="international-content-article-reject" data-article-id="" disabled>驳回</button>
+            <button class="secondary-btn" data-action="international-content-article-approve" data-article-id="" disabled>审核通过</button>
+          </div>
+        </td></tr>`
+      ];
+
+  return `
+    <section class="surface panel" data-international-panel="content-articles">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">文章生成队列</h3>
+          <div class="panel-note">从已审核证据资产生成完整 Markdown 草稿；local_rules 为当前唯一启用 provider，外部 AI provider 仅预留。</div>
+        </div>
+        <div class="actions-row">
+          <button class="secondary-btn" data-action="international-content-articles-generate">生成文章</button>
+        </div>
+      </div>
+      ${renderContentGenerationSummary(contentGeneration)}
+      ${tableMarkup(["文章", "Prompt / Canonical", "Provider / 来源", "状态", "动作"], rows)}
+    </section>
+  `;
+}
+
+function renderPlatformRewriteQueue(contentGeneration = {}) {
+  const rewrites = contentGeneration.rewrites || [];
+  const rows = rewrites.length
+    ? rewrites.slice(0, 12).map(
+        (item) => `
+          <tr>
+            <td>
+              <div class="cell-title">${escapeHtml(item.platform_name || item.platform_key || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.platform_key || "-")}</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml(item.source_article_title || item.source_article_id || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.rewrite_type || "-")}</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml(item.generator_provider || "local_rules")}</div>
+              <div class="cell-sub">${escapeHtml(item.ai_visibility_goal || "-")}</div>
+            </td>
+            <td>
+              ${statusMarkup(contentGenerationStatusLabel(item.rewrite_status))}
+              ${statusMarkup(contentGenerationStatusLabel(item.review_status))}
+            </td>
+            <td>
+              <div class="actions-row">
+                <button class="ghost-btn" data-action="international-content-rewrite-reject" data-rewrite-id="${escapeHtml(item.id || "")}">驳回</button>
+                <button class="secondary-btn" data-action="international-content-rewrite-approve" data-rewrite-id="${escapeHtml(item.id || "")}">审核通过</button>
+              </div>
+            </td>
+          </tr>
+        `
+      )
+    : [
+        `<tr><td colspan="5">
+          <div class="empty-state">暂无多平台改写稿。请先审核通过文章，再生成平台改写。</div>
+          <div class="actions-row">
+            <button class="ghost-btn" data-action="international-content-rewrite-reject" data-rewrite-id="" disabled>驳回</button>
+            <button class="secondary-btn" data-action="international-content-rewrite-approve" data-rewrite-id="" disabled>审核通过</button>
+          </div>
+        </td></tr>`
+      ];
+
+  return `
+    <section class="surface panel" data-international-panel="content-rewrites">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">多平台改写稿</h3>
+          <div class="panel-note">把已审核文章改写为官网、Medium、LinkedIn、Reddit、Quora、目录站等平台可人工发布的草稿。</div>
+        </div>
+        <div class="actions-row">
+          <button class="secondary-btn" data-action="international-content-rewrites-generate">生成改写稿</button>
+        </div>
+      </div>
+      ${tableMarkup(["平台", "来源文章", "Provider / 目标", "状态", "动作"], rows)}
+    </section>
+  `;
+}
+
+function renderContentGenerationRuns(contentGeneration = {}) {
+  const runs = contentGeneration.runs || [];
+  const rows = runs.length
+    ? runs.slice(0, 10).map(
+        (item) => `
+          <tr>
+            <td>
+              <div class="cell-title">${escapeHtml(runTypeLabel(item.run_type))}</div>
+              <div class="cell-sub">${escapeHtml(item.id || "-")}</div>
+            </td>
+            <td>${statusMarkup(contentGenerationStatusLabel(item.status))}</td>
+            <td>${escapeHtml(item.generator_provider || "local_rules")}</td>
+            <td>
+              <div class="cell-title">Articles ${escapeHtml(item.output_article_count ?? item.source_article_count ?? 0)} / Rewrites ${escapeHtml(item.created_count ?? 0)}</div>
+              <div class="cell-sub">Sources ${escapeHtml(item.source_asset_count ?? "-")} / Platforms ${escapeHtml(item.platform_count ?? "-")}</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml(item.started_at || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.completed_at || item.diagnostic || "-")}</div>
+            </td>
+          </tr>
+        `
+      )
+    : [`<tr><td colspan="5"><div class="empty-state">暂无生成记录。</div></td></tr>`];
+
+  return `
+    <section class="surface panel" data-international-panel="content-runs">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">生成记录</h3>
+          <div class="panel-note">记录文章生成和平台改写的本地运行结果，便于追踪 local_rules 输出和阻塞原因。</div>
+        </div>
+      </div>
+      ${tableMarkup(["运行", "状态", "Provider", "输出", "时间"], rows)}
+    </section>
+  `;
+}
+
 function renderPublishingPackageQueue(publishing = {}) {
   const packages = publishing.packages || [];
   const rows = packages.length
@@ -1364,6 +1574,7 @@ export function renderInternationalGeo(data = internationalGeo) {
   const latestAudit = data.site_audits?.latest || data.site_audits?.items?.[0] || {};
   const visibility = data.visibility || {};
   const publishing = data.publishing || {};
+  const contentGeneration = data.content_generation || {};
 
   return `
     <section class="surface toolbar">
@@ -1392,6 +1603,9 @@ export function renderInternationalGeo(data = internationalGeo) {
     ${renderEvidenceOpportunitiesPanel(data.evidence_assets || {})}
     ${renderEvidenceAssetQueuePanel(data.evidence_assets || {})}
     ${renderGeoAssetPreviews(mergeGeoAssetPreviews(data.geo_assets || [], data.evidence_assets || {}))}
+    ${renderGeneratedArticleQueue(contentGeneration)}
+    ${renderPlatformRewriteQueue(contentGeneration)}
+    ${renderContentGenerationRuns(contentGeneration)}
     ${renderPublishingPlatformMatrix(publishing)}
     ${renderPublishingPackageQueue(publishing)}
     ${renderPublishingTrackingLedger(publishing)}
