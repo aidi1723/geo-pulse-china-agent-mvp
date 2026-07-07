@@ -109,7 +109,7 @@ Acceptance:
 Boundary:
 
 - v0.14 adds evidence-driven International GEO asset opportunities, queue items, generated local previews, and approve/reject review state. The workflow creates reviewable local assets only; it does not publish externally, generate full long-form articles, or call live AI search engines for inclusion/ranking measurement.
-- v0.15 adds local publishing platform matrix rows, deterministic publishing packages from approved evidence assets, review-only package queue state, and manual/local tracking records. The workflow is local planning/handoff only; it does not publish externally, store platform credentials, generate full articles, call live AI/search/SERP/indexing services, or verify real inclusion/recommendation.
+- v0.15 adds local high-authority publishing platform rows, authority signals, AI recommendation-probability notes, deterministic publishing packages from approved evidence assets, review-only package queue state, and manual/local tracking records. The workflow is local planning/handoff only; it does not publish externally, store platform credentials, generate full articles, call live AI/search/SERP/indexing services, or verify real inclusion/recommendation.
 
 ## Track 5: External Distribution Connectors
 
@@ -173,7 +173,7 @@ Acceptance:
 - `v0.12`: deeper evidence-backed GEO scoring. Complete baseline.
 - `v0.13`: AI visibility measurement foundation. Complete baseline; measured provider integrations remain future work.
 - `v0.14`: evidence-driven local content and asset production upgrade. Complete baseline; external publishing and full article generation remain future work.
-- `v0.15`: local publishing platform matrix, review-only publishing packages, and manual tracking. Complete baseline; measured providers, connectors, and automation remain future work.
+- `v0.15`: local high-authority publishing platform list, review-only publishing packages, and manual tracking. Complete baseline; measured providers, connectors, and automation remain future work.
 - `v0.16`: measured visibility/tracking providers or controlled connector automation with explicit evidence and approval gates.
 - `v0.17`: database persistence, secrets, monitoring, and production hardening.
 - `v0.18+`: multi-tenant SaaS readiness if the product direction requires it.

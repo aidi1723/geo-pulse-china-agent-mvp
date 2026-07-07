@@ -18,7 +18,7 @@ Supported:
 - International GEO site audit input, durable rule-first audit records, guarded live crawl evidence, evidence-backed scoring, evidence-aware recommendations, and generated GEO asset previews.
 - International GEO AI visibility measurement foundation with prompt sets, provider readiness, visibility runs, prompt snapshots, and `measured` / `simulated` / `unavailable` status labels.
 - International GEO evidence-driven asset opportunities, local generation queue rows, generated local previews, provenance metadata, and approve/reject review state.
-- International GEO publishing platform matrix, review-only publishing package queue, deterministic package generation from approved evidence assets, and manual/local tracking records.
+- International GEO high-authority publishing platform list, AI recommendation-probability notes, review-only publishing package queue, deterministic package generation from approved evidence assets, and manual/local tracking records.
 - Health checks.
 - Mutation API-key guard.
 - Basic SEO/GEO files: `robots.txt`, `sitemap.xml`, `llms.txt`, and `favicon.ico`.
@@ -189,7 +189,7 @@ docker build -t geo-pulse:v0.15.0 .
 
 ## Stage Closeout Language
 
-GEO Pulse v0.15.0 is ready for controlled one-organization team deployment. It includes built-in login, role-based access, local workflows, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, GEO asset generation, AI visibility measurement foundation, evidence-driven asset opportunities, local generation queue, approve/reject review state, publishing platform matrix, review-only package queue, manual tracking records, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production startup guardrails, health checks, GEO/SEO static files, Docker packaging, minimal GitHub CI, and documentation for rollback.
+GEO Pulse v0.15.0 is ready for controlled one-organization team deployment. It includes built-in login, role-based access, local workflows, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, GEO asset generation, AI visibility measurement foundation, evidence-driven asset opportunities, local generation queue, approve/reject review state, high-authority publishing platform list, review-only package queue, manual tracking records, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production startup guardrails, health checks, GEO/SEO static files, Docker packaging, minimal GitHub CI, and documentation for rollback.
 
 v0.15.0 must still be protected by an external access layer and should not be presented as a complete SaaS platform, real-time AI search monitoring platform, or external publishing system. Visibility runs default to `unavailable` snapshots and do not query real AI/search providers. Evidence asset and publishing workflows create reviewable local assets, handoff packages, and manual tracking records only; they do not publish externally, store external platform credentials, generate full long-form articles, call live AI/search/SERP/indexing/external platform services, or verify inclusion/recommendation. Durable database storage, OAuth/SSO, MFA, real integrations, monitoring, measured AI visibility provider evidence, approved publishing/indexing connectors, and multi-tenant controls remain future work.
 

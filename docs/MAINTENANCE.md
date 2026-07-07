@@ -73,10 +73,10 @@ Do this only when the repository owner accepts history rewriting. For establishe
 
 ### 2026-07-07 - v0.15 Publishing Workflow Closeout
 
-- Scope: added International GEO publishing platform matrix, deterministic package generation from approved evidence assets, review-only package queue, and manual/local tracking records.
+- Scope: added International GEO high-authority publishing platform list, authority signals, AI recommendation-probability notes, deterministic package generation from approved evidence assets, review-only package queue, and manual/local tracking records.
 - Local gate: `npm run check` returned `verify-mvp: OK`.
 - Documentation aligned: README, API reference, architecture guide, development guide, production deployment guide, roadmap, documentation index, phase 2 roadmap, open-source release checklist, changelog, maintenance guide, and v0.15 closeout docs.
-- Boundary: local planning/handoff only; no external publishing, credentials, full articles, live AI/search/SERP/indexing verification; tracking is manual/local unless future connector evidence.
+- Boundary: local planning/handoff only; platform notes only describe probability-lifting channels; no external publishing, credentials, full articles, live AI/search/SERP/indexing verification; tracking is manual/local unless future connector evidence.
 
 ### 2026-07-07 - v0.14 Evidence-Driven Asset Review Closeout
 

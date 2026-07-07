@@ -71,7 +71,7 @@ This checks:
 - Node syntax for key files.
 - Mock data behavior.
 - API and security behavior through local HTTP tests.
-- UI rendering for the prototype pages, including International GEO site audit, crawl evidence, score breakdown, visibility panels, prompt snapshots, evidence asset opportunities, queue state, review state, asset previews, publishing platform matrix, package queue, and manual tracking panels.
+- UI rendering for the prototype pages, including International GEO site audit, crawl evidence, score breakdown, visibility panels, prompt snapshots, evidence asset opportunities, queue state, review state, asset previews, high-authority publishing platform list, package queue, and manual tracking panels.
 - Persistence, scheduler, audit, connector, source adapter, campaign, publishing, visibility, and International GEO site audit/crawl evidence/visibility/evidence-asset/publishing flows.
 
 For behavior changes, add focused assertions to `verify-mvp.mjs` before changing implementation.
@@ -118,7 +118,7 @@ When behavior changes, update docs in the same change:
 - International GEO workflow changes: `README.md`, `API_REFERENCE.md`, `ARCHITECTURE.md`, `ROADMAP.md`, `PHASE_2_ROADMAP.md`, `PRODUCTION_DEPLOYMENT.md`, and the current stage closeout doc.
 - Visibility measurement changes: document `measured`, `simulated`, and `unavailable` semantics, provider evidence requirements, and any no-real-provider boundary in the same change.
 - Evidence asset changes: document that generated opportunities, queue items, local previews, and approve/reject state create reviewable local assets only, with no external publishing, no full long-form articles, and no live AI search inclusion/ranking measurement.
-- Publishing workflow changes: document that platform matrix rows, package queue items, and tracking records are local planning/handoff only, with no external publishing, no external credentials, no full long-form article generation, no live AI/search/SERP/indexing verification, and manual/local tracking unless future connector evidence exists.
+- Publishing workflow changes: document that high-authority platform list rows, package queue items, and tracking records are local planning/handoff only; platform notes only describe channels that may increase AI retrieval, citation, and recommendation probability, with no external publishing, no external credentials, no full long-form article generation, no live AI/search/SERP/indexing verification, and manual/local tracking unless future connector evidence exists.
 - Operational routes or deployment behavior: `README.md`, `PRODUCTION_DEPLOYMENT.md`, and `STAGE_V0_2_CLOSEOUT.md`.
 - Extension seams: `ARCHITECTURE.md` and `EXTENDING.md`.
 - Security behavior: `SECURITY.md`, `MAINTENANCE.md`, and `reports/security-hardening-log.md`.

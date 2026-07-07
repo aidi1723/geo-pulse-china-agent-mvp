@@ -1454,7 +1454,7 @@ async function runMockDataChecks() {
   ];
   const platformKeys = new Set(publishingInitial.platforms.map((item) => item.platform_key));
   expectedPlatformKeys.forEach((platformKey) => {
-    assert.ok(platformKeys.has(platformKey), `Publishing platform matrix should include ${platformKey}`);
+    assert.ok(platformKeys.has(platformKey), `Publishing platform list should include ${platformKey}`);
   });
   assert.ok(
     publishingInitial.platforms.every(
@@ -1462,11 +1462,15 @@ async function runMockDataChecks() {
         item.ai_visibility_fit?.chatgpt_search &&
         item.ai_visibility_fit?.gemini &&
         item.ai_visibility_fit?.claude &&
+        typeof item.authority_signal === "string" &&
+        item.authority_signal.length > 20 &&
+        typeof item.ai_recommendation_note === "string" &&
+        item.ai_recommendation_note.length > 20 &&
         item.risk_level &&
         item.publishing_mode &&
         Array.isArray(item.supported_package_types)
     ),
-    "Publishing platform rows should include engine fit, risk, publishing mode, and package types"
+    "Publishing platform rows should include engine fit, authority signals, recommendation notes, risk, publishing mode, and package types"
   );
 
   const publishingGenerated = generateInternationalGeoPublishingPackagesAction();
@@ -3754,7 +3758,9 @@ function runInternationalGeoUiChecks() {
   assert.match(siteAuditHtml, /证据来源/, "International GEO assets should render provenance metadata");
   assert.match(siteAuditHtml, /审核通过/, "International GEO evidence assets should expose approve action");
   assert.match(siteAuditHtml, /驳回/, "International GEO evidence assets should expose reject action");
-  assert.match(siteAuditHtml, /发布平台矩阵/, "International GEO page should render publishing platform matrix");
+  assert.match(siteAuditHtml, /高权重发布平台清单/, "International GEO page should render the publishing platform list");
+  assert.match(siteAuditHtml, /推荐概率说明/, "Publishing platform list should explain AI recommendation probability");
+  assert.match(siteAuditHtml, /只能增加概率/, "Publishing platform list should avoid guaranteed AI recommendation claims");
   assert.match(siteAuditHtml, /发布包队列/, "International GEO page should render publishing package queue");
   assert.match(siteAuditHtml, /收录与推荐追踪/, "International GEO page should render publishing tracking ledger");
   assert.match(siteAuditHtml, /Manual \/ local/, "Publishing UI should expose the manual local boundary");

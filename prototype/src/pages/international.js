@@ -918,10 +918,17 @@ function renderPublishingPlatformMatrix(publishing = {}) {
               <div class="cell-title">${escapeHtml(item.platform_type || "-")}</div>
               <div class="cell-sub">${escapeHtml(item.category || "-")}</div>
             </td>
-            <td>${escapeHtml((item.recommended_asset_types || []).map(assetLabel).join(" / ") || "-")}</td>
+            <td>
+              <div class="cell-title">${escapeHtml(item.authority_signal || "-")}</div>
+              <div class="cell-sub">${escapeHtml((item.recommended_asset_types || []).map(assetLabel).join(" / ") || "-")}</div>
+            </td>
             <td>
               <div class="cell-title">ChatGPT Search: ${escapeHtml(publishingFitLabel(fit.chatgpt_search))} / Gemini: ${escapeHtml(publishingFitLabel(fit.gemini))} / Claude: ${escapeHtml(publishingFitLabel(fit.claude))}</div>
               <div class="cell-sub">Perplexity: ${escapeHtml(publishingFitLabel(fit.perplexity))} / Google AIO: ${escapeHtml(publishingFitLabel(fit.google_ai_overviews))} / Bing: ${escapeHtml(publishingFitLabel(fit.copilot_bing))}</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml(item.ai_recommendation_note || "-")}</div>
+              <div class="cell-sub">只能增加概率；真实收录、引用和推荐仍需上线后人工或 provider 证据核验。</div>
             </td>
             <td>
               <div class="cell-title">Index: ${escapeHtml(publishingFitLabel(item.indexing_value))} / Citation: ${escapeHtml(publishingFitLabel(item.citation_value))}</div>
@@ -935,17 +942,17 @@ function renderPublishingPlatformMatrix(publishing = {}) {
           </tr>
         `;
       })
-    : [`<tr><td colspan="7"><div class="empty-state">暂无发布平台。</div></td></tr>`];
+    : [`<tr><td colspan="8"><div class="empty-state">暂无发布平台。</div></td></tr>`];
 
   return `
     <section class="surface panel" data-international-panel="publishing-platforms">
       <div class="panel-head">
         <div>
-          <h3 class="panel-title">发布平台矩阵</h3>
-          <div class="panel-note">Manual / local 发布规划矩阵；不使用外部凭证，也不执行自动发布。</div>
+          <h3 class="panel-title">高权重发布平台清单</h3>
+          <div class="panel-note">Manual / local 平台参考清单；这些平台可增强实体信号和第三方验证，文章发布后可能提高 AI 检索、引用、推荐概率，但不代表已被真实推荐。</div>
         </div>
       </div>
-      ${tableMarkup(["平台", "类型", "适配资产", "AI 引擎适配", "价值", "风险", "模式"], rows)}
+      ${tableMarkup(["平台", "类型", "权重信号 / 适配资产", "AI 引擎适配", "推荐概率说明", "价值", "风险", "模式"], rows)}
     </section>
   `;
 }

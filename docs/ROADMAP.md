@@ -2,7 +2,7 @@
 
 ## Current State
 
-The project is a v0.15.0 one-organization team-access workspace with built-in login, RBAC, connector diagnostics, local backup import/restore, launch preflight, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, generated GEO assets, AI visibility measurement foundation, evidence-driven local asset opportunities, review queue state, publishing platform matrix, review-only package queue, manual tracking records, and minimal GitHub CI.
+The project is a v0.15.0 one-organization team-access workspace with built-in login, RBAC, connector diagnostics, local backup import/restore, launch preflight, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, generated GEO assets, AI visibility measurement foundation, evidence-driven local asset opportunities, review queue state, high-authority publishing platform list, review-only package queue, manual tracking records, and minimal GitHub CI.
 
 Completed mock-first product areas:
 
@@ -13,7 +13,7 @@ Completed mock-first product areas:
 - Automation provider registry, connector registry, connector-scoped permissions, automation runs, scheduler, retry, and runtime status.
 - Visibility analytics, mock SERP collection, competitor share-of-voice, audience segments, marketing campaigns, and campaign runs.
 - Audit events, audit CSV export, local persistence, reset, security headers, body limits, rate limits, and remote access guard.
-- International GEO workspace for overseas AI search readiness, rule-first and crawl-evidenced site audits, generated GEO assets, evidence-driven opportunity rows, local generation queue, approve/reject review state, publishing platform matrix, review-only package queue, manual tracking records, content generation planning, distribution execution, visibility prompt sets, provider readiness, runs, snapshots, and AI engine visibility models.
+- International GEO workspace for overseas AI search readiness, rule-first and crawl-evidenced site audits, generated GEO assets, evidence-driven opportunity rows, local generation queue, approve/reject review state, high-authority publishing platform list, review-only package queue, manual tracking records, content generation planning, distribution execution, visibility prompt sets, provider readiness, runs, snapshots, and AI engine visibility models.
 - Production guardrails, `/healthz`, `robots.txt`, `sitemap.xml`, `llms.txt`, `favicon.ico`, Docker, Docker Compose, and deployment documentation.
 - Single-user complete workflows: workspace input, manual topics, topic editing, outline generation, manual articles, templates, exports, International GEO audit/artifacts, local billing plan switch, and logout action.
 - Integration-readiness workflows: connector config editing, connector connection tests, connector health checks, masked secrets, runtime connector health summaries, and connector audit events.
@@ -27,7 +27,7 @@ Completed mock-first product areas:
 - Evidence-backed GEO scoring: deterministic 100-point rubric, check-level awarded/deducted points, confidence, priority, deduction reasons, next actions, audit-level `score_breakdown`, and International GEO `评分拆解` UI.
 - AI visibility measurement foundation baseline: prompt sets, provider readiness for ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude, and Copilot / Bing, visibility runs, prompt snapshots, UI panels, browser button wiring, and explicit `measured`, `simulated`, and `unavailable` data-status labels.
 - Evidence-driven asset opportunities: opportunity rows derived from audit scoring, crawl evidence, visibility gaps, and rule-first input; local generation queue rows; generated local previews with provenance metadata; and approve/reject review state.
-- International GEO publishing workflow: local platform matrix across owned, developer, professional social, community, Q&A, video, directory, review-site, and knowledge-base destinations; deterministic package generation from approved evidence assets; review-only package queue; and manual/local tracking for publication URL, canonical URL, indexing status, AI mention status, citation status, and recommendation status.
+- International GEO publishing workflow: local high-authority platform list across owned, developer, professional social, community, Q&A, video, directory, review-site, and knowledge-base destinations, with authority signals and AI recommendation-probability notes; deterministic package generation from approved evidence assets; review-only package queue; and manual/local tracking for publication URL, canonical URL, indexing status, AI mention status, citation status, and recommendation status.
 - Open-source release docs and GPLv3 licensing.
 
 ## Near-Term Maintenance

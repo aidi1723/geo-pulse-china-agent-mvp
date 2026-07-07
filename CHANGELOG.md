@@ -6,11 +6,11 @@ International GEO publishing platform workflow.
 
 ### Added
 
-- Local publishing platform matrix for owned, developer, professional social, community, Q&A, video, directory, review-site, and knowledge-base destinations.
+- Local high-authority publishing platform list for owned, developer, professional social, community, Q&A, video, directory, review-site, and knowledge-base destinations, including authority signals and AI recommendation-probability notes.
 - Deterministic publishing package generation from approved International GEO evidence assets.
 - Review-only publishing package queue for website article briefs, docs updates, GitHub README updates, LinkedIn posts, Reddit/Quora answers, YouTube outlines, developer article briefs, Product Hunt listings, review profile checklists, and directory checklists.
 - Manual/local tracking records for publication URL, canonical URL, indexing status, AI mention status, citation status, and recommendation status.
-- International GEO UI panels for 发布平台矩阵, 发布包队列, 收录与推荐追踪.
+- International GEO UI panels for 高权重发布平台清单, 发布包队列, 收录与推荐追踪.
 
 ### Boundaries
 
@@ -18,6 +18,7 @@ International GEO publishing platform workflow.
 - no external platform credentials,
 - no full long-form article generation,
 - no live ChatGPT/Gemini/Claude/Perplexity/Google AI Overviews/Copilot/Bing/SERP/indexing/external platform calls,
+- platform notes only describe probability-lifting channels and do not guarantee AI inclusion, citation, or recommendation,
 - tracking values are manual/local unless future connector evidence exists.
 
 ### Verification

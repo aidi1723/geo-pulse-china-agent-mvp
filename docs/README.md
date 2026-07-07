@@ -6,7 +6,7 @@ This directory contains the maintainer-facing documentation for GEO Pulse China 
 
 - [Development Guide](DEVELOPMENT.md): local setup, test gate, environment variables, UI rules, and contribution workflow.
 - [Architecture Guide](ARCHITECTURE.md): runtime structure, module boundaries, data flow, security model, and extension points.
-- [Production Deployment Guide](PRODUCTION_DEPLOYMENT.md): one-organization v0.15.0 deployment, built-in login, roles, International GEO site audit, guarded crawl evidence, evidence-backed scoring, AI visibility measurement foundation, evidence-driven local asset review workflow, publishing platform matrix, package queue, manual tracking, environment, Docker, health checks, launch preflight, backup, import, CI gate, and rollback.
+- [Production Deployment Guide](PRODUCTION_DEPLOYMENT.md): one-organization v0.15.0 deployment, built-in login, roles, International GEO site audit, guarded crawl evidence, evidence-backed scoring, AI visibility measurement foundation, evidence-driven local asset review workflow, high-authority publishing platform list, package queue, manual tracking, environment, Docker, health checks, launch preflight, backup, import, CI gate, and rollback.
 - [v0.2 Stage Closeout](STAGE_V0_2_CLOSEOUT.md): stage result, launch boundary, verification evidence, and closing copy.
 - [v0.3 Stage Closeout](STAGE_V0_3_CLOSEOUT.md): single-user complete stage result, launch boundary, verification evidence, and closing copy.
 - [v0.4 Stage Closeout](STAGE_V0_4_CLOSEOUT.md): connector integration-readiness stage result, launch boundary, verification evidence, and closing copy.
@@ -21,7 +21,7 @@ This directory contains the maintainer-facing documentation for GEO Pulse China 
 - [v0.12 Stage Closeout](STAGE_V0_12_CLOSEOUT.md): evidence-backed scoring stage result, API/UI surface, verification evidence, and closing copy.
 - [v0.13 Stage Closeout](STAGE_V0_13_CLOSEOUT.md): AI visibility measurement foundation stage result, API/UI surface, data-source boundary, verification commands, and next stage.
 - [v0.14 Stage Closeout](STAGE_V0_14_CLOSEOUT.md): evidence-driven local asset opportunities, queue, previews, review state, operating boundary, verification commands, and next stage.
-- [v0.15 Stage Closeout](STAGE_V0_15_CLOSEOUT.md): publishing platform matrix, review-only package queue, manual tracking records, operating boundary, verification commands, and maintainer notes.
+- [v0.15 Stage Closeout](STAGE_V0_15_CLOSEOUT.md): high-authority publishing platform list, review-only package queue, manual tracking records, operating boundary, verification commands, and maintainer notes.
 - [API Reference](API_REFERENCE.md): current mock API groups, route behavior, mutation requirements, and response shape.
 - [Extension Guide](EXTENDING.md): how to add providers, connectors, source adapters, UI pages, tests, and static preview data.
 - [Maintenance Guide](MAINTENANCE.md): routine maintenance, release gate, runtime state, security defaults, and production backlog.

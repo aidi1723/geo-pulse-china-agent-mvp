@@ -2918,8 +2918,6 @@ export function restoreRuntimeBackupAction(backupId) {
   };
 }
 
-initializePersistence();
-
 function paginate(items, page = 1, pageSize = 20) {
   const pageNumber = Number(page) || 1;
   const size = Number(pageSize) || 20;
@@ -5817,12 +5815,38 @@ function ensureInternationalGeoStateShape() {
   if (!internationalGeoState.publishing_platforms.length) {
     internationalGeoState.publishing_platforms = defaultInternationalGeoPublishingPlatforms();
   }
+  internationalGeoState.publishing_platforms = hydrateInternationalGeoPublishingPlatforms(
+    internationalGeoState.publishing_platforms
+  );
   if (!Array.isArray(internationalGeoState.publishing_packages)) {
     internationalGeoState.publishing_packages = [];
   }
   if (!Array.isArray(internationalGeoState.publishing_tracking)) {
     internationalGeoState.publishing_tracking = [];
   }
+}
+
+function hydrateInternationalGeoPublishingPlatforms(platforms = []) {
+  const defaultsByKey = new Map(defaultInternationalGeoPublishingPlatforms().map((item) => [item.platform_key, item]));
+  return platforms.map((platform) => {
+    const defaults = defaultsByKey.get(platform.platform_key) || {};
+    return {
+      ...defaults,
+      ...platform,
+      ai_visibility_fit: {
+        ...(defaults.ai_visibility_fit || {}),
+        ...(platform.ai_visibility_fit || {})
+      },
+      recommended_asset_types: Array.isArray(platform.recommended_asset_types)
+        ? platform.recommended_asset_types
+        : defaults.recommended_asset_types || [],
+      supported_package_types: Array.isArray(platform.supported_package_types)
+        ? platform.supported_package_types
+        : defaults.supported_package_types || [],
+      authority_signal: platform.authority_signal || defaults.authority_signal,
+      ai_recommendation_note: platform.ai_recommendation_note || defaults.ai_recommendation_note
+    };
+  });
 }
 
 function internationalGeoEngineLabel(engineId) {
@@ -5887,6 +5911,12 @@ function makePublishingPlatform(patch = {}) {
     indexing_value: patch.indexing_value || "medium",
     citation_value: patch.citation_value || "medium",
     entity_validation_value: patch.entity_validation_value || "medium",
+    authority_signal:
+      patch.authority_signal ||
+      "High-visibility public surface that can strengthen third-party entity evidence when the content is factual and indexed.",
+    ai_recommendation_note:
+      patch.ai_recommendation_note ||
+      "Publishing reviewed, source-backed content here may increase the chance of retrieval, citation, or recommendation by AI search engines; it is not measured proof of inclusion.",
     risk_level: patch.risk_level || "medium",
     publishing_mode: patch.publishing_mode || "manual",
     connector_status: "not_supported",
@@ -5916,6 +5946,9 @@ function defaultInternationalGeoPublishingPlatforms() {
       citation_value: "high",
       entity_validation_value: "medium",
       risk_level: "low",
+      authority_signal: "Owned canonical source with the strongest control over schema, sitemap, canonical links, and /llms.txt references.",
+      ai_recommendation_note:
+        "Use as the primary fact source. AI engines are more likely to cite and recommend pages that provide direct answers, structured data, proof tables, and stable canonical URLs.",
       notes: "Use canonical owned pages with JSON-LD, sitemap, and llms.txt references."
     }),
     makePublishingPlatform({
@@ -5937,6 +5970,9 @@ function defaultInternationalGeoPublishingPlatforms() {
       citation_value: "high",
       entity_validation_value: "high",
       risk_level: "low",
+      authority_signal: "Stable product documentation surface that can carry precise specifications, changelog context, and implementation boundaries.",
+      ai_recommendation_note:
+        "Well-structured docs help GPT, Gemini, Claude, Perplexity, and Copilot retrieve exact product facts instead of relying on weaker third-party summaries.",
       notes: "Docs should carry stable product facts, changelog links, FAQ proof, and llms.txt references."
     }),
     makePublishingPlatform({
@@ -5958,6 +5994,9 @@ function defaultInternationalGeoPublishingPlatforms() {
       citation_value: "high",
       entity_validation_value: "high",
       risk_level: "low",
+      authority_signal: "Developer-trusted repository surface with visible README, release, issue, and usage context.",
+      ai_recommendation_note:
+        "GitHub pages can reinforce technical entity trust for developer-oriented prompts and may improve retrieval for Claude, GPT, Copilot, and Perplexity technical answers.",
       notes: "README updates should describe exact capabilities, installation, limits, and official links."
     }),
     makePublishingPlatform({
@@ -5968,6 +6007,9 @@ function defaultInternationalGeoPublishingPlatforms() {
       recommended_asset_types: ["comparison_brief", "definition_brief", "buyer_guide_brief"],
       supported_package_types: ["linkedin_post"],
       risk_level: "medium",
+      authority_signal: "Professional company profile surface with brand, employee, customer, and industry relationship signals.",
+      ai_recommendation_note:
+        "Company posts can strengthen brand-entity consistency and professional proof, especially when they link back to canonical pages and avoid unsupported claims.",
       notes: "Use professional, source-backed posts with canonical links and no unsupported superlatives."
     }),
     makePublishingPlatform({
@@ -5978,6 +6020,9 @@ function defaultInternationalGeoPublishingPlatforms() {
       recommended_asset_types: ["definition_brief", "buyer_guide_brief"],
       supported_package_types: ["linkedin_post"],
       risk_level: "medium",
+      authority_signal: "Expert identity surface that can add author, founder, and subject-matter credibility signals.",
+      ai_recommendation_note:
+        "Founder explanations can improve E-E-A-T style context for AI retrieval when the relationship is disclosed and claims are backed by official sources.",
       notes: "Founder posts should add expert context and disclose relationship to the product."
     }),
     makePublishingPlatform({
@@ -5996,6 +6041,9 @@ function defaultInternationalGeoPublishingPlatforms() {
         copilot_bing: "medium"
       },
       risk_level: "high",
+      authority_signal: "Open community discussion surface that many AI search workflows use for third-party validation and user-language evidence.",
+      ai_recommendation_note:
+        "Helpful non-promotional Reddit answers may increase Perplexity and AI-search cross-check signals, but low-quality promotion can be removed or harm trust.",
       notes: "Answers must be helpful, non-promotional, and compliant with community rules."
     }),
     makePublishingPlatform({
@@ -6014,6 +6062,9 @@ function defaultInternationalGeoPublishingPlatforms() {
         copilot_bing: "medium"
       },
       risk_level: "high",
+      authority_signal: "Question-and-answer surface with long-tail buyer questions, comparison intent, and durable public answers.",
+      ai_recommendation_note:
+        "Clear answers on relevant questions can improve retrieval for comparison and buying prompts when affiliation is disclosed and links are genuinely useful.",
       notes: "Answers should disclose affiliation and link only when directly relevant."
     }),
     makePublishingPlatform({
@@ -6024,6 +6075,9 @@ function defaultInternationalGeoPublishingPlatforms() {
       recommended_asset_types: ["buyer_guide_brief"],
       supported_package_types: ["youtube_outline"],
       risk_level: "medium",
+      authority_signal: "Video search and transcript surface that can expose demos, walkthroughs, and product-use evidence.",
+      ai_recommendation_note:
+        "Titles, descriptions, chapters, and transcripts can give AI systems additional usage context, especially for demo and how-to recommendation prompts.",
       notes: "Video outlines should require demo proof and description links to canonical sources."
     }),
     makePublishingPlatform({
@@ -6034,6 +6088,9 @@ function defaultInternationalGeoPublishingPlatforms() {
       recommended_asset_types: ["comparison_brief", "alternatives_brief", "definition_brief"],
       supported_package_types: ["medium_article_brief"],
       risk_level: "medium",
+      authority_signal: "High-distribution article surface often used as a secondary source for topic explainers and opinionated comparisons.",
+      ai_recommendation_note:
+        "Medium articles can support Perplexity, Claude, GPT, and Gemini retrieval when they summarize verified facts and point back to canonical sources.",
       notes: "Use as a supporting article brief with canonical links back to owned pages."
     }),
     makePublishingPlatform({
@@ -6044,6 +6101,9 @@ function defaultInternationalGeoPublishingPlatforms() {
       recommended_asset_types: ["definition_brief", "product_spec_brief"],
       supported_package_types: ["devto_article_brief"],
       risk_level: "medium",
+      authority_signal: "Developer community article surface for implementation, API, open-source, and workflow content.",
+      ai_recommendation_note:
+        "Technical articles can improve developer-query retrieval if they include concrete steps, limitations, examples, and official documentation links.",
       notes: "Developer articles should focus on implementation facts and limitations."
     }),
     makePublishingPlatform({
@@ -6054,6 +6114,9 @@ function defaultInternationalGeoPublishingPlatforms() {
       recommended_asset_types: ["definition_brief", "product_spec_brief"],
       supported_package_types: ["devto_article_brief"],
       risk_level: "medium",
+      authority_signal: "Developer blogging surface with durable author and publication context.",
+      ai_recommendation_note:
+        "Hashnode can reinforce developer-facing entity signals when posts are factual, implementation-oriented, and canonically linked.",
       notes: "Hashnode package can reuse the developer article brief after human review."
     }),
     makePublishingPlatform({
@@ -6064,6 +6127,9 @@ function defaultInternationalGeoPublishingPlatforms() {
       recommended_asset_types: ["comparison_brief", "buyer_guide_brief"],
       supported_package_types: ["product_hunt_listing"],
       risk_level: "medium",
+      authority_signal: "Launch and product-discovery directory with maker, product, category, screenshot, and social proof context.",
+      ai_recommendation_note:
+        "A complete listing can strengthen product-entity discovery for launch, alternative, and category prompts after public validation exists.",
       notes: "Listing package should include positioning, screenshots, maker proof, and launch checklist."
     }),
     makePublishingPlatform({
@@ -6074,6 +6140,9 @@ function defaultInternationalGeoPublishingPlatforms() {
       recommended_asset_types: ["product_spec_brief", "buyer_guide_brief"],
       supported_package_types: ["g2_profile_checklist"],
       risk_level: "medium",
+      authority_signal: "B2B software review surface with category, profile, review, and buyer-intent context.",
+      ai_recommendation_note:
+        "Accurate G2 profiles and reviews can improve third-party validation for software recommendation prompts, especially in buyer-comparison contexts.",
       notes: "Profile checklist should focus on category, screenshots, proof, and review policy compliance."
     }),
     makePublishingPlatform({
@@ -6084,6 +6153,9 @@ function defaultInternationalGeoPublishingPlatforms() {
       recommended_asset_types: ["product_spec_brief", "buyer_guide_brief"],
       supported_package_types: ["capterra_profile_checklist"],
       risk_level: "medium",
+      authority_signal: "Software directory and review surface with pricing, category, feature, and buyer-evaluation metadata.",
+      ai_recommendation_note:
+        "Capterra profile completeness can support AI recommendation prompts that look for verified product categories, features, and buyer reviews.",
       notes: "Profile checklist should align category, pricing notes, proof, and public screenshots."
     }),
     makePublishingPlatform({
@@ -6094,6 +6166,9 @@ function defaultInternationalGeoPublishingPlatforms() {
       recommended_asset_types: ["comparison_brief", "alternatives_brief"],
       supported_package_types: ["directory_listing_checklist"],
       risk_level: "medium",
+      authority_signal: "Alternative and competitor-discovery directory with category relationships and comparable-product context.",
+      ai_recommendation_note:
+        "AlternativeTo can help AI systems understand competitor and alternative relationships when claims are factual and category alignment is accurate.",
       notes: "Directory listing should avoid unverifiable competitor claims."
     }),
     makePublishingPlatform({
@@ -6104,6 +6179,9 @@ function defaultInternationalGeoPublishingPlatforms() {
       recommended_asset_types: ["alternatives_brief", "buyer_guide_brief"],
       supported_package_types: ["directory_listing_checklist"],
       risk_level: "medium",
+      authority_signal: "SaaS discovery directory with product category, feature, and comparison metadata.",
+      ai_recommendation_note:
+        "SaaSWorthy can add third-party category coverage for SaaS recommendation prompts when profile facts match the official site.",
       notes: "Directory package should prepare category, positioning, screenshots, and source proof."
     })
   ];
@@ -8993,3 +9071,5 @@ export function cancelPublishTaskAction(taskId) {
   persistState();
   return getPublishTask(taskId);
 }
+
+initializePersistence();

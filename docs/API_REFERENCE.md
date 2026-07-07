@@ -233,12 +233,14 @@ Evidence assets are local review artifacts. They are not automatically published
 ### International GEO Publishing Workflow
 
 - `GET /international-geo/publishing`: viewer route for publishing workflow summary.
-- `GET /international-geo/publishing/platforms`: viewer route for the local platform matrix.
+- `GET /international-geo/publishing/platforms`: viewer route for the local high-authority platform list, including authority signals and AI recommendation-probability notes.
 - `GET /international-geo/publishing/packages`: viewer route for review-only package queue rows.
 - `GET /international-geo/publishing/tracking`: viewer route for manual/local tracking records.
 - `POST /international-geo/publishing/packages/generate`: editor route that generates deterministic publishing packages from approved International GEO evidence assets.
 - `POST /international-geo/publishing/packages/:id/review`: editor route that approves or rejects a review-only publishing package.
 - `PUT /international-geo/publishing/tracking/:id`: editor route that updates manual/local publication URL, canonical URL, indexing status, AI mention status, citation status, and recommendation status.
+
+Publishing platform notes are planning guidance only. They explain why public, higher-visibility platforms may improve retrieval, citation, and recommendation probability, but they are not measured AI engine evidence.
 
 Publishing workflow boundary: local planning/handoff only. These routes do not publish externally, store external platform credentials, generate full long-form articles, call live ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, Bing, SERP, indexing, or external platform services, or verify real inclusion/recommendation. Tracking values are manual/local unless future connector evidence exists.
 
