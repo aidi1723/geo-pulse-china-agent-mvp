@@ -32,6 +32,7 @@ const {
   generateInternationalGeoPublishingPackagesAction,
   generateInternationalGeoSiteAuditAssetsAction,
   generateTopicOutlineAction,
+  importInternationalGeoVisibilityEvidenceAction,
   getArticle,
   getAutomationConnector,
   getAutomationProviderConfig,
@@ -2243,6 +2244,25 @@ async function handleApi(req, res, url) {
   if (req.method === "POST" && pathname === "/international-geo/visibility/run") {
     const body = await parseBody(req).catch(() => ({}));
     sendJson(res, 200, ok(runInternationalGeoVisibilityMeasurementAction(body || {})));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/international-geo/visibility/evidence/import") {
+    const body = await parseBody(req).catch(() => null);
+    if (!body) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    try {
+      sendJson(res, 201, ok(importInternationalGeoVisibilityEvidenceAction(body)));
+    } catch (err) {
+      if ((err?.code || err?.message) === "VALIDATION_ERROR") {
+        const message = err.field_errors?.[0]?.message || err.message || "Invalid measured visibility evidence";
+        sendJson(res, 400, error("VALIDATION_ERROR", message).body);
+        return;
+      }
+      throw err;
+    }
     return;
   }
 

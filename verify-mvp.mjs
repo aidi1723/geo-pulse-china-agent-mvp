@@ -4965,6 +4965,79 @@ async function runMultiUserAccessHttpChecks() {
       "HTTP visibility run should not claim measured data without a provider"
     );
 
+    const viewerMeasuredImport = await httpRequest(
+      port,
+      "/api/v1/international-geo/visibility/evidence/import",
+      {
+        method: "POST",
+        headers: viewerHeaders,
+        body: JSON.stringify({
+          prompt_set_id: "aiprompt-seed-1",
+          engine_id: "chatgpt_search",
+          source_type: "manual_observation",
+          captured_at: "2026-07-07T10:30:00.000Z",
+          brand_mentioned: false,
+          evidence_note: "Viewer should not be able to import."
+        })
+      }
+    );
+    assert.equal(viewerMeasuredImport.status, 403, "Viewer should not import measured visibility evidence");
+
+    const ownerMeasuredPromptSet = await httpRequest(port, "/api/v1/international-geo/visibility/prompt-sets", {
+      method: "POST",
+      headers: ownerHeaders,
+      body: JSON.stringify({
+        prompt: "best AI search optimization platform for exporters",
+        market: "US",
+        language: "en-US",
+        product_name: "AgentCore GEO",
+        target_url: "https://example.com/agentcore-geo",
+        target_brand: "AgentCore GEO",
+        engines: ["chatgpt_search"]
+      })
+    });
+    assert.equal(ownerMeasuredPromptSet.status, 201, "Owner should create measured import prompt set");
+
+    const ownerMeasuredImport = await httpRequest(
+      port,
+      "/api/v1/international-geo/visibility/evidence/import",
+      {
+        method: "POST",
+        headers: ownerHeaders,
+        body: JSON.stringify({
+          prompt_set_id: ownerMeasuredPromptSet.body.data.id,
+          engine_id: "chatgpt_search",
+          source_type: "manual_observation",
+          source_url: "https://chatgpt.com/",
+          captured_at: "2026-07-07T10:30:00.000Z",
+          brand_mentioned: true,
+          citation_urls: ["https://example.com/agentcore-geo"],
+          recommendation_rank: 2,
+          raw_observation: "Manual observation cited the owned page.",
+          evidence_note: "HTTP import test."
+        })
+      }
+    );
+    assert.equal(ownerMeasuredImport.status, 201, "Owner should import measured visibility evidence");
+    assert.equal(ownerMeasuredImport.body?.data?.snapshot?.data_status, "measured");
+    assert.equal(ownerMeasuredImport.body?.data?.run?.data_source_type, "measured_import");
+
+    const invalidMeasuredImport = await httpRequest(
+      port,
+      "/api/v1/international-geo/visibility/evidence/import",
+      {
+        method: "POST",
+        headers: ownerHeaders,
+        body: JSON.stringify({
+          prompt_set_id: ownerMeasuredPromptSet.body.data.id,
+          engine_id: "chatgpt_search",
+          source_type: "manual_observation",
+          brand_mentioned: true
+        })
+      }
+    );
+    assert.equal(invalidMeasuredImport.status, 400, "Invalid measured visibility evidence import should fail");
+
     const viewerEvidenceAssets = await httpRequest(port, "/api/v1/international-geo/evidence-assets", {
       headers: {
         Cookie: viewerLogin.cookie
