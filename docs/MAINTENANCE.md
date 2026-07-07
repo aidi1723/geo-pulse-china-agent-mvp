@@ -71,6 +71,13 @@ Do this only when the repository owner accepts history rewriting. For establishe
 
 ## Maintenance Log
 
+### 2026-07-07 - v0.15 Publishing Workflow Closeout
+
+- Scope: added International GEO publishing platform matrix, deterministic package generation from approved evidence assets, review-only package queue, and manual/local tracking records.
+- Local gate: `npm run check` returned `verify-mvp: OK`.
+- Documentation aligned: README, API reference, architecture guide, development guide, production deployment guide, roadmap, documentation index, phase 2 roadmap, open-source release checklist, changelog, maintenance guide, and v0.15 closeout docs.
+- Boundary: local planning/handoff only; no external publishing, credentials, full articles, live AI/search/SERP/indexing verification; tracking is manual/local unless future connector evidence.
+
 ### 2026-07-07 - v0.14 Evidence-Driven Asset Review Closeout
 
 - Scope: added International GEO evidence-driven opportunities, local generation queue rows, generated local previews with provenance metadata, and approve/reject review state.
@@ -127,17 +134,17 @@ Do this only when the repository owner accepts history rewriting. For establishe
 - No evidence found of real local absolute paths, real personal email addresses, tracked `.env` files, tracked runtime state, or real credential patterns in the current tree or existing Git history.
 - History rewrite: not performed.
 
-## Post-v0.14 Production Hardening
+## Post-v0.15 Production Hardening
 
-v0.14.0 is deployable as a controlled one-organization team-access service behind an external access layer. Before treating it as a real SaaS, real-time AI search monitoring platform, external publishing system, or broadly exposed hosted service, production hardening should include:
+v0.15.0 is deployable as a controlled one-organization team-access service behind an external access layer. Before treating it as a real SaaS, real-time AI search monitoring platform, external publishing system, or broadly exposed hosted service, production hardening should include:
 
 - Database persistence, migrations, and database-grade backup policy.
 - Monitoring and alerting.
 - Durable secret management outside local JSON and source code.
 - OAuth/SSO and MFA if external identity integration is required.
 - Real provider, connector, and source adapter implementations.
-- Measured AI visibility data sources and external publishing connectors before claiming real engine inclusion, recommendation tracking, or automatic distribution.
-- Export packages and connector handoff contracts before moving reviewed evidence assets outside the local workflow.
+- Measured AI visibility data sources and external publishing/indexing connectors before claiming real engine inclusion, recommendation tracking, indexing, citation, or automatic distribution.
+- Connector evidence and approval gates before moving reviewed evidence assets or publishing packages outside the local workflow.
 - Security contact ownership and incident response process.
 - Multi-tenant workspace isolation if multiple organizations use the service.
 - Data retention, deletion, and privacy policy.

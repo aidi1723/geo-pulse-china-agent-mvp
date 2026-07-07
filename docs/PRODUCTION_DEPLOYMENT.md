@@ -1,8 +1,8 @@
 # Production Deployment Guide
 
-This guide covers the v0.14.0 one-organization team-access deployment profile for GEO Pulse.
+This guide covers the v0.15.0 one-organization team-access deployment profile for GEO Pulse.
 
-For stage-level scope and closing language, see [v0.9 Stage Closeout](STAGE_V0_9_CLOSEOUT.md), [v0.9.1 Stage Closeout](STAGE_V0_9_1_CLOSEOUT.md), [v0.10 Stage Closeout](STAGE_V0_10_CLOSEOUT.md), [v0.11 Stage Closeout](STAGE_V0_11_CLOSEOUT.md), [v0.12 Stage Closeout](STAGE_V0_12_CLOSEOUT.md), [v0.13 Stage Closeout](STAGE_V0_13_CLOSEOUT.md), and [v0.14 Stage Closeout](STAGE_V0_14_CLOSEOUT.md).
+For stage-level scope and closing language, see [v0.9 Stage Closeout](STAGE_V0_9_CLOSEOUT.md), [v0.9.1 Stage Closeout](STAGE_V0_9_1_CLOSEOUT.md), [v0.10 Stage Closeout](STAGE_V0_10_CLOSEOUT.md), [v0.11 Stage Closeout](STAGE_V0_11_CLOSEOUT.md), [v0.12 Stage Closeout](STAGE_V0_12_CLOSEOUT.md), [v0.13 Stage Closeout](STAGE_V0_13_CLOSEOUT.md), [v0.14 Stage Closeout](STAGE_V0_14_CLOSEOUT.md), and [v0.15 Stage Closeout](STAGE_V0_15_CLOSEOUT.md).
 
 ## Scope
 
@@ -18,6 +18,7 @@ Supported:
 - International GEO site audit input, durable rule-first audit records, guarded live crawl evidence, evidence-backed scoring, evidence-aware recommendations, and generated GEO asset previews.
 - International GEO AI visibility measurement foundation with prompt sets, provider readiness, visibility runs, prompt snapshots, and `measured` / `simulated` / `unavailable` status labels.
 - International GEO evidence-driven asset opportunities, local generation queue rows, generated local previews, provenance metadata, and approve/reject review state.
+- International GEO publishing platform matrix, review-only publishing package queue, deterministic package generation from approved evidence assets, and manual/local tracking records.
 - Health checks.
 - Mutation API-key guard.
 - Basic SEO/GEO files: `robots.txt`, `sitemap.xml`, `llms.txt`, and `favicon.ico`.
@@ -30,8 +31,8 @@ Not included:
 - Payment billing.
 - Real third-party publishing credentials.
 - Real GPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, Bing, SERP, or AI visibility monitoring APIs.
-- Recursive crawling, JavaScript browser rendering, real provider querying, real SERP collection, measured AI engine inclusion checks, recommendation-rank tracking, or automatic third-party publishing.
-- Full long-form article generation from evidence assets.
+- Recursive crawling, JavaScript browser rendering, real provider querying, real SERP collection, measured AI engine inclusion checks, indexing verification, recommendation-rank tracking, external platform calls, or automatic third-party publishing.
+- Full long-form article generation from evidence assets or publishing packages.
 - Email invitations or self-service signup.
 
 ## Security Boundary
@@ -120,7 +121,7 @@ curl -f http://localhost:3000/favicon.ico
 
 ## Backup And Restore
 
-The v0.14.0 deployment stores state in a local JSON file and provides built-in local backup controls in Settings -> Brand Knowledge -> Runtime and Data.
+The v0.15.0 deployment stores state in a local JSON file and provides built-in local backup controls in Settings -> Brand Knowledge -> Runtime and Data.
 
 Preferred operator flow:
 
@@ -183,14 +184,14 @@ curl -f -H "X-GEO-API-Key: $GEO_INTERNAL_API_KEY" http://localhost:3000/api/v1/s
 If Docker is available:
 
 ```bash
-docker build -t geo-pulse:v0.14.0 .
+docker build -t geo-pulse:v0.15.0 .
 ```
 
 ## Stage Closeout Language
 
-GEO Pulse v0.14.0 is ready for controlled one-organization team deployment. It includes built-in login, role-based access, local workflows, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, GEO asset generation, AI visibility measurement foundation, evidence-driven asset opportunities, local generation queue, approve/reject review state, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production startup guardrails, health checks, GEO/SEO static files, Docker packaging, minimal GitHub CI, and documentation for rollback.
+GEO Pulse v0.15.0 is ready for controlled one-organization team deployment. It includes built-in login, role-based access, local workflows, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, GEO asset generation, AI visibility measurement foundation, evidence-driven asset opportunities, local generation queue, approve/reject review state, publishing platform matrix, review-only package queue, manual tracking records, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production startup guardrails, health checks, GEO/SEO static files, Docker packaging, minimal GitHub CI, and documentation for rollback.
 
-v0.14.0 must still be protected by an external access layer and should not be presented as a complete SaaS platform, real-time AI search monitoring platform, or external publishing system. Visibility runs default to `unavailable` snapshots and do not query real AI/search providers. Evidence asset workflows create reviewable local assets only; they do not publish externally, generate full long-form articles, or call live AI search engines for inclusion/ranking measurement. Durable database storage, OAuth/SSO, MFA, real integrations, monitoring, measured AI visibility provider evidence, and multi-tenant controls remain future work.
+v0.15.0 must still be protected by an external access layer and should not be presented as a complete SaaS platform, real-time AI search monitoring platform, or external publishing system. Visibility runs default to `unavailable` snapshots and do not query real AI/search providers. Evidence asset and publishing workflows create reviewable local assets, handoff packages, and manual tracking records only; they do not publish externally, store external platform credentials, generate full long-form articles, call live AI/search/SERP/indexing/external platform services, or verify inclusion/recommendation. Durable database storage, OAuth/SSO, MFA, real integrations, monitoring, measured AI visibility provider evidence, approved publishing/indexing connectors, and multi-tenant controls remain future work.
 
 ## Rollback
 

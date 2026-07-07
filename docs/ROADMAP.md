@@ -2,7 +2,7 @@
 
 ## Current State
 
-The project is a v0.14.0 one-organization team-access workspace with built-in login, RBAC, connector diagnostics, local backup import/restore, launch preflight, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, generated GEO assets, AI visibility measurement foundation, evidence-driven local asset opportunities, review queue state, and minimal GitHub CI.
+The project is a v0.15.0 one-organization team-access workspace with built-in login, RBAC, connector diagnostics, local backup import/restore, launch preflight, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, generated GEO assets, AI visibility measurement foundation, evidence-driven local asset opportunities, review queue state, publishing platform matrix, review-only package queue, manual tracking records, and minimal GitHub CI.
 
 Completed mock-first product areas:
 
@@ -13,7 +13,7 @@ Completed mock-first product areas:
 - Automation provider registry, connector registry, connector-scoped permissions, automation runs, scheduler, retry, and runtime status.
 - Visibility analytics, mock SERP collection, competitor share-of-voice, audience segments, marketing campaigns, and campaign runs.
 - Audit events, audit CSV export, local persistence, reset, security headers, body limits, rate limits, and remote access guard.
-- International GEO workspace for overseas AI search readiness, rule-first and crawl-evidenced site audits, generated GEO assets, evidence-driven opportunity rows, local generation queue, approve/reject review state, content generation planning, distribution execution, visibility prompt sets, provider readiness, runs, snapshots, and AI engine visibility models.
+- International GEO workspace for overseas AI search readiness, rule-first and crawl-evidenced site audits, generated GEO assets, evidence-driven opportunity rows, local generation queue, approve/reject review state, publishing platform matrix, review-only package queue, manual tracking records, content generation planning, distribution execution, visibility prompt sets, provider readiness, runs, snapshots, and AI engine visibility models.
 - Production guardrails, `/healthz`, `robots.txt`, `sitemap.xml`, `llms.txt`, `favicon.ico`, Docker, Docker Compose, and deployment documentation.
 - Single-user complete workflows: workspace input, manual topics, topic editing, outline generation, manual articles, templates, exports, International GEO audit/artifacts, local billing plan switch, and logout action.
 - Integration-readiness workflows: connector config editing, connector connection tests, connector health checks, masked secrets, runtime connector health summaries, and connector audit events.
@@ -27,11 +27,12 @@ Completed mock-first product areas:
 - Evidence-backed GEO scoring: deterministic 100-point rubric, check-level awarded/deducted points, confidence, priority, deduction reasons, next actions, audit-level `score_breakdown`, and International GEO `评分拆解` UI.
 - AI visibility measurement foundation baseline: prompt sets, provider readiness for ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude, and Copilot / Bing, visibility runs, prompt snapshots, UI panels, browser button wiring, and explicit `measured`, `simulated`, and `unavailable` data-status labels.
 - Evidence-driven asset opportunities: opportunity rows derived from audit scoring, crawl evidence, visibility gaps, and rule-first input; local generation queue rows; generated local previews with provenance metadata; and approve/reject review state.
+- International GEO publishing workflow: local platform matrix across owned, developer, professional social, community, Q&A, video, directory, review-site, and knowledge-base destinations; deterministic package generation from approved evidence assets; review-only package queue; and manual/local tracking for publication URL, canonical URL, indexing status, AI mention status, citation status, and recommendation status.
 - Open-source release docs and GPLv3 licensing.
 
 ## Near-Term Maintenance
 
-These items keep v0.14.0 healthy without changing its architecture:
+These items keep v0.15.0 healthy without changing its architecture:
 
 - Keep `npm run check` passing.
 - Expand `verify-mvp.mjs` when new behavior is added.
@@ -43,37 +44,41 @@ These items keep v0.14.0 healthy without changing its architecture:
 
 These are the immediate product slices. The full second-stage direction is tracked in [Phase 2 Roadmap](PHASE_2_ROADMAP.md).
 
-1. Export packages and connector handoff contracts for reviewed assets.
-   - Keep publication behind explicit human approval and future connector permissions.
-   - Preserve provenance metadata from the evidence or prompt gap that produced each reviewed asset.
+1. Measured provider evidence for visibility and tracking.
+   - Add explicit connectors before claiming real engine inclusion, indexing, citation presence, recommendation rank, or external distribution.
+   - Keep manual/local values separate from measured connector evidence.
 
 2. Future approved providers for measured visibility.
    - Add explicit connectors for approved SERP or AI visibility providers before claiming real engine inclusion.
    - Convert ChatGPT Search, Gemini, Claude, Perplexity, Google AI Overviews, and Copilot / Bing prompts to `measured` snapshots only when provider evidence exists.
 
-3. Source adapter implementation stubs per contract.
+3. Controlled external publishing connectors.
+   - Keep publication behind explicit human approval and future connector permissions.
+   - Preserve provenance metadata from the evidence or prompt gap that produced each reviewed package.
+
+4. Source adapter implementation stubs per contract.
    - Add explicit adapter runners behind `sourceAdapterContracts`.
    - Keep evidence and error taxonomy visible in crawl jobs.
 
-4. Connector run detail drawer.
+5. Connector run detail drawer.
    - Expand from connector-level diagnostics into per-run drilldown when a workflow has multiple connectors.
 
-5. Prompt regression dataset.
+6. Prompt regression dataset.
    - Store sample inputs, expected criteria, generated outputs, and quality score history.
 
 ## Phase 2 Direction
 
-Phase 2 should move the product from v0.14 evidence-scored audit, visibility foundation, and local evidence-asset review workflow to broader measured GEO operations:
+Phase 2 should move the product from v0.15 evidence-scored audit, visibility foundation, local evidence-asset review workflow, and publishing handoff workflow to broader measured GEO operations:
 
 - AI visibility monitoring through approved data sources.
-- Export packages and connector handoff contracts for reviewed assets.
 - External distribution connectors with manual approval gates.
+- Measured indexing, citation, recommendation, and external publication evidence through approved connectors.
 - Multi-user production hardening with database persistence, durable secrets, monitoring, and audit retention.
 - Multi-tenant SaaS readiness only after the one-organization deployment model is hardened.
 
 Phase 2 must preserve a clear distinction between rule-first recommendations, crawl-evidenced findings, and measured external visibility data.
 
-## Post-v0.14 Production Hardening
+## Post-v0.15 Production Hardening
 
 These are required before using the project as a real SaaS or broadly exposed hosted service:
 
@@ -88,7 +93,7 @@ These are required before using the project as a real SaaS or broadly exposed ho
 - Incident response owner and security contact.
 - Data retention, deletion, and privacy policy.
 
-## Non-Goals For v0.14
+## Non-Goals For v0.15
 
 - Production multi-tenant hosting.
 - Real third-party credential management.
@@ -96,6 +101,7 @@ These are required before using the project as a real SaaS or broadly exposed ho
 - MFA.
 - Real external CMS, social, email, SERP, or analytics publishing/collection.
 - Real ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, Bing, SERP, or AI visibility provider querying.
+- Real indexing verification or external platform calls.
 - Measured engine inclusion, citation presence, recommendation rank, or competitor rank without approved provider evidence.
 - Automatic third-party community or CMS publishing.
 - Full long-form article generation from evidence assets.
@@ -106,7 +112,7 @@ These are required before using the project as a real SaaS or broadly exposed ho
 
 ## Release Versioning
 
-Current public snapshot: `0.14.0`.
+Current public snapshot: `0.15.0`.
 
 Suggested version policy:
 

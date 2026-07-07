@@ -2,17 +2,17 @@
 
 ## Purpose
 
-Phase 2 turns the current v0.14 evidence-scored GEO audit, visibility foundation, and local evidence-asset review workflow into a broader measured and integration-ready GEO operating system.
+Phase 2 turns the current v0.15 evidence-scored GEO audit, visibility foundation, local evidence-asset review workflow, and publishing handoff workflow into a broader measured and integration-ready GEO operating system.
 
-The current product can prepare audits and assets from local inputs, attach guarded public-site crawl evidence, explain a deterministic 100-point scoring breakdown, store prompt sets, provider readiness, visibility runs, and prompt snapshots with explicit data-status labels, and generate evidence-driven local asset opportunities with review state. Phase 2 should next add export packages, connector handoff contracts, measured AI visibility data from approved providers, controlled external distribution, and stronger production foundations before the project claims live engine inclusion or recommendation monitoring.
+The current product can prepare audits and assets from local inputs, attach guarded public-site crawl evidence, explain a deterministic 100-point scoring breakdown, store prompt sets, provider readiness, visibility runs, and prompt snapshots with explicit data-status labels, generate evidence-driven local asset opportunities with review state, generate review-only publishing packages from approved evidence assets, and track publication/indexing/AI mention/citation/recommendation fields manually. Phase 2 should next add measured AI visibility data from approved providers, controlled external distribution connectors, automation with explicit approval gates, and stronger production foundations before the project claims live engine inclusion, indexing, citation, recommendation, or publication outcomes.
 
 ## Phase 2 Direction
 
 Build in this order:
 
 1. AI visibility monitoring through approved data sources.
-2. Export packages and connector handoff contracts for reviewed assets.
-3. External distribution connectors with manual guardrails.
+2. External distribution connectors with manual guardrails.
+3. Measured indexing, citation, recommendation, and publication evidence through approved connectors.
 4. Production hardening for hosted team use.
 
 ## Track 1: Live Site Crawl And Evidence Collection
@@ -88,7 +88,7 @@ Acceptance:
 
 ## Track 4: Content And Asset Production Upgrade
 
-Status: v0.14 baseline complete for local review assets. Export packages, connector handoff contracts, and publication connectors remain future work.
+Status: v0.15 baseline complete for local review assets, publishing package handoff, and manual tracking. Measured providers, connector automation, and publication connectors remain future work.
 
 Goal: generate better GEO content from crawl evidence, score deductions, and prompt visibility gaps.
 
@@ -109,6 +109,7 @@ Acceptance:
 Boundary:
 
 - v0.14 adds evidence-driven International GEO asset opportunities, queue items, generated local previews, and approve/reject review state. The workflow creates reviewable local assets only; it does not publish externally, generate full long-form articles, or call live AI search engines for inclusion/ranking measurement.
+- v0.15 adds local publishing platform matrix rows, deterministic publishing packages from approved evidence assets, review-only package queue state, and manual/local tracking records. The workflow is local planning/handoff only; it does not publish externally, store platform credentials, generate full articles, call live AI/search/SERP/indexing services, or verify real inclusion/recommendation.
 
 ## Track 5: External Distribution Connectors
 
@@ -172,9 +173,10 @@ Acceptance:
 - `v0.12`: deeper evidence-backed GEO scoring. Complete baseline.
 - `v0.13`: AI visibility measurement foundation. Complete baseline; measured provider integrations remain future work.
 - `v0.14`: evidence-driven local content and asset production upgrade. Complete baseline; external publishing and full article generation remain future work.
-- `v0.15`: export packages and connector handoff contracts with approval gates.
-- `v0.16`: database persistence, secrets, monitoring, and production hardening.
-- `v0.17+`: multi-tenant SaaS readiness if the product direction requires it.
+- `v0.15`: local publishing platform matrix, review-only publishing packages, and manual tracking. Complete baseline; measured providers, connectors, and automation remain future work.
+- `v0.16`: measured visibility/tracking providers or controlled connector automation with explicit evidence and approval gates.
+- `v0.17`: database persistence, secrets, monitoring, and production hardening.
+- `v0.18+`: multi-tenant SaaS readiness if the product direction requires it.
 
 ## Phase 2 Boundaries
 
