@@ -388,6 +388,10 @@ export function runInternationalGeoVisibilityMeasurement(payload = {}) {
   return requestJson("/api/v1/international-geo/visibility/run", "POST", payload);
 }
 
+export function importInternationalGeoVisibilityEvidence(payload = {}) {
+  return requestJson("/api/v1/international-geo/visibility/evidence/import", "POST", payload);
+}
+
 export function getInternationalGeoEvidenceAssets() {
   return request("/api/v1/international-geo/evidence-assets");
 }

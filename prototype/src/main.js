@@ -30,6 +30,7 @@ import {
   getCurrentSession as getCurrentSessionApi,
   getLaunchPreflight as getLaunchPreflightApi,
   getRuntimeBackupDownload as getRuntimeBackupDownloadApi,
+  importInternationalGeoVisibilityEvidence as importInternationalGeoVisibilityEvidenceApi,
   importRuntimeBackup as importRuntimeBackupApi,
   loginSession as loginSessionApi,
   logoutSession as logoutSessionApi,
@@ -180,6 +181,32 @@ function getInternationalSiteAuditPayload() {
     competitors: parseLineArray(
       container.querySelector('[data-international-audit-field="competitors"]')?.value || ""
     )
+  };
+}
+
+function getInternationalVisibilityEvidencePayload() {
+  const container = root.querySelector('[data-international-panel="visibility-evidence-import"]');
+  if (!container) return null;
+  return {
+    prompt_set_id: container.querySelector('[data-visibility-evidence-field="prompt_set_id"]')?.value || "",
+    engine_id: container.querySelector('[data-visibility-evidence-field="engine_id"]')?.value || "",
+    brand_mentioned: container.querySelector('[data-visibility-evidence-field="brand_mentioned"]')?.value || "",
+    citation_urls: parseLineArray(
+      container.querySelector('[data-visibility-evidence-field="citation_urls"]')?.value || ""
+    ),
+    recommendation_rank:
+      container.querySelector('[data-visibility-evidence-field="recommendation_rank"]')?.value?.trim() || "",
+    competitors_mentioned: parseLineArray(
+      container.querySelector('[data-visibility-evidence-field="competitors_mentioned"]')?.value || ""
+    ),
+    source_type: container.querySelector('[data-visibility-evidence-field="source_type"]')?.value || "manual_observation",
+    source_url: container.querySelector('[data-visibility-evidence-field="source_url"]')?.value?.trim() || "",
+    captured_at: container.querySelector('[data-visibility-evidence-field="captured_at"]')?.value?.trim() || "",
+    confidence: container.querySelector('[data-visibility-evidence-field="confidence"]')?.value || "medium",
+    raw_observation:
+      container.querySelector('[data-visibility-evidence-field="raw_observation"]')?.value?.trim() || "",
+    evidence_note:
+      container.querySelector('[data-visibility-evidence-field="evidence_note"]')?.value?.trim() || ""
   };
 }
 
@@ -1379,6 +1406,19 @@ const actions = {
       showNotice(`AI 可见度测量已完成，新增 ${result.snapshots_created || 0} 条快照。`);
     } catch (error) {
       setError(error instanceof Error ? error.message : "AI 可见度测量失败");
+      rerender();
+    }
+  },
+  async importInternationalGeoVisibilityEvidence() {
+    const payload = getInternationalVisibilityEvidencePayload();
+    if (!payload) return;
+    try {
+      const result = await importInternationalGeoVisibilityEvidenceApi(payload);
+      await refreshData();
+      store.page = "international";
+      showNotice(`测量证据已导入：${result.snapshot?.engine_label || result.snapshot?.engine_id || "measured"}。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "导入测量证据失败");
       rerender();
     }
   },

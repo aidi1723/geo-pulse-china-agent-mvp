@@ -438,6 +438,11 @@ export function bindEvents(root, store, rerender, actions) {
       return;
     }
 
+    if (action === "international-visibility-evidence-import") {
+      await actions.importInternationalGeoVisibilityEvidence();
+      return;
+    }
+
     if (action === "international-evidence-assets-generate") {
       await actions.generateInternationalGeoEvidenceAssets();
       return;
