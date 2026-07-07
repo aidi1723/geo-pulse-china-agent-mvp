@@ -71,6 +71,13 @@ Do this only when the repository owner accepts history rewriting. For establishe
 
 ## Maintenance Log
 
+### 2026-07-07 - v0.13 AI Visibility Measurement Foundation Closeout
+
+- Scope: added International GEO prompt sets, provider readiness, visibility runs, prompt snapshots, UI panels, and browser button wiring for ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude, and Copilot / Bing readiness.
+- Local gate: `npm run check` returned `verify-mvp: OK` after rerunning in the parent environment with local port binding available.
+- Documentation aligned: README, API reference, architecture guide, development guide, production deployment guide, roadmap, documentation index, phase 2 roadmap, open-source release checklist, changelog, maintenance guide, and v0.13 closeout docs.
+- Boundary: v0.13 is a measurement foundation only. Default local runs create `unavailable` snapshots and do not query real AI/search providers or claim measured engine inclusion, citation presence, recommendation rank, or competitor rank.
+
 ### 2026-07-07 - v0.12 Evidence-Backed GEO Scoring Closeout
 
 - Scope: added deterministic International GEO scoring fields, audit-level `score_breakdown`, legacy-safe score hydration, and UI `评分拆解`.
@@ -113,9 +120,9 @@ Do this only when the repository owner accepts history rewriting. For establishe
 - No evidence found of real local absolute paths, real personal email addresses, tracked `.env` files, tracked runtime state, or real credential patterns in the current tree or existing Git history.
 - History rewrite: not performed.
 
-## Post-v0.12 Production Hardening
+## Post-v0.13 Production Hardening
 
-v0.12.0 is deployable as a controlled one-organization team-access service behind an external access layer. Before treating it as a real SaaS, real-time AI search monitoring platform, or broadly exposed hosted service, production hardening should include:
+v0.13.0 is deployable as a controlled one-organization team-access service behind an external access layer. Before treating it as a real SaaS, real-time AI search monitoring platform, or broadly exposed hosted service, production hardening should include:
 
 - Database persistence, migrations, and database-grade backup policy.
 - Monitoring and alerting.

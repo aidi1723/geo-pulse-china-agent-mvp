@@ -2,7 +2,7 @@
 
 ## Overview
 
-GEO Pulse China Agent v0.12.0 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes built-in one-organization multi-user access, role-based permissions, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, International GEO site audit records, guarded live crawl evidence, evidence-backed scoring, generated GEO asset previews, production startup guardrails, health checks, GEO/SEO static files, and minimal GitHub CI for controlled server use.
+GEO Pulse China Agent v0.13.0 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes built-in one-organization multi-user access, role-based permissions, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, International GEO site audit records, guarded live crawl evidence, evidence-backed scoring, generated GEO asset previews, AI visibility measurement foundation state, production startup guardrails, health checks, GEO/SEO static files, and minimal GitHub CI for controlled server use.
 
 ## Runtime Components
 
@@ -35,7 +35,7 @@ GEO Pulse China Agent v0.12.0 is a zero-dependency Node.js application with a br
 | Publishing | Channels, publish tasks, task items, calendar metadata, variants, readiness checks, approval guard, records. | `mock-data.mjs`, `prototype/src/pages/distribution.js` |
 | Automation operations | Provider registry, connector registry, permission matrix, connector health checks, connector diagnostics, automation run steps, scheduler tick, retries. | `automation-providers.mjs`, `mock-data.mjs`, `prototype/src/pages/settings.js` |
 | Analytics | Visibility tracking, SERP snapshots, competitor domains, audience segments, campaign runs. | `mock-data.mjs`, `prototype/src/pages/analytics.js` |
-| International GEO | Overseas AI search readiness, rule-first and crawl-evidenced site audit records, deterministic scoring breakdowns, generated GEO assets, article and distribution planning, engine visibility models, community citation surfaces. | `mock-data.mjs`, `site-crawl.mjs`, `server.mjs`, `prototype/src/pages/international.js` |
+| International GEO | Overseas AI search readiness, rule-first and crawl-evidenced site audit records, deterministic scoring breakdowns, generated GEO assets, article and distribution planning, visibility prompt sets, provider readiness, runs, snapshots, and community citation surfaces. | `mock-data.mjs`, `site-crawl.mjs`, `server.mjs`, `prototype/src/pages/international.js` |
 | Single-user completion | Workspace input, manual topics, outlines, manual articles, templates, exports, local billing plan switch, and logout action. | `mock-data.mjs`, `server.mjs`, `prototype/src/main.js` |
 | Security and governance | Login sessions, local users, role permissions, API key automation guard, audit events, CSV export safety, connector-scoped permissions, endpoint restrictions, local backup/restore audit trail. | `server.mjs`, `mock-data.mjs`, `reports/security-hardening-log.md` |
 
@@ -50,7 +50,7 @@ Persistence is local JSON, not a production database.
 
 ## Security Model
 
-v0.12.0 uses built-in team access plus local-first production guardrails:
+v0.13.0 uses built-in team access plus local-first production guardrails:
 
 - Remote access is disabled unless `GEO_ALLOW_REMOTE_ACCESS=1`.
 - Remote access requires a fixed `GEO_INTERNAL_API_KEY`.
@@ -71,11 +71,13 @@ These safeguards are not a replacement for database controls, multi-tenant isola
 
 ## International GEO Audit Boundary
 
-The v0.12 International GEO workflow stores `site_audits`, `crawl_evidence`, `score_breakdown`, and `geo_assets` inside the local mock state. It accepts a website URL, product or brand name, target market, target language, primary buyer query, and competitors, then builds deterministic rule-first checks and copyable assets. Editors can run a guarded live crawl that fetches only the submitted homepage plus origin `robots.txt`, `sitemap.xml`, and `/llms.txt`, stores the evidence snapshot, and rebuilds checks with `rule_first`, `crawl_evidenced`, or `unavailable` evidence states.
+The v0.13 International GEO workflow stores `site_audits`, `crawl_evidence`, `score_breakdown`, `geo_assets`, `visibility_prompt_sets`, `visibility_provider_readiness`, `visibility_snapshots`, and `visibility_runs` inside the local mock state. It accepts a website URL, product or brand name, target market, target language, primary buyer query, and competitors, then builds deterministic rule-first checks and copyable assets. Editors can run a guarded live crawl that fetches only the submitted homepage plus origin `robots.txt`, `sitemap.xml`, and `/llms.txt`, stores the evidence snapshot, and rebuilds checks with `rule_first`, `crawl_evidenced`, or `unavailable` evidence states.
 
 Each audit check is scored against a deterministic 100-point rubric through `score_weight`, `score_awarded`, `score_deduction`, `confidence`, `priority`, `deduction_reasons`, and `next_actions`. Audit-level `score_breakdown` groups awarded and deducted points by category and keeps legacy audit records renderable by hydrating missing scoring fields.
 
-The audit is an operational preparation layer, not live AI monitoring. It does not recursively crawl sites, render JavaScript-heavy pages, query ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, SERP APIs, or publish to external platforms. Future AI visibility and publishing integrations should enter through explicit connectors and preserve the same audit/evidence/asset records as the UI contract.
+Visibility prompt sets group a required prompt with optional market, language, buyer intent, product name, target URL, target brand, competitors, and engine ids. Provider readiness rows describe whether ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude, or Copilot / Bing can produce measured evidence. Visibility snapshots must label data as `measured`, `simulated`, or `unavailable`; measured snapshots require approved provider evidence. Default local runs create `unavailable` snapshots only.
+
+The audit and visibility foundation are operational preparation layers, not live AI monitoring. They do not recursively crawl sites, render JavaScript-heavy pages, query ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, Bing, SERP APIs, or publish to external platforms. Future AI visibility and publishing integrations should enter through explicit connectors and preserve the same audit/evidence/asset/snapshot records as the UI contract.
 
 ## Operational Routes
 

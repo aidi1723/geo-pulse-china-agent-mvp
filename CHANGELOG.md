@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.13.0 - 2026-07-07
+
+International GEO AI visibility measurement foundation.
+
+### Added
+
+- International GEO prompt sets for tracking prompts, market, language, buyer intent, product name, target URL, target brand, competitors, and engine ids.
+- Provider readiness models for ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude, and Copilot / Bing.
+- Visibility runs and prompt snapshots with explicit `measured`, `simulated`, and `unavailable` data-status labels.
+- API routes for visibility overview, runs, snapshots, prompt-set creation, and local run creation.
+- International GEO UI panels and browser button wiring for provider readiness, visibility runs, and snapshot review.
+
+### Boundaries
+
+- v0.13 is a measurement foundation, not real AI search monitoring.
+- Default local runs create `unavailable` snapshots only.
+- v0.13 does not query real ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, Bing, SERP, or AI visibility providers.
+- v0.13 does not claim measured engine inclusion, citation presence, recommendation rank, or competitor rank unless future approved provider evidence is stored.
+- Prompt sets and snapshots never expose raw provider credentials.
+
+### Verification
+
+- `npm run check`
+
 ## 0.12.0 - 2026-07-07
 
 Evidence-backed scoring depth for International GEO site audits.

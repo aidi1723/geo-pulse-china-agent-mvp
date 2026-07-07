@@ -1149,15 +1149,28 @@ const billingPlanState = {
   upgrade_history: []
 };
 
+const defaultInternationalGeoInput = {
+  website_url: "https://example.com",
+  product_name: "GEO Pulse",
+  target_market: "United States",
+  target_language: "English",
+  primary_query: "best GEO platform for AI search",
+  competitors: ["Profound", "AthenaHQ", "Semrush AI"]
+};
+
+const INTERNATIONAL_GEO_VISIBILITY_ENGINES = [
+  { id: "chatgpt_search", label: "ChatGPT Search" },
+  { id: "perplexity", label: "Perplexity" },
+  { id: "google_ai_overviews", label: "Google AI Overviews" },
+  { id: "gemini", label: "Gemini" },
+  { id: "claude", label: "Claude" },
+  { id: "copilot_bing", label: "Copilot / Bing" }
+];
+
+const INTERNATIONAL_GEO_VISIBILITY_DATA_STATUSES = new Set(["measured", "simulated", "unavailable"]);
+
 const internationalGeoState = {
-  input: {
-    website_url: "https://example.com",
-    product_name: "GEO Pulse",
-    target_market: "United States",
-    target_language: "English",
-    primary_query: "best GEO platform for AI search",
-    competitors: ["Profound", "AthenaHQ", "Semrush AI"]
-  },
+  input: { ...defaultInternationalGeoInput },
   summary: {
     ai_ready_score: 78,
     llms_status: "已生成",
@@ -1177,6 +1190,10 @@ const internationalGeoState = {
     latest: null
   },
   geo_assets: [],
+  visibility_prompt_sets: defaultInternationalGeoVisibilityPromptSets(),
+  visibility_provider_readiness: defaultInternationalGeoProviderReadiness(),
+  visibility_snapshots: [],
+  visibility_runs: [],
   artifacts: {
     llms_txt: "",
     json_ld: "",
@@ -5679,7 +5696,9 @@ export function getExportJobDownload(exportId) {
 
 export function getInternationalGeoState() {
   ensureInternationalGeoStateShape();
-  return deepClone(internationalGeoState);
+  const state = deepClone(internationalGeoState);
+  state.visibility = getInternationalGeoVisibilityState();
+  return state;
 }
 
 function ensureInternationalGeoStateShape() {
@@ -5718,6 +5737,236 @@ function ensureInternationalGeoStateShape() {
       distribution_brief: ""
     };
   }
+  if (!Array.isArray(internationalGeoState.visibility_prompt_sets)) {
+    internationalGeoState.visibility_prompt_sets = defaultInternationalGeoVisibilityPromptSets();
+  }
+  if (!Array.isArray(internationalGeoState.visibility_provider_readiness)) {
+    internationalGeoState.visibility_provider_readiness = defaultInternationalGeoProviderReadiness();
+  }
+  if (!Array.isArray(internationalGeoState.visibility_snapshots)) {
+    internationalGeoState.visibility_snapshots = [];
+  }
+  if (!Array.isArray(internationalGeoState.visibility_runs)) {
+    internationalGeoState.visibility_runs = [];
+  }
+}
+
+function internationalGeoEngineLabel(engineId) {
+  return INTERNATIONAL_GEO_VISIBILITY_ENGINES.find((item) => item.id === engineId)?.label || engineId;
+}
+
+function defaultInternationalGeoVisibilityPromptSets() {
+  let input = defaultInternationalGeoInput;
+  try {
+    input = internationalGeoState.input || defaultInternationalGeoInput;
+  } catch {
+    input = defaultInternationalGeoInput;
+  }
+  return [
+    {
+      id: "aiprompt_seed_comparison",
+      prompt: input.primary_query || "best GEO platform for AI search",
+      market: input.target_market || "Global",
+      language: input.target_language || "en",
+      buyer_intent: "comparison",
+      product_name: input.product_name || "GEO Pulse",
+      target_url: input.website_url || workspaceInput.website_url,
+      target_brand: input.product_name || "GEO Pulse",
+      competitors: normalizeStringArray(input.competitors || workspaceInput.competitors),
+      engines: INTERNATIONAL_GEO_VISIBILITY_ENGINES.map((item) => item.id),
+      status: "active",
+      created_at: "2026-07-07T00:00:00.000Z"
+    }
+  ];
+}
+
+function defaultInternationalGeoProviderReadiness() {
+  return INTERNATIONAL_GEO_VISIBILITY_ENGINES.map((engine) => ({
+    engine_id: engine.id,
+    engine_label: engine.label,
+    data_status: "unavailable",
+    provider_id: "",
+    connector_id: "",
+    permission_status: "not_configured",
+    last_measured_at: null,
+    diagnostics: [`No approved visibility provider configured for ${engine.label}.`]
+  }));
+}
+
+function normalizeInternationalGeoVisibilityEngines(engines) {
+  const requested =
+    Array.isArray(engines) && engines.length
+      ? engines
+      : INTERNATIONAL_GEO_VISIBILITY_ENGINES.map((item) => item.id);
+  const allowed = new Set(INTERNATIONAL_GEO_VISIBILITY_ENGINES.map((item) => item.id));
+  const normalized = requested.map((item) => String(item || "").trim()).filter(Boolean);
+  const invalid = normalized.filter((item) => !allowed.has(item));
+  if (invalid.length) {
+    const error = new Error("VALIDATION_ERROR");
+    error.code = "VALIDATION_ERROR";
+    error.field_errors = [{ field: "engines", message: `Unsupported engines: ${invalid.join(", ")}` }];
+    throw error;
+  }
+  return [...new Set(normalized)];
+}
+
+export function createInternationalGeoVisibilityPromptSetAction(payload = {}) {
+  ensureInternationalGeoStateShape();
+  const prompt = String(payload.prompt || "").trim();
+  if (!prompt) {
+    const error = new Error("VALIDATION_ERROR");
+    error.code = "VALIDATION_ERROR";
+    error.field_errors = [{ field: "prompt", message: "Prompt is required" }];
+    throw error;
+  }
+  const input = internationalGeoState.input || {};
+  const promptSet = {
+    id: uniqueId("aiprompt"),
+    prompt,
+    market: String(payload.market || input.target_market || "Global").trim(),
+    language: String(payload.language || input.target_language || "en").trim(),
+    buyer_intent: String(payload.buyer_intent || "comparison").trim(),
+    product_name: String(payload.product_name || input.product_name || workspaceInput.product_name || "").trim(),
+    target_url: String(payload.target_url || input.website_url || workspaceInput.website_url || "").trim(),
+    target_brand: String(
+      payload.target_brand || payload.product_name || input.product_name || workspaceInput.product_name || ""
+    ).trim(),
+    competitors: normalizeStringArray(payload.competitors || input.competitors || []),
+    engines: normalizeInternationalGeoVisibilityEngines(payload.engines),
+    status: "active",
+    created_at: nowIso()
+  };
+  internationalGeoState.visibility_prompt_sets.unshift(promptSet);
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.visibility_prompt.create", "international_geo_visibility_prompt", promptSet.id, {
+    prompt: promptSet.prompt,
+    engine_count: promptSet.engines.length
+  });
+  persistState();
+  return deepClone(promptSet);
+}
+
+export function validateInternationalGeoVisibilitySnapshot(snapshot = {}) {
+  const dataStatus = String(snapshot.data_status || "").trim();
+  if (!INTERNATIONAL_GEO_VISIBILITY_DATA_STATUSES.has(dataStatus)) {
+    const error = new Error("INVALID_DATA_STATUS");
+    error.code = "INVALID_DATA_STATUS";
+    throw error;
+  }
+  if (dataStatus === "measured" && (!snapshot.provider_id || !snapshot.source_type || !snapshot.captured_at)) {
+    const error = new Error("MEASURED_SOURCE_REQUIRED");
+    error.code = "MEASURED_SOURCE_REQUIRED";
+    throw error;
+  }
+  return true;
+}
+
+function buildUnavailableVisibilitySnapshot(promptSet, engineId, run) {
+  const snapshot = {
+    id: uniqueId("aivs"),
+    prompt_set_id: promptSet.id,
+    run_id: run.id,
+    engine_id: engineId,
+    engine_label: internationalGeoEngineLabel(engineId),
+    data_status: "unavailable",
+    source_type: "unavailable",
+    source_label: "No provider configured",
+    captured_at: run.finished_at,
+    brand_mentioned: null,
+    owned_citation_count: null,
+    citation_urls: [],
+    recommendation_rank: null,
+    competitors_mentioned: [],
+    confidence: "low",
+    diagnostics: ["No measured provider is configured. Snapshot records unavailable state only."]
+  };
+  validateInternationalGeoVisibilitySnapshot(snapshot);
+  return snapshot;
+}
+
+export function runInternationalGeoVisibilityMeasurementAction(payload = {}) {
+  ensureInternationalGeoStateShape();
+  const startedAt = nowIso();
+  const promptSets = internationalGeoState.visibility_prompt_sets.filter((item) => item.status !== "disabled");
+  const engineIds = [...new Set(promptSets.flatMap((item) => item.engines || []))];
+  const run = {
+    id: uniqueId("aivrun"),
+    trigger: payload.trigger || "manual",
+    status: "completed_with_unavailable",
+    data_source_type: "unavailable",
+    provider_id: "",
+    prompt_count: promptSets.length,
+    engine_count: engineIds.length,
+    snapshots_created: 0,
+    started_at: startedAt,
+    finished_at: nowIso(),
+    steps: []
+  };
+  const snapshots = promptSets.flatMap((promptSet) =>
+    (promptSet.engines || []).map((engineId) => buildUnavailableVisibilitySnapshot(promptSet, engineId, run))
+  );
+  run.snapshots_created = snapshots.length;
+  run.steps = [
+    {
+      id: uniqueId("aivstep"),
+      run_id: run.id,
+      sequence: 1,
+      step_type: "provider_readiness",
+      status: "warning",
+      status_label: "No provider configured",
+      output_preview: {
+        unavailable_engines: internationalGeoState.visibility_provider_readiness.filter(
+          (item) => item.data_status === "unavailable"
+        ).length
+      }
+    },
+    {
+      id: uniqueId("aivstep"),
+      run_id: run.id,
+      sequence: 2,
+      step_type: "write_snapshots",
+      status: "succeeded",
+      status_label: "Unavailable snapshots recorded",
+      output_preview: {
+        snapshots_created: snapshots.length
+      }
+    }
+  ];
+  internationalGeoState.visibility_snapshots.unshift(...snapshots);
+  internationalGeoState.visibility_runs.unshift(run);
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.visibility.run", "international_geo_visibility_run", run.id, {
+    trigger: run.trigger,
+    data_source_type: run.data_source_type,
+    snapshots_created: run.snapshots_created
+  });
+  persistState();
+  return deepClone({ run, snapshots_created: snapshots.length, snapshots });
+}
+
+function internationalGeoVisibilitySummary() {
+  const snapshots = internationalGeoState.visibility_snapshots || [];
+  const countByStatus = (status) => snapshots.filter((item) => item.data_status === status).length;
+  return {
+    prompt_count: internationalGeoState.visibility_prompt_sets.length,
+    engine_count: INTERNATIONAL_GEO_VISIBILITY_ENGINES.length,
+    measured_snapshots: countByStatus("measured"),
+    simulated_snapshots: countByStatus("simulated"),
+    unavailable_snapshots: countByStatus("unavailable"),
+    latest_run_status: internationalGeoState.visibility_runs[0]?.status || "not_run"
+  };
+}
+
+export function getInternationalGeoVisibilityState() {
+  ensureInternationalGeoStateShape();
+  return deepClone({
+    summary: internationalGeoVisibilitySummary(),
+    prompt_sets: internationalGeoState.visibility_prompt_sets,
+    provider_readiness: internationalGeoState.visibility_provider_readiness,
+    snapshots: internationalGeoState.visibility_snapshots,
+    runs: internationalGeoState.visibility_runs,
+    latest_run: internationalGeoState.visibility_runs[0] || null
+  });
 }
 
 function normalizeSiteAuditUrl(value) {

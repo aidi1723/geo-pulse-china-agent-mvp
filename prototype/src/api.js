@@ -384,6 +384,10 @@ export function generateInternationalGeoArtifacts() {
   return requestJson("/api/v1/international-geo/artifacts", "POST", {});
 }
 
+export function runInternationalGeoVisibilityMeasurement(payload = {}) {
+  return requestJson("/api/v1/international-geo/visibility/run", "POST", payload);
+}
+
 export function updateBillingPlan(payload) {
   return requestJson("/api/v1/billing/plan", "POST", payload);
 }

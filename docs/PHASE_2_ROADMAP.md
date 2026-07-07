@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Phase 2 turns the current v0.12 evidence-scored GEO audit into a broader measured and integration-ready GEO operating system.
+Phase 2 turns the current v0.13 evidence-scored GEO audit and visibility foundation into a broader measured and integration-ready GEO operating system.
 
-The current product can prepare audits and assets from local inputs, attach guarded public-site crawl evidence, and explain a deterministic 100-point scoring breakdown. Phase 2 should next add measured AI visibility data, controlled external distribution, and stronger production foundations before the project claims live engine inclusion or recommendation monitoring.
+The current product can prepare audits and assets from local inputs, attach guarded public-site crawl evidence, explain a deterministic 100-point scoring breakdown, and store prompt sets, provider readiness, visibility runs, and prompt snapshots with explicit data-status labels. Phase 2 should next add evidence-driven content/asset production, measured AI visibility data from approved providers, controlled external distribution, and stronger production foundations before the project claims live engine inclusion or recommendation monitoring.
 
 ## Phase 2 Direction
 
@@ -67,12 +67,15 @@ Remaining future depth:
 
 ## Track 3: AI Engine Visibility Monitoring
 
+Status: v0.13 foundation complete. Future provider integrations are still required for measured data.
+
 Goal: measure brand inclusion, citations, and recommendation presence using controlled providers or approved APIs.
 
 Scope:
 
-- Track prompt sets by market, language, buyer intent, and product category.
-- Store measured snapshots for ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude, and Copilot/Bing only when a compliant data source is configured.
+- Track prompt sets by market, language, buyer intent, product or brand context, and supported engines.
+- Store prompt snapshots for ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude, and Copilot/Bing, with default local runs marked `unavailable`.
+- Store measured snapshots only when a compliant data source is configured and approved provider evidence is attached.
 - Record brand mention, citation URL, recommendation rank, competitor mentions, and source timestamp.
 - Separate measured data from simulated or seed data in the UI.
 - Add connector diagnostics for each visibility data provider.
@@ -85,7 +88,7 @@ Acceptance:
 
 ## Track 4: Content And Asset Production Upgrade
 
-Goal: generate better GEO content from real crawl evidence and measured prompt gaps.
+Goal: generate better GEO content from crawl evidence, score deductions, and prompt visibility gaps.
 
 Scope:
 
@@ -161,7 +164,7 @@ Acceptance:
 
 - `v0.11`: live site crawl and evidence collection. Complete baseline.
 - `v0.12`: deeper evidence-backed GEO scoring. Complete baseline.
-- `v0.13`: AI visibility monitoring connectors and measured prompt snapshots.
+- `v0.13`: AI visibility measurement foundation. Complete baseline; measured provider integrations remain future work.
 - `v0.14`: content and asset production upgrade from evidence.
 - `v0.15`: external distribution connectors with approval gates.
 - `v0.16`: database persistence, secrets, monitoring, and production hardening.
@@ -171,8 +174,10 @@ Acceptance:
 
 Do not claim real-time AI engine inclusion, recommendation ranking, or automatic distribution until the relevant connector is implemented, configured, and storing measured evidence.
 
-Phase 2 should keep three labels visible in product and docs:
+Phase 2 should keep five evidence and data-status labels visible in product and docs:
 
 - `Rule-first`: generated from local rules and user input.
 - `Crawl-evidenced`: verified from the target website.
 - `Measured`: captured from an approved external visibility or publishing data source.
+- `Simulated`: demo or seed visibility data that must not be presented as real engine output.
+- `Unavailable`: no compliant provider data is available for that prompt/provider pair.

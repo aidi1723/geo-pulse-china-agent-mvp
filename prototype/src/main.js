@@ -38,6 +38,7 @@ import {
   runSchedulerTick as runSchedulerTickApi,
   runConnectorDiagnostic as runConnectorDiagnosticApi,
   runInternationalGeoAudit as runInternationalGeoAuditApi,
+  runInternationalGeoVisibilityMeasurement as runInternationalGeoVisibilityMeasurementApi,
   runVisibilityCollection as runVisibilityCollectionApi,
   restoreRuntimeBackup as restoreRuntimeBackupApi,
   saveAutomationProvider as saveAutomationProviderApi,
@@ -1356,6 +1357,19 @@ const actions = {
       showNotice(`抓取证据已完成，状态 ${result.crawl_evidence?.status || "-"}。`);
     } catch (error) {
       setError(error instanceof Error ? error.message : "抓取站点证据失败");
+      rerender();
+    }
+  },
+  async runInternationalGeoVisibilityMeasurement() {
+    try {
+      const result = await runInternationalGeoVisibilityMeasurementApi({
+        trigger: "manual"
+      });
+      await refreshData();
+      store.page = "international";
+      showNotice(`AI 可见度测量已完成，新增 ${result.snapshots_created || 0} 条快照。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "AI 可见度测量失败");
       rerender();
     }
   },
