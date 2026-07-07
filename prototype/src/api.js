@@ -392,6 +392,18 @@ export function importInternationalGeoVisibilityEvidence(payload = {}) {
   return requestJson("/api/v1/international-geo/visibility/evidence/import", "POST", payload);
 }
 
+export function importInternationalGeoVisibilityEvidenceBatch(payload = {}) {
+  return requestJson("/api/v1/international-geo/visibility/evidence/imports", "POST", payload);
+}
+
+export function reviewInternationalGeoVisibilityEvidence(snapshotId, payload = {}) {
+  return requestJson(
+    `/api/v1/international-geo/visibility/evidence/${encodeURIComponent(snapshotId)}/review`,
+    "POST",
+    payload
+  );
+}
+
 export function getInternationalGeoEvidenceAssets() {
   return request("/api/v1/international-geo/evidence-assets");
 }

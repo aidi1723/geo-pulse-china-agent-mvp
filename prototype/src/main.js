@@ -30,12 +30,14 @@ import {
   getCurrentSession as getCurrentSessionApi,
   getLaunchPreflight as getLaunchPreflightApi,
   getRuntimeBackupDownload as getRuntimeBackupDownloadApi,
+  importInternationalGeoVisibilityEvidenceBatch as importInternationalGeoVisibilityEvidenceBatchApi,
   importInternationalGeoVisibilityEvidence as importInternationalGeoVisibilityEvidenceApi,
   importRuntimeBackup as importRuntimeBackupApi,
   loginSession as loginSessionApi,
   logoutSession as logoutSessionApi,
   resetRuntimeState as resetRuntimeStateApi,
   reconnectChannel as reconnectChannelApi,
+  reviewInternationalGeoVisibilityEvidence as reviewInternationalGeoVisibilityEvidenceApi,
   reviewInternationalGeoGeneratedArticle as reviewInternationalGeoGeneratedArticleApi,
   reviewInternationalGeoEvidenceAsset as reviewInternationalGeoEvidenceAssetApi,
   reviewInternationalGeoPlatformRewrite as reviewInternationalGeoPlatformRewriteApi,
@@ -207,6 +209,19 @@ function getInternationalVisibilityEvidencePayload() {
       container.querySelector('[data-visibility-evidence-field="raw_observation"]')?.value?.trim() || "",
     evidence_note:
       container.querySelector('[data-visibility-evidence-field="evidence_note"]')?.value?.trim() || ""
+  };
+}
+
+function getInternationalVisibilityEvidenceBatchPayload() {
+  const container = root.querySelector('[data-international-panel="visibility-evidence-batch-import"]');
+  if (!container) return null;
+  const rowsText = container.querySelector('[data-visibility-evidence-batch-field="rows_json"]')?.value?.trim() || "";
+  return {
+    source_label:
+      container.querySelector('[data-visibility-evidence-batch-field="source_label"]')?.value?.trim() || "",
+    import_note:
+      container.querySelector('[data-visibility-evidence-batch-field="import_note"]')?.value?.trim() || "",
+    rows: rowsText ? JSON.parse(rowsText) : []
   };
 }
 
@@ -1419,6 +1434,38 @@ const actions = {
       showNotice(`测量证据已导入：${result.snapshot?.engine_label || result.snapshot?.engine_id || "measured"}。`);
     } catch (error) {
       setError(error instanceof Error ? error.message : "导入测量证据失败");
+      rerender();
+    }
+  },
+  async importInternationalGeoVisibilityEvidenceBatch() {
+    let payload = null;
+    try {
+      payload = getInternationalVisibilityEvidenceBatchPayload();
+    } catch (error) {
+      setError("批量导入 JSON 格式无效");
+      rerender();
+      return;
+    }
+    if (!payload) return;
+    try {
+      const result = await importInternationalGeoVisibilityEvidenceBatchApi(payload);
+      await refreshData();
+      store.page = "international";
+      showNotice(`批量测量证据已导入：${result.snapshots?.length || 0} 条。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "批量导入测量证据失败");
+      rerender();
+    }
+  },
+  async reviewInternationalGeoVisibilityEvidence(snapshotId, action) {
+    if (!snapshotId) return;
+    try {
+      await reviewInternationalGeoVisibilityEvidenceApi(snapshotId, { action });
+      await refreshData();
+      store.page = "international";
+      showNotice(action === "approve" ? "测量证据已通过。" : "测量证据已驳回。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "复核测量证据失败");
       rerender();
     }
   },

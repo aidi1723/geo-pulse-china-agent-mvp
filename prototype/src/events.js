@@ -443,6 +443,21 @@ export function bindEvents(root, store, rerender, actions) {
       return;
     }
 
+    if (action === "international-visibility-evidence-batch-import") {
+      await actions.importInternationalGeoVisibilityEvidenceBatch();
+      return;
+    }
+
+    if (action === "international-visibility-evidence-approve") {
+      await actions.reviewInternationalGeoVisibilityEvidence(actionButton.dataset.snapshotId, "approve");
+      return;
+    }
+
+    if (action === "international-visibility-evidence-reject") {
+      await actions.reviewInternationalGeoVisibilityEvidence(actionButton.dataset.snapshotId, "reject");
+      return;
+    }
+
     if (action === "international-evidence-assets-generate") {
       await actions.generateInternationalGeoEvidenceAssets();
       return;
