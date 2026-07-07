@@ -1398,7 +1398,20 @@ async function runMockDataChecks() {
   const assetToApprove = evidenceAssetsGenerated.assets[0];
   const approvedAsset = reviewInternationalGeoEvidenceAssetAction(assetToApprove.id, { action: "approve" });
   assert.equal(approvedAsset.review_status, "approved", "Evidence asset review should approve assets");
-  const assetToReject = evidenceAssetsGenerated.assets.find((item) => item.id !== assetToApprove.id);
+  const approvedPublishingAssetTypes = new Set(["comparison_brief", "definition_brief"]);
+  evidenceAssetsGenerated.assets
+    .filter((item) => approvedPublishingAssetTypes.has(item.asset_type) && item.id !== approvedAsset.id)
+    .forEach((item) => {
+      const approvedPublishingAsset = reviewInternationalGeoEvidenceAssetAction(item.id, { action: "approve" });
+      assert.equal(
+        approvedPublishingAsset.review_status,
+        "approved",
+        `Evidence asset ${item.asset_type} should approve for publishing package coverage`
+      );
+    });
+  const assetToReject = evidenceAssetsGenerated.assets.find(
+    (item) => item.id !== assetToApprove.id && !approvedPublishingAssetTypes.has(item.asset_type)
+  );
   const rejectedAsset = reviewInternationalGeoEvidenceAssetAction(assetToReject.id, {
     action: "reject",
     human_notes: "Needs stronger source proof."
