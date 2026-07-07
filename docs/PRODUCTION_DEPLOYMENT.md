@@ -1,8 +1,8 @@
 # Production Deployment Guide
 
-This guide covers the v0.17.0 one-organization team-access deployment profile for GEO Pulse.
+This guide covers the v0.18.0 one-organization team-access deployment profile for GEO Pulse.
 
-For stage-level scope and closing language, see [v0.9 Stage Closeout](STAGE_V0_9_CLOSEOUT.md), [v0.9.1 Stage Closeout](STAGE_V0_9_1_CLOSEOUT.md), [v0.10 Stage Closeout](STAGE_V0_10_CLOSEOUT.md), [v0.11 Stage Closeout](STAGE_V0_11_CLOSEOUT.md), [v0.12 Stage Closeout](STAGE_V0_12_CLOSEOUT.md), [v0.13 Stage Closeout](STAGE_V0_13_CLOSEOUT.md), [v0.14 Stage Closeout](STAGE_V0_14_CLOSEOUT.md), [v0.15 Stage Closeout](STAGE_V0_15_CLOSEOUT.md), [v0.16 Stage Closeout](STAGE_V0_16_CLOSEOUT.md), and [v0.17 Stage Closeout](STAGE_V0_17_CLOSEOUT.md).
+For stage-level scope and closing language, see [v0.9 Stage Closeout](STAGE_V0_9_CLOSEOUT.md), [v0.9.1 Stage Closeout](STAGE_V0_9_1_CLOSEOUT.md), [v0.10 Stage Closeout](STAGE_V0_10_CLOSEOUT.md), [v0.11 Stage Closeout](STAGE_V0_11_CLOSEOUT.md), [v0.12 Stage Closeout](STAGE_V0_12_CLOSEOUT.md), [v0.13 Stage Closeout](STAGE_V0_13_CLOSEOUT.md), [v0.14 Stage Closeout](STAGE_V0_14_CLOSEOUT.md), [v0.15 Stage Closeout](STAGE_V0_15_CLOSEOUT.md), [v0.16 Stage Closeout](STAGE_V0_16_CLOSEOUT.md), [v0.17 Stage Closeout](STAGE_V0_17_CLOSEOUT.md), and [v0.18 Stage Closeout](STAGE_V0_18_CLOSEOUT.md).
 
 ## Scope
 
@@ -17,7 +17,7 @@ Supported:
 - Built-in launch preflight for persistence, auth, session security, remote access, backup recovery, connectors, GEO static routes, and scheduler state.
 - International GEO site audit input, durable rule-first audit records, guarded live crawl evidence, evidence-backed scoring, evidence-aware recommendations, and generated GEO asset previews.
 - International GEO AI visibility measurement foundation with prompt sets, provider readiness, visibility runs, prompt snapshots, and `measured` / `simulated` / `unavailable` status labels.
-- International GEO manual measured visibility evidence import with `manual_import` snapshot provenance, `measured_import` runs, readiness `manual_review` status, and `导入测量证据` UI.
+- International GEO manual measured visibility evidence operations with single-row import, JSON batch import, `manual_import` snapshot provenance, `measured_import` runs, readiness `manual_review` status, import ledger rows, approve/reject review state, approved-only visibility trends, and `导入测量证据` / `批量导入测量证据` / `测量证据台账` / `证据复核` / `可见度趋势` UI.
 - International GEO evidence-driven asset opportunities, local generation queue rows, generated local previews, provenance metadata, and approve/reject review state.
 - International GEO local-rule article generation from approved evidence assets, generated article review state, platform rewrite generation from approved articles, rewrite review state, and generation run records.
 - International GEO high-authority publishing platform list, AI recommendation-probability notes, review-only publishing package queue, deterministic package generation from approved evidence assets, and manual/local tracking records.
@@ -35,7 +35,8 @@ Not included:
 - External LLM generation provider execution.
 - Real GPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, Bing, SERP, indexing, external platform, or AI visibility monitoring APIs.
 - External provider credentials for AI/search/SERP/indexing providers.
-- Batch measured evidence imports.
+- CSV/file-upload measured evidence imports.
+- Automated measured evidence collection from AI/search providers.
 - Recursive crawling, JavaScript browser rendering, real provider querying, real SERP collection, measured AI engine inclusion checks, indexing verification, recommendation-rank tracking, external platform calls, or automatic third-party publishing.
 - Email invitations or self-service signup.
 
@@ -125,7 +126,7 @@ curl -f http://localhost:3000/favicon.ico
 
 ## Backup And Restore
 
-The v0.17.0 deployment stores state in a local JSON file and provides built-in local backup controls in Settings -> Brand Knowledge -> Runtime and Data.
+The v0.18.0 deployment stores state in a local JSON file and provides built-in local backup controls in Settings -> Brand Knowledge -> Runtime and Data.
 
 Preferred operator flow:
 
@@ -188,14 +189,14 @@ curl -f -H "X-GEO-API-Key: $GEO_INTERNAL_API_KEY" http://localhost:3000/api/v1/s
 If Docker is available:
 
 ```bash
-docker build -t geo-pulse:v0.17.0 .
+docker build -t geo-pulse:v0.18.0 .
 ```
 
 ## Stage Closeout Language
 
-GEO Pulse v0.17.0 is ready for controlled one-organization team deployment. It includes built-in login, role-based access, local workflows, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, GEO asset generation, AI visibility measurement foundation, manual measured visibility evidence import, evidence-driven asset opportunities, local generation queue, approve/reject review state, local-rule article generation, platform rewrite generation, generation records, high-authority publishing platform list, review-only package queue, manual tracking records, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production startup guardrails, health checks, GEO/SEO static files, Docker packaging, minimal GitHub CI, and documentation for rollback.
+GEO Pulse v0.18.0 is ready for controlled one-organization team deployment. It includes built-in login, role-based access, local workflows, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, GEO asset generation, AI visibility measurement foundation, manual measured visibility evidence operations, evidence-driven asset opportunities, local generation queue, approve/reject review state, local-rule article generation, platform rewrite generation, generation records, high-authority publishing platform list, review-only package queue, manual tracking records, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production startup guardrails, health checks, GEO/SEO static files, Docker packaging, minimal GitHub CI, and documentation for rollback.
 
-v0.17.0 must still be protected by an external access layer and should not be presented as a complete SaaS platform, real-time AI search monitoring platform, external LLM generation system, or external publishing system. Visibility runs default to `unavailable` snapshots and do not query real AI/search providers. Manual evidence import can create `measured` snapshots from human-entered observations with `manual_import` provenance and `measured_import` runs, but imported snapshots are only as accurate as the operator-entered evidence and do not support automated monitoring claims. Evidence asset, content-generation, and publishing workflows create reviewable local assets, article drafts, platform rewrites, handoff packages, and manual tracking records only; they do not publish externally, store external provider or platform credentials, call external LLMs, call live AI/search/SERP/indexing/external platform services, or verify inclusion/recommendation automatically. Durable database storage, OAuth/SSO, MFA, real integrations, monitoring, approved measured AI visibility provider evidence, approved LLM generation providers, approved publishing/indexing connectors, batch imports, and multi-tenant controls remain future work.
+v0.18.0 must still be protected by an external access layer and should not be presented as a complete SaaS platform, real-time AI search monitoring platform, external LLM generation system, or external publishing system. Visibility runs default to `unavailable` snapshots and do not query real AI/search providers. Manual evidence import and JSON batch import can create `measured` snapshots from human-entered observations with `manual_import` provenance and `measured_import` runs, but imported snapshots are only as accurate as the operator-entered evidence and do not support automated monitoring claims. Evidence asset, content-generation, and publishing workflows create reviewable local assets, article drafts, platform rewrites, handoff packages, and manual tracking records only; they do not publish externally, store external provider or platform credentials, call external LLMs, call live AI/search/SERP/indexing/external platform services, or verify inclusion/recommendation automatically. Durable database storage, OAuth/SSO, MFA, real integrations, monitoring, approved measured AI visibility provider evidence, approved LLM generation providers, approved publishing/indexing connectors, CSV/file-upload imports, automated provider imports, and multi-tenant controls remain future work.
 
 ## Rollback
 

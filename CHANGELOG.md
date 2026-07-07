@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.18.0 - 2026-07-07
+
+Measured evidence operations for International GEO.
+
+### Added
+
+- Batch manual measured-evidence import through `POST /api/v1/international-geo/visibility/evidence/imports`.
+- Local measured evidence import ledger with source label, import note, row count, snapshot count, and review counts.
+- Approve/reject review workflow for manually imported measured snapshots through `POST /api/v1/international-geo/visibility/evidence/:id/review`.
+- Approved-evidence-only visibility trend summaries grouped by prompt set and AI engine.
+- International GEO UI panels for `批量导入测量证据`, `测量证据台账`, `证据复核`, and `可见度趋势`.
+
+### Boundaries
+
+- batch imports are local JSON rows copied from human-verified observations,
+- trend summaries count approved manual evidence only,
+- no live ChatGPT/Gemini/Claude/Perplexity/Google AI Overviews/Copilot/Bing/SERP/indexing/external platform APIs are called,
+- no external provider credentials are stored,
+- imported `measured` snapshots remain only as accurate as operator-entered evidence,
+- automated provider integrations, file uploads, external LLM generation, external publishing/indexing connectors, durable DB, OAuth/SSO, MFA, monitoring, and multi-tenant controls remain future work.
+
+### Verification
+
+- `npm run check`
+- `git diff --check`
+
 ## 0.17.0 - 2026-07-07
 
 Manual measured visibility evidence import for International GEO.
