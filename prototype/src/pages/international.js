@@ -686,6 +686,179 @@ function renderVisibilityMeasurementPanel(visibility = {}) {
   `;
 }
 
+function integrationStatusLabel(value) {
+  return (
+    {
+      reserved: "预留",
+      configured: "已配置",
+      blocked: "阻断",
+      disabled: "停用",
+      warning: "告警",
+      passed: "通过",
+      failed: "失败",
+      not_run: "未运行",
+      missing: "缺失",
+      masked: "已遮蔽"
+    }[value] || value || "-"
+  );
+}
+
+function approvalStatusLabel(value) {
+  return (
+    {
+      not_requested: "未申请",
+      requested: "已申请",
+      approved: "已批准",
+      rejected: "已拒绝"
+    }[value] || value || "-"
+  );
+}
+
+function integrationStatusOptions(selected) {
+  const options = [
+    ["reserved", "预留"],
+    ["configured", "已配置"],
+    ["blocked", "阻断"],
+    ["disabled", "停用"]
+  ];
+  return options
+    .map(([value, label]) => `<option value="${value}" ${selected === value ? "selected" : ""}>${label}</option>`)
+    .join("");
+}
+
+function approvalStatusOptions(selected) {
+  const options = [
+    ["not_requested", "未申请"],
+    ["requested", "已申请"],
+    ["approved", "已批准"],
+    ["rejected", "已拒绝"]
+  ];
+  return options
+    .map(([value, label]) => `<option value="${value}" ${selected === value ? "selected" : ""}>${label}</option>`)
+    .join("");
+}
+
+function renderVisibilityProviderConfigPanel(providers = []) {
+  const rows = providers.length
+    ? providers.map((item) => {
+        const endpoint = item.endpoint || item.config?.endpoint || "";
+        const maskedKey = item.config?.masked_api_key || "";
+        return `
+          <tr data-visibility-provider-id="${escapeHtml(item.id || "")}">
+            <td>
+              <div class="cell-title">${escapeHtml(item.provider_label || item.engine_label || item.id || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.engine_label || item.engine_id || "-")} / ${escapeHtml(item.id || "-")}</div>
+            </td>
+            <td>
+              <select data-visibility-provider-field="status">
+                ${integrationStatusOptions(item.status)}
+              </select>
+            </td>
+            <td>
+              <select data-visibility-provider-field="approval_status">
+                ${approvalStatusOptions(item.approval_status)}
+              </select>
+            </td>
+            <td>
+              <input data-visibility-provider-field="endpoint" value="${escapeHtml(endpoint)}" placeholder="https://provider.example/api" />
+              <div class="cell-sub">${escapeHtml(item.permission_boundary || "dry_run_only")}</div>
+            </td>
+            <td>
+              <input type="password" data-visibility-provider-field="api_key" value="" placeholder="${escapeHtml(maskedKey)}" />
+              <div class="cell-sub">${escapeHtml(integrationStatusLabel(item.credential_status))}</div>
+            </td>
+            <td>
+              <textarea data-visibility-provider-field="notes" rows="3">${escapeHtml(item.notes || item.config?.notes || "")}</textarea>
+            </td>
+            <td>
+              <div class="actions-row">
+                <button class="ghost-btn" data-action="international-visibility-provider-save" data-provider-id="${escapeHtml(item.id || "")}">保存</button>
+                <button class="secondary-btn" data-action="international-visibility-provider-test" data-provider-id="${escapeHtml(item.id || "")}">Dry-run</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      })
+    : [`<tr><td colspan="7"><div class="empty-state">暂无可见度 Provider 配置。</div></td></tr>`];
+
+  return `
+    <section class="surface panel" data-international-panel="visibility-provider-config">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">可见度 Provider 配置</h3>
+          <div class="panel-note">为 ChatGPT Search、Gemini、Claude、Perplexity、Google AIO、Copilot/Bing 预留 approved provider connector；v0.19 仅保存配置并执行 dry-run。</div>
+        </div>
+        <button class="secondary-btn" data-action="international-visibility-provider-diagnose">诊断全部 Provider</button>
+      </div>
+      ${tableMarkup(["Provider", "状态", "审批", "Endpoint / 边界", "密钥", "备注", "动作"], rows)}
+    </section>
+  `;
+}
+
+function renderVisibilityProviderDiagnosticsPanel(visibility = {}) {
+  const providers = visibility.providers || [];
+  const diagnostics = visibility.provider_diagnostics || [];
+  const diagnosticsById = new Map(diagnostics.map((item) => [item.provider_id, item]));
+  const rows = providers.length
+    ? providers.map((item) => {
+        const diagnostic = diagnosticsById.get(item.id) || {};
+        const messages = diagnostic.diagnostics || item.diagnostics || [];
+        return `
+          <tr>
+            <td>
+              <div class="cell-title">${escapeHtml(item.provider_label || item.id || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.engine_label || item.engine_id || "-")}</div>
+            </td>
+            <td>${statusMarkup(integrationStatusLabel(item.last_test_status || "not_run"))}</td>
+            <td>${statusMarkup(integrationStatusLabel(diagnostic.status || item.last_diagnostic_status || "not_run"))}</td>
+            <td>
+              <div class="cell-title">${escapeHtml(item.last_tested_at || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.last_diagnosed_at || "-")}</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml((messages || []).slice(0, 2).join(" / ") || "-")}</div>
+              <div class="cell-sub">external_call_performed: false</div>
+            </td>
+          </tr>
+        `;
+      })
+    : [`<tr><td colspan="5"><div class="empty-state">暂无 Provider 诊断。</div></td></tr>`];
+
+  return `
+    <section class="surface panel" data-international-panel="visibility-provider-diagnostics">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">Provider 诊断</h3>
+          <div class="panel-note">诊断只检查本地配置、审批状态、Endpoint 安全和密钥遮蔽，不查询任何 AI 搜索或 SERP 接口。</div>
+        </div>
+      </div>
+      ${tableMarkup(["Provider", "最近测试", "诊断状态", "时间", "诊断摘要"], rows)}
+    </section>
+  `;
+}
+
+function renderVisibilityProviderBoundaryPanel(visibility = {}) {
+  const summary = visibility.summary || {};
+  return `
+    <section class="surface panel" data-international-panel="visibility-provider-boundary">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">Provider 运行边界</h3>
+          <div class="panel-note">v0.19 是 approved connector foundation；不会自动访问 GPT、Gemini、Claude、Perplexity、Google AIO 或 Bing，也不会把 unavailable 写成 measured。</div>
+        </div>
+      </div>
+      <div class="info-grid">
+        <div class="info-row"><span>Provider 数量</span><strong>${escapeHtml(summary.provider_count ?? (visibility.providers || []).length ?? 0)}</strong></div>
+        <div class="info-row"><span>已配置</span><strong>${escapeHtml(summary.configured_provider_count ?? summary.configured_count ?? 0)}</strong></div>
+        <div class="info-row"><span>已批准</span><strong>${escapeHtml(summary.approved_provider_count ?? summary.approved_count ?? 0)}</strong></div>
+        <div class="info-row"><span>外部调用</span><strong>false</strong></div>
+        <div class="info-row"><span>自动 measured snapshot</span><strong>blocked</strong></div>
+        <div class="info-row"><span>证据来源</span><strong>manual_import / measured_import only</strong></div>
+      </div>
+    </section>
+  `;
+}
+
 function internationalEngineLabel(engineId) {
   const labels = {
     chatgpt_search: "ChatGPT Search",
@@ -1259,6 +1432,126 @@ function renderPublishingPlatformMatrix(publishing = {}) {
         </div>
       </div>
       ${tableMarkup(["平台", "类型", "权重信号 / 适配资产", "AI 引擎适配", "推荐概率说明", "价值", "风险", "模式"], rows)}
+    </section>
+  `;
+}
+
+function renderPublishingConnectorConfigPanel(connectors = []) {
+  const rows = connectors.length
+    ? connectors.map((item) => {
+        const endpoint = item.endpoint || item.config?.endpoint || "";
+        const maskedKey = item.config?.masked_api_key || "";
+        return `
+          <tr data-publishing-connector-id="${escapeHtml(item.id || "")}">
+            <td>
+              <div class="cell-title">${escapeHtml(item.platform_name || item.label || item.id || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.platform_key || "-")} / ${escapeHtml(item.id || "-")}</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml(item.platform_type || item.connector_type || "-")}</div>
+              <div class="cell-sub">${escapeHtml((item.allowed_actions || []).join(", ") || "publishing:dry_run")}</div>
+            </td>
+            <td>
+              <select data-publishing-connector-field="status">
+                ${integrationStatusOptions(item.status)}
+              </select>
+            </td>
+            <td>
+              <input data-publishing-connector-field="endpoint" value="${escapeHtml(endpoint)}" placeholder="https://platform.example/api" />
+              <div class="cell-sub">${escapeHtml(item.permission_boundary || "dry_run_only")}</div>
+            </td>
+            <td>
+              <input type="password" data-publishing-connector-field="api_key" value="" placeholder="${escapeHtml(maskedKey)}" />
+              <div class="cell-sub">${escapeHtml(integrationStatusLabel(item.credential_status))}</div>
+            </td>
+            <td>
+              <textarea data-publishing-connector-field="notes" rows="3">${escapeHtml(item.notes || item.config?.notes || "")}</textarea>
+            </td>
+            <td>
+              <div class="actions-row">
+                <button class="ghost-btn" data-action="international-publishing-connector-save" data-connector-id="${escapeHtml(item.id || "")}">保存</button>
+                <button class="secondary-btn" data-action="international-publishing-connector-test" data-connector-id="${escapeHtml(item.id || "")}">Dry-run</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      })
+    : [`<tr><td colspan="7"><div class="empty-state">暂无发布连接器配置。</div></td></tr>`];
+
+  return `
+    <section class="surface panel" data-international-panel="publishing-connector-config">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">发布连接器配置</h3>
+          <div class="panel-note">为官网、文档、Medium、LinkedIn、YouTube、GitHub、Reddit、Quora、目录站预留连接器；当前只支持本地 dry-run 和人工发布交接。</div>
+        </div>
+        <button class="secondary-btn" data-action="international-publishing-connector-diagnose">诊断全部连接器</button>
+      </div>
+      ${tableMarkup(["平台", "类型 / 动作", "状态", "Endpoint / 边界", "密钥", "备注", "动作"], rows)}
+    </section>
+  `;
+}
+
+function renderPublishingConnectorDiagnosticsPanel(publishing = {}) {
+  const connectors = publishing.connectors || [];
+  const diagnostics = publishing.connector_diagnostics || [];
+  const diagnosticsById = new Map(diagnostics.map((item) => [item.connector_id, item]));
+  const rows = connectors.length
+    ? connectors.map((item) => {
+        const diagnostic = diagnosticsById.get(item.id) || {};
+        const messages = diagnostic.diagnostics || item.diagnostics || [];
+        return `
+          <tr>
+            <td>
+              <div class="cell-title">${escapeHtml(item.platform_name || item.id || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.platform_key || "-")}</div>
+            </td>
+            <td>${statusMarkup(integrationStatusLabel(item.last_test_status || "not_run"))}</td>
+            <td>${statusMarkup(integrationStatusLabel(diagnostic.status || item.last_diagnostic_status || "not_run"))}</td>
+            <td>
+              <div class="cell-title">${escapeHtml(item.last_tested_at || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.last_diagnosed_at || "-")}</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml((messages || []).slice(0, 2).join(" / ") || "-")}</div>
+              <div class="cell-sub">external_call_performed: false / external_publish_blocked</div>
+            </td>
+          </tr>
+        `;
+      })
+    : [`<tr><td colspan="5"><div class="empty-state">暂无发布连接器诊断。</div></td></tr>`];
+
+  return `
+    <section class="surface panel" data-international-panel="publishing-connector-diagnostics">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">发布连接器诊断</h3>
+          <div class="panel-note">诊断只检查本地配置、Endpoint、密钥遮蔽和可交付发布包，不调用外部 CMS、社区或社媒 API。</div>
+        </div>
+      </div>
+      ${tableMarkup(["连接器", "最近测试", "诊断状态", "时间", "诊断摘要"], rows)}
+    </section>
+  `;
+}
+
+function renderPublishingConnectorBoundaryPanel(publishing = {}) {
+  const summary = publishing.connector_summary || {};
+  return `
+    <section class="surface panel" data-international-panel="publishing-connector-boundary">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">发布运行边界</h3>
+          <div class="panel-note">v0.19 不自动发布到 Medium、LinkedIn、Reddit、Quora、GitHub、YouTube 或目录站；只生成可审核内容、发布包、连接器 dry-run 和人工追踪记录。</div>
+        </div>
+      </div>
+      <div class="info-grid">
+        <div class="info-row"><span>连接器数量</span><strong>${escapeHtml(summary.connector_count ?? (publishing.connectors || []).length ?? 0)}</strong></div>
+        <div class="info-row"><span>已配置</span><strong>${escapeHtml(summary.configured_count ?? 0)}</strong></div>
+        <div class="info-row"><span>预留</span><strong>${escapeHtml(summary.reserved_count ?? 0)}</strong></div>
+        <div class="info-row"><span>外部发布</span><strong>blocked</strong></div>
+        <div class="info-row"><span>外部调用</span><strong>false</strong></div>
+        <div class="info-row"><span>上线证据</span><strong>manual tracking only</strong></div>
+      </div>
     </section>
   `;
 }
@@ -1913,6 +2206,9 @@ export function renderInternationalGeo(data = internationalGeo) {
     ${renderPlatformRewriteQueue(contentGeneration)}
     ${renderContentGenerationRuns(contentGeneration)}
     ${renderPublishingPlatformMatrix(publishing)}
+    ${renderPublishingConnectorConfigPanel(publishing.connectors || [])}
+    ${renderPublishingConnectorDiagnosticsPanel(publishing)}
+    ${renderPublishingConnectorBoundaryPanel(publishing)}
     ${renderPublishingPackageQueue(publishing)}
     ${renderPublishingTrackingLedger(publishing)}
 
@@ -1933,6 +2229,9 @@ export function renderInternationalGeo(data = internationalGeo) {
     </section>
 
     ${renderVisibilityMeasurementPanel(visibility)}
+    ${renderVisibilityProviderConfigPanel(visibility.providers || [])}
+    ${renderVisibilityProviderDiagnosticsPanel(visibility)}
+    ${renderVisibilityProviderBoundaryPanel(visibility)}
     ${renderMeasuredVisibilityEvidenceImportPanel(visibility)}
     ${renderMeasuredVisibilityEvidenceBatchImportPanel(visibility)}
     ${renderMeasuredEvidenceImportLedger(visibility.imports || [])}

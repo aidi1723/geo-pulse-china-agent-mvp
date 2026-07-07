@@ -18,6 +18,8 @@ import {
   createPublishTask as createPublishTaskApi,
   createKeywordCrawlJob,
   createTopicsFromKeywords,
+  diagnoseInternationalGeoPublishingConnectors as diagnoseInternationalGeoPublishingConnectorsApi,
+  diagnoseInternationalGeoVisibilityProviders as diagnoseInternationalGeoVisibilityProvidersApi,
   exportDownloadUrl,
   generateInternationalGeoArtifacts as generateInternationalGeoArtifactsApi,
   generateInternationalGeoArticles as generateInternationalGeoArticlesApi,
@@ -29,6 +31,7 @@ import {
   getArticleDetail,
   getCurrentSession as getCurrentSessionApi,
   getLaunchPreflight as getLaunchPreflightApi,
+  runProductionReadinessCheck as runProductionReadinessCheckApi,
   getRuntimeBackupDownload as getRuntimeBackupDownloadApi,
   importInternationalGeoVisibilityEvidenceBatch as importInternationalGeoVisibilityEvidenceBatchApi,
   importInternationalGeoVisibilityEvidence as importInternationalGeoVisibilityEvidenceApi,
@@ -56,6 +59,8 @@ import {
   saveAutomationConnector as saveAutomationConnectorApi,
   saveBrandProfile,
   saveChannel as saveChannelApi,
+  saveInternationalGeoPublishingConnector as saveInternationalGeoPublishingConnectorApi,
+  saveInternationalGeoVisibilityProvider as saveInternationalGeoVisibilityProviderApi,
   saveInternationalGeoInput as saveInternationalGeoInputApi,
   saveMediaSource as saveMediaSourceApi,
   saveModelConfig as saveModelConfigApi,
@@ -64,6 +69,8 @@ import {
   takeoverPublishTaskItem as takeoverPublishTaskItemApi,
   testAutomationProvider as testAutomationProviderApi,
   testAutomationConnector as testAutomationConnectorApi,
+  testInternationalGeoPublishingConnector as testInternationalGeoPublishingConnectorApi,
+  testInternationalGeoVisibilityProvider as testInternationalGeoVisibilityProviderApi,
   updateBillingPlan as updateBillingPlanApi,
   updateInternationalGeoPublishingTracking as updateInternationalGeoPublishingTrackingApi,
   updateTopic as updateTopicApi,
@@ -222,6 +229,29 @@ function getInternationalVisibilityEvidenceBatchPayload() {
     import_note:
       container.querySelector('[data-visibility-evidence-batch-field="import_note"]')?.value?.trim() || "",
     rows: rowsText ? JSON.parse(rowsText) : []
+  };
+}
+
+function getInternationalVisibilityProviderPayload(providerId) {
+  const row = root.querySelector(`[data-visibility-provider-id="${CSS.escape(providerId || "")}"]`);
+  if (!row) return null;
+  return {
+    status: row.querySelector('[data-visibility-provider-field="status"]')?.value || "reserved",
+    approval_status: row.querySelector('[data-visibility-provider-field="approval_status"]')?.value || "not_requested",
+    endpoint: row.querySelector('[data-visibility-provider-field="endpoint"]')?.value?.trim() || "",
+    api_key: row.querySelector('[data-visibility-provider-field="api_key"]')?.value?.trim() || "",
+    notes: row.querySelector('[data-visibility-provider-field="notes"]')?.value?.trim() || ""
+  };
+}
+
+function getInternationalPublishingConnectorPayload(connectorId) {
+  const row = root.querySelector(`[data-publishing-connector-id="${CSS.escape(connectorId || "")}"]`);
+  if (!row) return null;
+  return {
+    status: row.querySelector('[data-publishing-connector-field="status"]')?.value || "reserved",
+    endpoint: row.querySelector('[data-publishing-connector-field="endpoint"]')?.value?.trim() || "",
+    api_key: row.querySelector('[data-publishing-connector-field="api_key"]')?.value?.trim() || "",
+    notes: row.querySelector('[data-publishing-connector-field="notes"]')?.value?.trim() || ""
   };
 }
 
@@ -1466,6 +1496,90 @@ const actions = {
       showNotice(action === "approve" ? "测量证据已通过。" : "测量证据已驳回。");
     } catch (error) {
       setError(error instanceof Error ? error.message : "复核测量证据失败");
+      rerender();
+    }
+  },
+  async saveInternationalGeoVisibilityProvider(providerId) {
+    const payload = getInternationalVisibilityProviderPayload(providerId);
+    if (!providerId || !payload) return;
+    try {
+      await saveInternationalGeoVisibilityProviderApi(providerId, payload);
+      await refreshData();
+      store.page = "international";
+      showNotice("可见度 Provider 配置已保存。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "保存可见度 Provider 失败");
+      rerender();
+    }
+  },
+  async testInternationalGeoVisibilityProvider(providerId) {
+    if (!providerId) return;
+    try {
+      const result = await testInternationalGeoVisibilityProviderApi(providerId);
+      await refreshData();
+      store.page = "international";
+      showNotice(`Provider dry-run 完成：${result.status || "review"}。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Provider dry-run 失败");
+      rerender();
+    }
+  },
+  async diagnoseInternationalGeoVisibilityProviders() {
+    try {
+      const result = await diagnoseInternationalGeoVisibilityProvidersApi();
+      await refreshData();
+      store.page = "international";
+      showNotice(`Provider 诊断完成：${result.items?.length || 0} 项。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Provider 诊断失败");
+      rerender();
+    }
+  },
+  async saveInternationalGeoPublishingConnector(connectorId) {
+    const payload = getInternationalPublishingConnectorPayload(connectorId);
+    if (!connectorId || !payload) return;
+    try {
+      await saveInternationalGeoPublishingConnectorApi(connectorId, payload);
+      await refreshData();
+      store.page = "international";
+      showNotice("发布连接器配置已保存。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "保存发布连接器失败");
+      rerender();
+    }
+  },
+  async testInternationalGeoPublishingConnector(connectorId) {
+    if (!connectorId) return;
+    try {
+      const result = await testInternationalGeoPublishingConnectorApi(connectorId);
+      await refreshData();
+      store.page = "international";
+      showNotice(`发布连接器 dry-run 完成：${result.status || "review"}。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "发布连接器 dry-run 失败");
+      rerender();
+    }
+  },
+  async diagnoseInternationalGeoPublishingConnectors() {
+    try {
+      const result = await diagnoseInternationalGeoPublishingConnectorsApi();
+      await refreshData();
+      store.page = "international";
+      showNotice(`发布连接器诊断完成：${result.items?.length || 0} 项。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "发布连接器诊断失败");
+      rerender();
+    }
+  },
+  async refreshProductionReadiness() {
+    try {
+      const result = await runProductionReadinessCheckApi();
+      await refreshData();
+      store.page = "settings";
+      store.tabs.settings = "brand";
+      showNotice(`生产检查已刷新：${result.status || "review"} / ${result.score ?? "-"}。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "刷新生产检查失败");
       rerender();
     }
   },

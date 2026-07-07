@@ -263,6 +263,139 @@ function renderLaunchPreflight(preflight = {}) {
   `;
 }
 
+function productionReadinessStatusLabel(value) {
+  return (
+    {
+      ready: "可上线",
+      review: "需复核",
+      blocked: "阻断",
+      passed: "通过",
+      warning: "告警",
+      failed: "失败",
+      configured: "已配置",
+      missing: "未配置"
+    }[value] || value || "-"
+  );
+}
+
+function renderProductionReadinessPanel(productionReadiness = {}) {
+  const summary = productionReadiness.summary || {};
+  const checks = productionReadiness.checks || [];
+  const rows = checks.length
+    ? checks.map((item) => `
+        <tr>
+          <td>
+            <div class="cell-title">${escapeHtml(item.label || item.id)}</div>
+            <div class="cell-sub">${escapeHtml(item.category || "-")} / ${escapeHtml(item.id || "-")}</div>
+          </td>
+          <td>${statusMarkup(productionReadinessStatusLabel(item.status))}</td>
+          <td>
+            <div class="cell-title">${escapeHtml(item.message || "-")}</div>
+            <div class="cell-sub">${escapeHtml(item.recommendation || "-")}</div>
+          </td>
+        </tr>
+      `)
+    : [`
+        <tr>
+          <td colspan="3">
+            <div class="empty-state">暂无生产运行就绪检查。</div>
+          </td>
+        </tr>
+      `];
+
+  return `
+    <div class="section-block" style="margin-top:18px">
+      <div class="panel-head">
+        <div>
+          <h4 class="panel-title" style="font-size:15px">生产运行就绪</h4>
+          <div class="panel-note">集中检查持久化、备份、鉴权、远程访问、Provider、连接器和 GEO 静态入口。</div>
+        </div>
+        <button class="secondary-btn" data-action="refresh-production-readiness">刷新生产就绪</button>
+      </div>
+      <div class="info-list">
+        <div class="info-row"><span>总体状态</span><strong>${escapeHtml(productionReadinessStatusLabel(productionReadiness.status))}</strong></div>
+        <div class="info-row"><span>就绪得分</span><strong>${escapeHtml(productionReadiness.score ?? "-")}</strong></div>
+        <div class="info-row"><span>通过项</span><strong>${escapeHtml(summary.passed ?? "-")}</strong></div>
+        <div class="info-row"><span>告警项</span><strong>${escapeHtml(summary.warnings ?? "-")}</strong></div>
+        <div class="info-row"><span>失败项</span><strong>${escapeHtml(summary.failed ?? "-")}</strong></div>
+        <div class="info-row"><span>生成时间</span><strong>${escapeHtml(formatDateTime(productionReadiness.generated_at))}</strong></div>
+      </div>
+      ${tableMarkup(["检查项", "状态", "说明 / 建议"], rows)}
+    </div>
+  `;
+}
+
+function renderMaskedSecretInventoryPanel(productionReadiness = {}) {
+  const items = productionReadiness.masked_secret_inventory || [];
+  const rows = items.length
+    ? items.map((item) => `
+        <tr>
+          <td>
+            <div class="cell-title">${escapeHtml(item.label || item.id)}</div>
+            <div class="cell-sub">${escapeHtml(item.scope || "-")} / ${escapeHtml(item.id || "-")}</div>
+          </td>
+          <td>${statusMarkup(productionReadinessStatusLabel(item.status))}</td>
+          <td>
+            <div class="cell-title">${escapeHtml(item.masked_value || "-")}</div>
+            <div class="cell-sub">raw_secret_exposed: ${escapeHtml(item.raw_secret_exposed ? "true" : "false")}</div>
+          </td>
+        </tr>
+      `)
+    : [`
+        <tr>
+          <td colspan="3">
+            <div class="empty-state">暂无密钥清单。</div>
+          </td>
+        </tr>
+      `];
+
+  return `
+    <div class="section-block" style="margin-top:18px">
+      <div class="panel-head">
+        <div>
+          <h4 class="panel-title" style="font-size:15px">密钥与连接边界</h4>
+          <div class="panel-note">仅展示 masked secret inventory；浏览器、API 和文档不得返回原始密钥。</div>
+        </div>
+      </div>
+      ${tableMarkup(["密钥 / 连接", "状态", "Masked value / 边界"], rows)}
+    </div>
+  `;
+}
+
+function renderHandoffChecklistPanel(productionReadiness = {}) {
+  const items = productionReadiness.handoff_checklist || [];
+  const rows = items.length
+    ? items.map((item) => `
+        <tr>
+          <td>
+            <div class="cell-title">${escapeHtml(item.label || item.id)}</div>
+            <div class="cell-sub">${escapeHtml(item.id || "-")}</div>
+          </td>
+          <td>${statusMarkup(productionReadinessStatusLabel(item.status))}</td>
+          <td>${escapeHtml(item.recommendation || "-")}</td>
+        </tr>
+      `)
+    : [`
+        <tr>
+          <td colspan="3">
+            <div class="empty-state">暂无交付检查清单。</div>
+          </td>
+        </tr>
+      `];
+
+  return `
+    <div class="section-block" style="margin-top:18px">
+      <div class="panel-head">
+        <div>
+          <h4 class="panel-title" style="font-size:15px">交付检查清单</h4>
+          <div class="panel-note">上线前由维护方逐项确认；v0.19 外部 Provider 和发布连接器仍为 dry-run foundation。</div>
+        </div>
+      </div>
+      ${tableMarkup(["事项", "状态", "建议"], rows)}
+    </div>
+  `;
+}
+
 function renderCreateUserForm(form = {}) {
   return `
     <div class="section-block" style="margin-top:18px">
@@ -389,6 +522,7 @@ function renderBrand(profile, runtimeStatus, auditEvents = [], isStaticPreview =
   const providers = runtimeStatus?.providers || {};
   const backups = runtimeStatus?.backups || {};
   const preflight = runtimeStatus?.preflight || {};
+  const productionReadiness = runtimeStatus?.production_readiness || {};
   return `
     <div class="stack-blocks">
       <section class="surface panel" data-settings-panel="brand">
@@ -445,6 +579,9 @@ function renderBrand(profile, runtimeStatus, auditEvents = [], isStaticPreview =
           <button class="danger-btn" data-action="reset-runtime-state">重置运行态</button>
         </div>
         ${renderLaunchPreflight(preflight)}
+        ${renderProductionReadinessPanel(productionReadiness)}
+        ${renderMaskedSecretInventoryPanel(productionReadiness)}
+        ${renderHandoffChecklistPanel(productionReadiness)}
         ${renderRuntimeBackups(backups, runtimeBackupImport)}
       </section>
       ${renderUserManagement(store)}

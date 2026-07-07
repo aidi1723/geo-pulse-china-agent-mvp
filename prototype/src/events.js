@@ -622,6 +622,11 @@ export function bindEvents(root, store, rerender, actions) {
       return;
     }
 
+    if (action === "refresh-production-readiness") {
+      await actions.refreshProductionReadiness();
+      return;
+    }
+
     if (action === "create-runtime-backup") {
       await actions.createRuntimeBackup();
       return;
@@ -679,6 +684,36 @@ export function bindEvents(root, store, rerender, actions) {
 
     if (action === "reconnect-channel") {
       await actions.reconnectChannel(actionButton.dataset.channelId || store.selectedIds.channel);
+      return;
+    }
+
+    if (action === "international-visibility-provider-save") {
+      await actions.saveInternationalGeoVisibilityProvider(actionButton.dataset.providerId);
+      return;
+    }
+
+    if (action === "international-visibility-provider-test") {
+      await actions.testInternationalGeoVisibilityProvider(actionButton.dataset.providerId);
+      return;
+    }
+
+    if (action === "international-visibility-provider-diagnose") {
+      await actions.diagnoseInternationalGeoVisibilityProviders();
+      return;
+    }
+
+    if (action === "international-publishing-connector-save") {
+      await actions.saveInternationalGeoPublishingConnector(actionButton.dataset.connectorId);
+      return;
+    }
+
+    if (action === "international-publishing-connector-test") {
+      await actions.testInternationalGeoPublishingConnector(actionButton.dataset.connectorId);
+      return;
+    }
+
+    if (action === "international-publishing-connector-diagnose") {
+      await actions.diagnoseInternationalGeoPublishingConnectors();
       return;
     }
 

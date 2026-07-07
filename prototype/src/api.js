@@ -388,6 +388,22 @@ export function runInternationalGeoVisibilityMeasurement(payload = {}) {
   return requestJson("/api/v1/international-geo/visibility/run", "POST", payload);
 }
 
+export function getInternationalGeoVisibilityProviders() {
+  return request("/api/v1/international-geo/visibility/providers");
+}
+
+export function saveInternationalGeoVisibilityProvider(providerId, payload = {}) {
+  return requestJson(`/api/v1/international-geo/visibility/providers/${encodeURIComponent(providerId)}`, "PUT", payload);
+}
+
+export function testInternationalGeoVisibilityProvider(providerId) {
+  return requestJson(`/api/v1/international-geo/visibility/providers/${encodeURIComponent(providerId)}/test`, "POST", {});
+}
+
+export function diagnoseInternationalGeoVisibilityProviders() {
+  return requestJson("/api/v1/international-geo/visibility/providers/diagnose", "POST", {});
+}
+
 export function importInternationalGeoVisibilityEvidence(payload = {}) {
   return requestJson("/api/v1/international-geo/visibility/evidence/import", "POST", payload);
 }
@@ -418,6 +434,22 @@ export function reviewInternationalGeoEvidenceAsset(assetId, payload = {}) {
 
 export function getInternationalGeoPublishing() {
   return request("/api/v1/international-geo/publishing");
+}
+
+export function getInternationalGeoPublishingConnectors() {
+  return request("/api/v1/international-geo/publishing/connectors");
+}
+
+export function saveInternationalGeoPublishingConnector(connectorId, payload = {}) {
+  return requestJson(`/api/v1/international-geo/publishing/connectors/${encodeURIComponent(connectorId)}`, "PUT", payload);
+}
+
+export function testInternationalGeoPublishingConnector(connectorId) {
+  return requestJson(`/api/v1/international-geo/publishing/connectors/${encodeURIComponent(connectorId)}/test`, "POST", {});
+}
+
+export function diagnoseInternationalGeoPublishingConnectors() {
+  return requestJson("/api/v1/international-geo/publishing/connectors/diagnose", "POST", {});
 }
 
 export function getInternationalGeoContentGeneration() {
@@ -530,6 +562,14 @@ export function getRuntimeStatus() {
 
 export function getLaunchPreflight() {
   return request("/api/v1/system/preflight");
+}
+
+export function getProductionReadiness() {
+  return request("/api/v1/system/production-readiness");
+}
+
+export function runProductionReadinessCheck() {
+  return requestJson("/api/v1/system/production-readiness/check", "POST", {});
 }
 
 export function listRuntimeBackups() {
