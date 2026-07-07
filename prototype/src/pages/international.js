@@ -839,6 +839,39 @@ function evidenceSourceLabel(value) {
   );
 }
 
+function publishingFitLabel(value) {
+  return ({ high: "高", medium: "中", low: "低" }[value] || value || "-");
+}
+
+function publishingStatusLabel(value) {
+  return (
+    {
+      draft_package: "草稿包",
+      approved_package: "已通过",
+      rejected_package: "已驳回",
+      exported: "已导出",
+      manually_published: "人工发布",
+      pending_review: "待审核",
+      approved: "已通过",
+      rejected: "已驳回",
+      planned: "计划中",
+      packaged: "已打包",
+      not_published: "未发布",
+      blocked: "受阻",
+      unknown: "未知",
+      not_checked: "未核验",
+      not_indexed: "未收录",
+      indexed: "已收录",
+      not_mentioned: "未提及",
+      mentioned: "已提及",
+      not_cited: "未引用",
+      cited: "已引用",
+      not_recommended: "未推荐",
+      recommended: "已推荐"
+    }[value] || value || "-"
+  );
+}
+
 function reviewStatusLabel(value) {
   return (
     {
@@ -847,6 +880,170 @@ function reviewStatusLabel(value) {
       rejected: "已驳回"
     }[value] || value || "-"
   );
+}
+
+function renderSafeExternalLink(url, label = url) {
+  const value = String(url || "");
+  const isSafe = /^https?:\/\//i.test(value);
+  if (!isSafe) {
+    return escapeHtml(value || "-");
+  }
+  return `<a href="${escapeHtml(value)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label || value)}</a>`;
+}
+
+function renderPublishingPlatformMatrix(publishing = {}) {
+  const platforms = publishing.platforms || [];
+  const rows = platforms.length
+    ? platforms.map((item) => {
+        const fit = item.ai_visibility_fit || {};
+        return `
+          <tr>
+            <td>
+              <div class="cell-title">${escapeHtml(item.platform_name || item.platform_key || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.platform_key || item.id || "-")}</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml(item.platform_type || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.category || "-")}</div>
+            </td>
+            <td>${escapeHtml((item.recommended_asset_types || []).map(assetLabel).join(" / ") || "-")}</td>
+            <td>
+              <div class="cell-title">ChatGPT Search: ${escapeHtml(publishingFitLabel(fit.chatgpt_search))} / Gemini: ${escapeHtml(publishingFitLabel(fit.gemini))} / Claude: ${escapeHtml(publishingFitLabel(fit.claude))}</div>
+              <div class="cell-sub">Perplexity: ${escapeHtml(publishingFitLabel(fit.perplexity))} / Google AIO: ${escapeHtml(publishingFitLabel(fit.google_ai_overviews))} / Bing: ${escapeHtml(publishingFitLabel(fit.copilot_bing))}</div>
+            </td>
+            <td>
+              <div class="cell-title">Index: ${escapeHtml(publishingFitLabel(item.indexing_value))} / Citation: ${escapeHtml(publishingFitLabel(item.citation_value))}</div>
+              <div class="cell-sub">Entity: ${escapeHtml(publishingFitLabel(item.entity_validation_value))}</div>
+            </td>
+            <td>${statusMarkup(publishingFitLabel(item.risk_level))}</td>
+            <td>
+              <div class="cell-title">${escapeHtml(item.publishing_mode || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.connector_status || "-")}</div>
+            </td>
+          </tr>
+        `;
+      })
+    : [`<tr><td colspan="7"><div class="empty-state">暂无发布平台。</div></td></tr>`];
+
+  return `
+    <section class="surface panel" data-international-panel="publishing-platforms">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">发布平台矩阵</h3>
+          <div class="panel-note">Manual / local 发布规划矩阵；不使用外部凭证，也不执行自动发布。</div>
+        </div>
+      </div>
+      ${tableMarkup(["平台", "类型", "适配资产", "AI 引擎适配", "价值", "风险", "模式"], rows)}
+    </section>
+  `;
+}
+
+function renderPublishingPackageQueue(publishing = {}) {
+  const packages = publishing.packages || [];
+  const rows = packages.length
+    ? packages.map(
+        (item) => `
+          <tr>
+            <td>
+              <div class="cell-title">${escapeHtml(item.title || item.id || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.id || "-")}</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml(assetLabel(item.source_asset_type))}</div>
+              <div class="cell-sub">${escapeHtml(item.source_asset_id || "-")}</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml(item.platform_name || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.platform_id || "-")}</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml(item.package_type || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.content_type || "-")}</div>
+            </td>
+            <td>
+              ${statusMarkup(publishingStatusLabel(item.package_status))}
+              ${statusMarkup(publishingStatusLabel(item.review_status))}
+            </td>
+            <td>
+              <div class="actions-row">
+                <button class="ghost-btn" data-action="international-publishing-package-reject" data-package-id="${escapeHtml(item.id || "")}">驳回</button>
+                <button class="secondary-btn" data-action="international-publishing-package-approve" data-package-id="${escapeHtml(item.id || "")}">审核通过</button>
+              </div>
+            </td>
+          </tr>
+        `
+      )
+    : [
+        `<tr>
+          <td colspan="5"><div class="empty-state">暂无发布包。</div></td>
+          <td>
+            <div class="actions-row">
+              <button class="ghost-btn" data-action="international-publishing-package-reject" data-package-id="" disabled>驳回</button>
+              <button class="secondary-btn" data-action="international-publishing-package-approve" data-package-id="" disabled>审核通过</button>
+            </div>
+          </td>
+        </tr>`
+      ];
+
+  return `
+    <section class="surface panel" data-international-panel="publishing-packages">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">发布包队列</h3>
+          <div class="panel-note">发布包是 brief、outline 和 checklist，不是完整文章；审核后人工复制到外部平台。</div>
+        </div>
+        <div class="actions-row">
+          <button class="secondary-btn" data-action="international-publishing-packages-generate">生成发布包</button>
+        </div>
+      </div>
+      ${tableMarkup(["发布包", "来源资产", "平台", "类型", "状态", "动作"], rows)}
+    </section>
+  `;
+}
+
+function renderPublishingTrackingLedger(publishing = {}) {
+  const tracking = publishing.tracking || [];
+  const rows = tracking.length
+    ? tracking.map(
+        (item) => `
+          <tr>
+            <td>
+              <div class="cell-title">${escapeHtml(item.platform_name || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.platform_id || "-")}</div>
+            </td>
+            <td>
+              ${
+                item.published_url
+                  ? renderSafeExternalLink(item.published_url, item.published_url)
+                  : `<button class="ghost-btn" data-action="international-publishing-tracking-demo-update" data-tracking-id="${escapeHtml(item.id || "")}">记录人工发布</button>`
+              }
+            </td>
+            <td>${item.canonical_url ? renderSafeExternalLink(item.canonical_url, item.canonical_url) : escapeHtml("-")}</td>
+            <td>${statusMarkup(publishingStatusLabel(item.publication_status))}</td>
+            <td>${statusMarkup(publishingStatusLabel(item.indexing_status))}</td>
+            <td>${statusMarkup(publishingStatusLabel(item.ai_mention_status))}</td>
+            <td>${statusMarkup(publishingStatusLabel(item.citation_status))}</td>
+            <td>${statusMarkup(publishingStatusLabel(item.recommendation_status))}</td>
+            <td>
+              <div class="cell-title">${escapeHtml(item.updated_at || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.last_checked_at || item.evidence_note || "-")}</div>
+            </td>
+          </tr>
+        `
+      )
+    : [`<tr><td colspan="9"><div class="empty-state">暂无收录与推荐追踪。</div></td></tr>`];
+
+  return `
+    <section class="surface panel" data-international-panel="publishing-tracking">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">收录与推荐追踪</h3>
+          <div class="panel-note">Manual / local tracking only；unknown / not_checked 不是已测量的搜索或 AI 引擎证据。</div>
+        </div>
+      </div>
+      ${tableMarkup(["平台", "Published URL", "Canonical", "发布", "收录", "AI 提及", "引用", "推荐", "更新时间"], rows)}
+    </section>
+  `;
 }
 
 function renderScoreBreakdownPanel(audit = {}) {
@@ -1157,6 +1354,7 @@ export function renderInternationalGeo(data = internationalGeo) {
   const summary = data.summary || {};
   const latestAudit = data.site_audits?.latest || data.site_audits?.items?.[0] || {};
   const visibility = data.visibility || {};
+  const publishing = data.publishing || {};
 
   return `
     <section class="surface toolbar">
@@ -1185,6 +1383,9 @@ export function renderInternationalGeo(data = internationalGeo) {
     ${renderEvidenceOpportunitiesPanel(data.evidence_assets || {})}
     ${renderEvidenceAssetQueuePanel(data.evidence_assets || {})}
     ${renderGeoAssetPreviews(mergeGeoAssetPreviews(data.geo_assets || [], data.evidence_assets || {}))}
+    ${renderPublishingPlatformMatrix(publishing)}
+    ${renderPublishingPackageQueue(publishing)}
+    ${renderPublishingTrackingLedger(publishing)}
 
     <section class="surface panel">
       <div class="panel-head">
