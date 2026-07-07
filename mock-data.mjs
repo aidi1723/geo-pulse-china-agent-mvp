@@ -1169,6 +1169,57 @@ const INTERNATIONAL_GEO_VISIBILITY_ENGINES = [
 
 const INTERNATIONAL_GEO_VISIBILITY_DATA_STATUSES = new Set(["measured", "simulated", "unavailable"]);
 
+const INTERNATIONAL_GEO_PUBLISHING_PLATFORM_KEYS = [
+  "official_blog",
+  "docs",
+  "github",
+  "linkedin_company",
+  "linkedin_founder",
+  "reddit",
+  "quora",
+  "youtube",
+  "medium",
+  "devto",
+  "hashnode",
+  "product_hunt",
+  "g2",
+  "capterra",
+  "alternative_to",
+  "saasworthy"
+];
+
+const INTERNATIONAL_GEO_PUBLISHING_PACKAGE_TYPES = new Set([
+  "website_article_brief",
+  "docs_update_brief",
+  "github_readme_update",
+  "linkedin_post",
+  "reddit_answer",
+  "quora_answer",
+  "youtube_outline",
+  "medium_article_brief",
+  "devto_article_brief",
+  "newsletter_brief",
+  "product_hunt_listing",
+  "g2_profile_checklist",
+  "capterra_profile_checklist",
+  "directory_listing_checklist"
+]);
+
+const INTERNATIONAL_GEO_PACKAGE_REVIEW_ACTIONS = new Set(["approve", "reject"]);
+const INTERNATIONAL_GEO_PUBLICATION_STATUSES = new Set([
+  "planned",
+  "packaged",
+  "manually_published",
+  "not_published",
+  "blocked"
+]);
+const INTERNATIONAL_GEO_TRACKING_STATUSES = {
+  indexing_status: new Set(["unknown", "not_checked", "not_indexed", "indexed", "blocked"]),
+  ai_mention_status: new Set(["unknown", "not_checked", "not_mentioned", "mentioned", "blocked"]),
+  citation_status: new Set(["unknown", "not_checked", "not_cited", "cited", "blocked"]),
+  recommendation_status: new Set(["unknown", "not_checked", "not_recommended", "recommended", "blocked"])
+};
+
 const internationalGeoState = {
   input: { ...defaultInternationalGeoInput },
   summary: {
@@ -1194,6 +1245,9 @@ const internationalGeoState = {
   visibility_provider_readiness: defaultInternationalGeoProviderReadiness(),
   visibility_snapshots: [],
   visibility_runs: [],
+  publishing_platforms: [],
+  publishing_packages: [],
+  publishing_tracking: [],
   artifacts: {
     llms_txt: "",
     json_ld: "",
@@ -5699,6 +5753,7 @@ export function getInternationalGeoState() {
   const state = deepClone(internationalGeoState);
   state.visibility = getInternationalGeoVisibilityState();
   state.evidence_assets = getInternationalGeoEvidenceAssetsState();
+  state.publishing = getInternationalGeoPublishingState();
   return state;
 }
 
@@ -5756,6 +5811,18 @@ function ensureInternationalGeoStateShape() {
   if (!Array.isArray(internationalGeoState.visibility_runs)) {
     internationalGeoState.visibility_runs = [];
   }
+  if (!Array.isArray(internationalGeoState.publishing_platforms)) {
+    internationalGeoState.publishing_platforms = defaultInternationalGeoPublishingPlatforms();
+  }
+  if (!internationalGeoState.publishing_platforms.length) {
+    internationalGeoState.publishing_platforms = defaultInternationalGeoPublishingPlatforms();
+  }
+  if (!Array.isArray(internationalGeoState.publishing_packages)) {
+    internationalGeoState.publishing_packages = [];
+  }
+  if (!Array.isArray(internationalGeoState.publishing_tracking)) {
+    internationalGeoState.publishing_tracking = [];
+  }
 }
 
 function internationalGeoEngineLabel(engineId) {
@@ -5798,6 +5865,248 @@ function defaultInternationalGeoProviderReadiness() {
     last_measured_at: null,
     diagnostics: [`No approved visibility provider configured for ${engine.label}.`]
   }));
+}
+
+function makePublishingPlatform(patch = {}) {
+  return {
+    id: `geopub_${patch.platform_key}`,
+    platform_type: patch.platform_type || "owned",
+    platform_key: patch.platform_key,
+    platform_name: patch.platform_name,
+    category: patch.category || "owned_site",
+    recommended_asset_types: patch.recommended_asset_types || [],
+    supported_package_types: patch.supported_package_types || [],
+    ai_visibility_fit: {
+      chatgpt_search: patch.ai_visibility_fit?.chatgpt_search || "medium",
+      claude: patch.ai_visibility_fit?.claude || "medium",
+      perplexity: patch.ai_visibility_fit?.perplexity || "medium",
+      google_ai_overviews: patch.ai_visibility_fit?.google_ai_overviews || "medium",
+      gemini: patch.ai_visibility_fit?.gemini || "medium",
+      copilot_bing: patch.ai_visibility_fit?.copilot_bing || "medium"
+    },
+    indexing_value: patch.indexing_value || "medium",
+    citation_value: patch.citation_value || "medium",
+    entity_validation_value: patch.entity_validation_value || "medium",
+    risk_level: patch.risk_level || "medium",
+    publishing_mode: patch.publishing_mode || "manual",
+    connector_status: "not_supported",
+    review_policy: "human_required",
+    notes: patch.notes || "Manual review required before external use."
+  };
+}
+
+function defaultInternationalGeoPublishingPlatforms() {
+  return [
+    makePublishingPlatform({
+      platform_key: "official_blog",
+      platform_name: "Official Blog",
+      platform_type: "owned",
+      category: "owned_site",
+      recommended_asset_types: ["definition_brief", "buyer_guide_brief", "comparison_brief", "faq_block"],
+      supported_package_types: ["website_article_brief"],
+      ai_visibility_fit: {
+        chatgpt_search: "high",
+        claude: "high",
+        perplexity: "high",
+        google_ai_overviews: "high",
+        gemini: "high",
+        copilot_bing: "medium"
+      },
+      indexing_value: "high",
+      citation_value: "high",
+      entity_validation_value: "medium",
+      risk_level: "low",
+      notes: "Use canonical owned pages with JSON-LD, sitemap, and llms.txt references."
+    }),
+    makePublishingPlatform({
+      platform_key: "docs",
+      platform_name: "Documentation",
+      platform_type: "owned",
+      category: "knowledge_base",
+      recommended_asset_types: ["llms_txt_update", "json_ld_patch", "definition_brief", "product_spec_brief", "faq_block"],
+      supported_package_types: ["docs_update_brief"],
+      ai_visibility_fit: {
+        chatgpt_search: "high",
+        claude: "high",
+        perplexity: "high",
+        google_ai_overviews: "high",
+        gemini: "high",
+        copilot_bing: "high"
+      },
+      indexing_value: "high",
+      citation_value: "high",
+      entity_validation_value: "high",
+      risk_level: "low",
+      notes: "Docs should carry stable product facts, changelog links, FAQ proof, and llms.txt references."
+    }),
+    makePublishingPlatform({
+      platform_key: "github",
+      platform_name: "GitHub",
+      platform_type: "developer",
+      category: "developer_source",
+      recommended_asset_types: ["definition_brief", "product_spec_brief"],
+      supported_package_types: ["github_readme_update"],
+      ai_visibility_fit: {
+        chatgpt_search: "high",
+        claude: "high",
+        perplexity: "medium",
+        google_ai_overviews: "medium",
+        gemini: "medium",
+        copilot_bing: "high"
+      },
+      indexing_value: "medium",
+      citation_value: "high",
+      entity_validation_value: "high",
+      risk_level: "low",
+      notes: "README updates should describe exact capabilities, installation, limits, and official links."
+    }),
+    makePublishingPlatform({
+      platform_key: "linkedin_company",
+      platform_name: "LinkedIn Company Page",
+      platform_type: "professional_social",
+      category: "social_profile",
+      recommended_asset_types: ["comparison_brief", "definition_brief", "buyer_guide_brief"],
+      supported_package_types: ["linkedin_post"],
+      risk_level: "medium",
+      notes: "Use professional, source-backed posts with canonical links and no unsupported superlatives."
+    }),
+    makePublishingPlatform({
+      platform_key: "linkedin_founder",
+      platform_name: "LinkedIn Founder Profile",
+      platform_type: "professional_social",
+      category: "expert_profile",
+      recommended_asset_types: ["definition_brief", "buyer_guide_brief"],
+      supported_package_types: ["linkedin_post"],
+      risk_level: "medium",
+      notes: "Founder posts should add expert context and disclose relationship to the product."
+    }),
+    makePublishingPlatform({
+      platform_key: "reddit",
+      platform_name: "Reddit",
+      platform_type: "community",
+      category: "community_discussion",
+      recommended_asset_types: ["comparison_brief", "alternatives_brief", "faq_block"],
+      supported_package_types: ["reddit_answer"],
+      ai_visibility_fit: {
+        chatgpt_search: "medium",
+        claude: "medium",
+        perplexity: "high",
+        google_ai_overviews: "medium",
+        gemini: "medium",
+        copilot_bing: "medium"
+      },
+      risk_level: "high",
+      notes: "Answers must be helpful, non-promotional, and compliant with community rules."
+    }),
+    makePublishingPlatform({
+      platform_key: "quora",
+      platform_name: "Quora",
+      platform_type: "qa",
+      category: "qa_site",
+      recommended_asset_types: ["faq_block", "comparison_brief", "alternatives_brief"],
+      supported_package_types: ["quora_answer"],
+      ai_visibility_fit: {
+        chatgpt_search: "medium",
+        claude: "medium",
+        perplexity: "high",
+        google_ai_overviews: "medium",
+        gemini: "medium",
+        copilot_bing: "medium"
+      },
+      risk_level: "high",
+      notes: "Answers should disclose affiliation and link only when directly relevant."
+    }),
+    makePublishingPlatform({
+      platform_key: "youtube",
+      platform_name: "YouTube",
+      platform_type: "video",
+      category: "video_search",
+      recommended_asset_types: ["buyer_guide_brief"],
+      supported_package_types: ["youtube_outline"],
+      risk_level: "medium",
+      notes: "Video outlines should require demo proof and description links to canonical sources."
+    }),
+    makePublishingPlatform({
+      platform_key: "medium",
+      platform_name: "Medium",
+      platform_type: "knowledge_base",
+      category: "third_party_article",
+      recommended_asset_types: ["comparison_brief", "alternatives_brief", "definition_brief"],
+      supported_package_types: ["medium_article_brief"],
+      risk_level: "medium",
+      notes: "Use as a supporting article brief with canonical links back to owned pages."
+    }),
+    makePublishingPlatform({
+      platform_key: "devto",
+      platform_name: "Dev.to",
+      platform_type: "developer",
+      category: "developer_article",
+      recommended_asset_types: ["definition_brief", "product_spec_brief"],
+      supported_package_types: ["devto_article_brief"],
+      risk_level: "medium",
+      notes: "Developer articles should focus on implementation facts and limitations."
+    }),
+    makePublishingPlatform({
+      platform_key: "hashnode",
+      platform_name: "Hashnode",
+      platform_type: "developer",
+      category: "developer_article",
+      recommended_asset_types: ["definition_brief", "product_spec_brief"],
+      supported_package_types: ["devto_article_brief"],
+      risk_level: "medium",
+      notes: "Hashnode package can reuse the developer article brief after human review."
+    }),
+    makePublishingPlatform({
+      platform_key: "product_hunt",
+      platform_name: "Product Hunt",
+      platform_type: "directory",
+      category: "launch_directory",
+      recommended_asset_types: ["comparison_brief", "buyer_guide_brief"],
+      supported_package_types: ["product_hunt_listing"],
+      risk_level: "medium",
+      notes: "Listing package should include positioning, screenshots, maker proof, and launch checklist."
+    }),
+    makePublishingPlatform({
+      platform_key: "g2",
+      platform_name: "G2",
+      platform_type: "review_site",
+      category: "review_profile",
+      recommended_asset_types: ["product_spec_brief", "buyer_guide_brief"],
+      supported_package_types: ["g2_profile_checklist"],
+      risk_level: "medium",
+      notes: "Profile checklist should focus on category, screenshots, proof, and review policy compliance."
+    }),
+    makePublishingPlatform({
+      platform_key: "capterra",
+      platform_name: "Capterra",
+      platform_type: "review_site",
+      category: "review_profile",
+      recommended_asset_types: ["product_spec_brief", "buyer_guide_brief"],
+      supported_package_types: ["capterra_profile_checklist"],
+      risk_level: "medium",
+      notes: "Profile checklist should align category, pricing notes, proof, and public screenshots."
+    }),
+    makePublishingPlatform({
+      platform_key: "alternative_to",
+      platform_name: "AlternativeTo",
+      platform_type: "directory",
+      category: "alternative_directory",
+      recommended_asset_types: ["comparison_brief", "alternatives_brief"],
+      supported_package_types: ["directory_listing_checklist"],
+      risk_level: "medium",
+      notes: "Directory listing should avoid unverifiable competitor claims."
+    }),
+    makePublishingPlatform({
+      platform_key: "saasworthy",
+      platform_name: "SaaSWorthy",
+      platform_type: "directory",
+      category: "saas_directory",
+      recommended_asset_types: ["alternatives_brief", "buyer_guide_brief"],
+      supported_package_types: ["directory_listing_checklist"],
+      risk_level: "medium",
+      notes: "Directory package should prepare category, positioning, screenshots, and source proof."
+    })
+  ];
 }
 
 function normalizeInternationalGeoVisibilityEngines(engines) {
@@ -6778,6 +7087,94 @@ function evidenceAssetContent(opportunity = {}) {
   return `# Buyer guide brief\n\nBuyer prompt: ${prompt}\n\n## Decision path\n1. Define the buyer problem.\n2. List must-have evidence.\n3. Compare source-backed options.\n4. Add review notes and limitations.\n\n${evidenceNote}\n${reviewNote}\n`;
 }
 
+const PUBLISHING_ASSET_PLATFORM_MAP = {
+  llms_txt_update: ["official_blog", "docs"],
+  json_ld_patch: ["official_blog", "docs"],
+  faq_block: ["official_blog", "docs", "quora"],
+  comparison_brief: ["official_blog", "linkedin_company", "reddit", "quora", "medium", "product_hunt", "alternative_to"],
+  alternatives_brief: ["official_blog", "reddit", "quora", "medium", "alternative_to", "saasworthy"],
+  definition_brief: ["official_blog", "docs", "github", "linkedin_company", "medium", "devto", "hashnode"],
+  product_spec_brief: ["docs", "github", "official_blog", "g2", "capterra"],
+  buyer_guide_brief: ["official_blog", "linkedin_company", "youtube", "g2", "capterra", "saasworthy"]
+};
+
+const PUBLISHING_CORE_PACKAGE_PLATFORM_KEYS = [
+  "official_blog",
+  "docs",
+  "github",
+  "linkedin_company",
+  "reddit",
+  "quora"
+];
+
+const PUBLISHING_PACKAGE_TYPE_BY_PLATFORM = {
+  official_blog: "website_article_brief",
+  docs: "docs_update_brief",
+  github: "github_readme_update",
+  linkedin_company: "linkedin_post",
+  linkedin_founder: "linkedin_post",
+  reddit: "reddit_answer",
+  quora: "quora_answer",
+  youtube: "youtube_outline",
+  medium: "medium_article_brief",
+  devto: "devto_article_brief",
+  hashnode: "devto_article_brief",
+  product_hunt: "product_hunt_listing",
+  g2: "g2_profile_checklist",
+  capterra: "capterra_profile_checklist",
+  alternative_to: "directory_listing_checklist",
+  saasworthy: "directory_listing_checklist"
+};
+
+function publishingPackageTitle(packageType, platform, asset = {}) {
+  const assetTitle = asset.title || evidenceAssetTitle(asset.asset_type);
+  return `${platform.platform_name} ${packageType.replaceAll("_", " ")} for ${assetTitle}`;
+}
+
+function publishingPackageContent(packageType, platform, asset = {}) {
+  const input = internationalGeoState.input || defaultInternationalGeoInput;
+  const product = input.product_name || workspaceInput.product_name || "Product";
+  const targetUrl = input.website_url || workspaceInput.website_url || asset.target_url || "";
+  const prompt = input.primary_query || asset.target_prompt || "AI search visibility";
+  const evidenceNote = asset.evidence_summary || "Review source evidence before publishing.";
+  const sourceLine = `Source evidence: ${asset.evidence_source_type || "unknown"}:${asset.evidence_source_id || "unknown"}.`;
+  const handoff = "Manual handoff: review claims, verify source proof, publish outside GEO Pulse, then record the public URL in tracking.";
+
+  if (packageType === "website_article_brief") {
+    return `# Website article brief\n\nDirect answer upfront: ${product} should answer "${prompt}" with verified product facts, canonical pages, structured data, and source-backed proof.\n\nCanonical URL recommendation: ${targetUrl}\n\n## Outline\n- Direct answer and category definition\n- Evidence table with product facts\n- Comparison or buyer decision criteria\n- FAQ block\n- JSON-LD recommendation\n\n## Proof checklist\n- Confirm canonical URL\n- Add Organization, Product, SoftwareApplication, FAQPage, Article, or BreadcrumbList schema when relevant\n- Link /llms.txt and sitemap references\n\n${sourceLine}\nEvidence note: ${evidenceNote}\n${handoff}\n`;
+  }
+
+  if (packageType === "docs_update_brief") {
+    return `# Documentation update brief\n\nDocs target: ${targetUrl}\n\n## Facts to verify\n- Product capability boundaries\n- Market and language support\n- Integration, crawl, or structured-data requirements\n- Changelog or FAQ insertion point\n\n## Linkage note\nConnect the docs page to /llms.txt, sitemap, and JSON-LD references.\n\n${sourceLine}\nEvidence note: ${evidenceNote}\n${handoff}\n`;
+  }
+
+  if (packageType === "github_readme_update") {
+    return `# GitHub README update package\n\n## Section suggestion\nAdd a concise "AI search and GEO readiness" section for ${product}.\n\n## Include\n- Install or usage context after reviewer confirmation\n- Official docs link: ${targetUrl}\n- Limitations and supported use cases\n- Source proof and review notes\n\n${sourceLine}\nEvidence note: ${evidenceNote}\n${handoff}\n`;
+  }
+
+  if (packageType === "linkedin_post") {
+    return `# LinkedIn post package\n\n${product} teams evaluating "${prompt}" should start with source-backed facts: canonical pages, structured data, /llms.txt, and evidence-rich buyer answers.\n\nLink: ${targetUrl}\n\nReview checklist:\n- Remove unsupported superlatives\n- Confirm claims and product proof\n- Keep tone professional and factual\n\n${sourceLine}\nEvidence note: ${evidenceNote}\n${handoff}\n`;
+  }
+
+  if (packageType === "reddit_answer" || packageType === "quora_answer") {
+    return `# Helpful answer package\n\nQuestion angle: ${prompt}\n\n## Answer structure\n- Start with a neutral direct answer\n- Explain evaluation criteria\n- Add source-backed facts only\n- Disclose affiliation when relevant\n- Link canonical source only if it directly helps\n\nModeration risk note: ${platform.platform_name} is high-risk for promotional posts. Keep the answer useful and non-promotional.\n\n${sourceLine}\nEvidence note: ${evidenceNote}\n${handoff}\n`;
+  }
+
+  if (packageType === "youtube_outline") {
+    return `# YouTube outline package\n\nVideo title: How to evaluate ${product} for ${prompt}\n\n## Sections\n1. Buyer problem\n2. Direct answer\n3. Required evidence\n4. Product or workflow demonstration\n5. Comparison criteria\n6. Limitations\n7. Canonical links and next steps\n\nDescription link checklist: include ${targetUrl} only after review.\n\n${sourceLine}\nEvidence note: ${evidenceNote}\n${handoff}\n`;
+  }
+
+  if (packageType === "medium_article_brief" || packageType === "devto_article_brief") {
+    return `# Third-party article brief\n\nPlatform: ${platform.platform_name}\nTopic angle: ${prompt}\n\n## Sections to prepare\n- Neutral definition or implementation context\n- Evidence-backed product facts\n- Limitations and fit notes\n- Canonical references\n- Reviewer notes before manual submission\n\nCanonical URL: ${targetUrl}\n\n${sourceLine}\nEvidence note: ${evidenceNote}\n${handoff}\n`;
+  }
+
+  if (packageType === "product_hunt_listing") {
+    return `# Product Hunt listing package\n\nProduct: ${product}\nCanonical URL: ${targetUrl}\n\n## Listing checklist\n- Tagline draft for reviewer approval\n- Maker notes and launch proof\n- Screenshots or demo assets to verify\n- Source-backed positioning statement\n- Limitations and disclosure notes\n\n${sourceLine}\nEvidence note: ${evidenceNote}\n${handoff}\n`;
+  }
+
+  return `# Profile or directory checklist\n\nPlatform: ${platform.platform_name}\nProduct: ${product}\nCanonical URL: ${targetUrl}\n\n## Fields to prepare\n- Category recommendation\n- Positioning statement\n- Product proof and screenshots\n- Public documentation links\n- Limitations and review checklist\n\n${sourceLine}\nEvidence note: ${evidenceNote}\n${handoff}\n`;
+}
+
 export function getInternationalGeoEvidenceAssetsState() {
   ensureInternationalGeoStateShape();
   return deepClone({
@@ -6786,6 +7183,230 @@ export function getInternationalGeoEvidenceAssetsState() {
     queue: internationalGeoState.asset_generation_queue,
     assets: internationalGeoState.geo_assets.filter((item) => item.opportunity_id || item.queue_item_id)
   });
+}
+
+function publishingSummary() {
+  const packages = internationalGeoState.publishing_packages || [];
+  const tracking = internationalGeoState.publishing_tracking || [];
+  return {
+    platform_count: (internationalGeoState.publishing_platforms || []).length,
+    package_count: packages.length,
+    approved_package_count: packages.filter((item) => item.review_status === "approved").length,
+    manually_published_count: tracking.filter((item) => item.publication_status === "manually_published").length,
+    indexed_count: tracking.filter((item) => item.indexing_status === "indexed").length,
+    mentioned_count: tracking.filter((item) => item.ai_mention_status === "mentioned").length,
+    cited_count: tracking.filter((item) => item.citation_status === "cited").length,
+    recommended_count: tracking.filter((item) => item.recommendation_status === "recommended").length
+  };
+}
+
+export function getInternationalGeoPublishingState() {
+  ensureInternationalGeoStateShape();
+  return deepClone({
+    summary: publishingSummary(),
+    platforms: internationalGeoState.publishing_platforms,
+    packages: internationalGeoState.publishing_packages,
+    tracking: internationalGeoState.publishing_tracking
+  });
+}
+
+export function generateInternationalGeoPublishingPackagesAction() {
+  ensureInternationalGeoStateShape();
+  const approvedAssets = (internationalGeoState.geo_assets || []).filter(
+    (item) => (item.opportunity_id || item.queue_item_id) && item.review_status === "approved"
+  );
+  if (!approvedAssets.length) {
+    return getInternationalGeoPublishingState();
+  }
+
+  const platformByKey = new Map(internationalGeoState.publishing_platforms.map((item) => [item.platform_key, item]));
+  const existingByPair = new Map(
+    (internationalGeoState.publishing_packages || []).map((item) => [`${item.source_asset_id}:${item.platform_id}`, item])
+  );
+  const existingTrackingByPackage = new Map(
+    (internationalGeoState.publishing_tracking || []).map((item) => [item.package_id, item])
+  );
+  const createdAt = nowIso();
+
+  approvedAssets.forEach((asset) => {
+    const platformKeys = [
+      ...new Set([...(PUBLISHING_ASSET_PLATFORM_MAP[asset.asset_type] || ["official_blog"]), ...PUBLISHING_CORE_PACKAGE_PLATFORM_KEYS])
+    ];
+    platformKeys.forEach((platformKey) => {
+      const platform = platformByKey.get(platformKey);
+      if (!platform) return;
+      const packageType = PUBLISHING_PACKAGE_TYPE_BY_PLATFORM[platformKey] || platform.supported_package_types[0];
+      if (!INTERNATIONAL_GEO_PUBLISHING_PACKAGE_TYPES.has(packageType)) return;
+      const pairKey = `${asset.id}:${platform.id}`;
+      let pkg = existingByPair.get(pairKey);
+      if (!pkg) {
+        pkg = {
+          id: uniqueId("geopkg"),
+          source_asset_id: asset.id,
+          source_asset_type: asset.asset_type,
+          platform_id: platform.id,
+          platform_name: platform.platform_name,
+          package_type: packageType,
+          title: publishingPackageTitle(packageType, platform, asset),
+          target_prompt: internationalGeoState.input?.primary_query || "",
+          target_url: internationalGeoState.input?.website_url || workspaceInput.website_url || "",
+          canonical_url: internationalGeoState.input?.website_url || workspaceInput.website_url || "",
+          package_status: "draft_package",
+          review_status: "pending_review",
+          content_type: "text/markdown",
+          content: publishingPackageContent(packageType, platform, asset),
+          checklist: [
+            "Confirm canonical URL.",
+            "Remove unsupported claims.",
+            "Add approved product proof.",
+            "Publish manually outside GEO Pulse.",
+            "Record the public URL and manual tracking status after publication."
+          ],
+          evidence_source_type: asset.evidence_source_type,
+          evidence_source_id: asset.evidence_source_id,
+          evidence_summary: asset.evidence_summary,
+          confidence: asset.confidence || "medium",
+          created_at: createdAt,
+          reviewed_at: null,
+          human_notes: ""
+        };
+        internationalGeoState.publishing_packages.unshift(pkg);
+        existingByPair.set(pairKey, pkg);
+      }
+
+      if (!existingTrackingByPackage.has(pkg.id)) {
+        const tracking = {
+          id: uniqueId("geotrack"),
+          package_id: pkg.id,
+          platform_id: platform.id,
+          platform_name: platform.platform_name,
+          source_asset_id: asset.id,
+          published_url: "",
+          canonical_url: pkg.canonical_url,
+          target_prompt: pkg.target_prompt,
+          publication_status: "packaged",
+          indexing_status: "unknown",
+          ai_mention_status: "unknown",
+          citation_status: "unknown",
+          recommendation_status: "unknown",
+          evidence_url: "",
+          evidence_note: "Manual/local tracking only. No live AI or search provider measurement has been performed.",
+          last_checked_at: null,
+          updated_at: createdAt
+        };
+        internationalGeoState.publishing_tracking.unshift(tracking);
+        existingTrackingByPackage.set(pkg.id, tracking);
+      }
+    });
+  });
+
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.publishing.generate", "international_geo_publishing", "batch", {
+    package_count: internationalGeoState.publishing_packages.length,
+    tracking_count: internationalGeoState.publishing_tracking.length
+  });
+  persistState();
+  return getInternationalGeoPublishingState();
+}
+
+export function reviewInternationalGeoPublishingPackageAction(packageId, payload = {}) {
+  ensureInternationalGeoStateShape();
+  const action = String(payload.action || "").trim();
+  if (!INTERNATIONAL_GEO_PACKAGE_REVIEW_ACTIONS.has(action)) {
+    const error = new Error("VALIDATION_ERROR");
+    error.code = "VALIDATION_ERROR";
+    error.field_errors = [{ field: "action", message: "Use approve or reject." }];
+    throw error;
+  }
+  const pkg = internationalGeoState.publishing_packages.find((item) => item.id === packageId);
+  if (!pkg) return null;
+  const reviewStatus = action === "approve" ? "approved" : "rejected";
+  pkg.review_status = reviewStatus;
+  pkg.package_status = action === "approve" ? "approved_package" : "rejected_package";
+  pkg.reviewed_at = nowIso();
+  pkg.human_notes = String(payload.human_notes || "").trim();
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.publishing.review", "international_geo_publishing_package", pkg.id, {
+    review_status: pkg.review_status
+  });
+  persistState();
+  return deepClone(pkg);
+}
+
+function validationError(field, message) {
+  const error = new Error("VALIDATION_ERROR");
+  error.code = "VALIDATION_ERROR";
+  error.field_errors = [{ field, message }];
+  return error;
+}
+
+function assertValidTrackingStatus(field, value) {
+  if (value === undefined) return;
+  if (field === "publication_status" && !INTERNATIONAL_GEO_PUBLICATION_STATUSES.has(value)) {
+    throw validationError(field, `Invalid ${field}`);
+  }
+  if (INTERNATIONAL_GEO_TRACKING_STATUSES[field] && !INTERNATIONAL_GEO_TRACKING_STATUSES[field].has(value)) {
+    throw validationError(field, `Invalid ${field}`);
+  }
+}
+
+function isHttpUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    return ["http:", "https:"].includes(url.protocol);
+  } catch {
+    return false;
+  }
+}
+
+export function updateInternationalGeoPublishingTrackingAction(trackingId, payload = {}) {
+  ensureInternationalGeoStateShape();
+  const record = internationalGeoState.publishing_tracking.find((item) => item.id === trackingId);
+  if (!record) return null;
+
+  [
+    "publication_status",
+    "indexing_status",
+    "ai_mention_status",
+    "citation_status",
+    "recommendation_status"
+  ].forEach((field) => {
+    if (payload[field] !== undefined) assertValidTrackingStatus(field, String(payload[field]));
+  });
+
+  const nextPublicationStatus = String(payload.publication_status || record.publication_status || "planned");
+  const nextPublishedUrl = String(payload.published_url ?? record.published_url ?? "").trim();
+  if (nextPublicationStatus === "manually_published" && !isHttpUrl(nextPublishedUrl)) {
+    throw validationError("published_url", "Manual publication requires an http published_url.");
+  }
+
+  record.publication_status = nextPublicationStatus;
+  record.published_url = nextPublishedUrl;
+  record.canonical_url = String(payload.canonical_url ?? record.canonical_url ?? "").trim();
+  record.indexing_status = String(payload.indexing_status || record.indexing_status || "unknown");
+  record.ai_mention_status = String(payload.ai_mention_status || record.ai_mention_status || "unknown");
+  record.citation_status = String(payload.citation_status || record.citation_status || "unknown");
+  record.recommendation_status = String(payload.recommendation_status || record.recommendation_status || "unknown");
+  record.evidence_url = String(payload.evidence_url ?? record.evidence_url ?? "").trim();
+  record.evidence_note = String(payload.evidence_note ?? record.evidence_note ?? "").trim();
+  record.last_checked_at = nowIso();
+  record.updated_at = nowIso();
+
+  const pkg = internationalGeoState.publishing_packages.find((item) => item.id === record.package_id);
+  if (pkg && record.publication_status === "manually_published") {
+    pkg.package_status = "manually_published";
+  }
+
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.publishing.tracking.update", "international_geo_publishing_tracking", record.id, {
+    publication_status: record.publication_status,
+    indexing_status: record.indexing_status,
+    ai_mention_status: record.ai_mention_status,
+    citation_status: record.citation_status,
+    recommendation_status: record.recommendation_status
+  });
+  persistState();
+  return deepClone(record);
 }
 
 export function generateInternationalGeoEvidenceAssetsAction() {
