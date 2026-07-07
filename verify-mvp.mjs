@@ -22,6 +22,7 @@ import {
   createTopicIdeaAction,
   createTopicIdeasFromKeywords,
   evaluateConnectorPermission,
+  generateInternationalGeoPublishingPackagesAction,
   generateInternationalGeoEvidenceAssetsAction,
   generateInternationalGeoArtifactsAction,
   generateInternationalGeoSiteAuditAssetsAction,
@@ -37,6 +38,7 @@ import {
   getCampaignAnalytics,
   getInternationalGeoState,
   getInternationalGeoEvidenceAssetsState,
+  getInternationalGeoPublishingState,
   getInternationalGeoVisibilityState,
   getInternationalGeoSiteAudit,
   getKeyword,
@@ -75,6 +77,7 @@ import {
   resetRuntimeState,
   reviewArticleAction,
   reviewInternationalGeoEvidenceAssetAction,
+  reviewInternationalGeoPublishingPackageAction,
   approvePublishTaskAction,
   crawlInternationalGeoSiteAuditAction,
   runInternationalGeoAuditAction,
@@ -100,6 +103,7 @@ import {
   testAutomationProviderAction,
   updateBillingPlanAction,
   updateArticleAction,
+  updateInternationalGeoPublishingTrackingAction,
   updateTopicIdeaAction,
   updateKeywordAction,
   verifyUserPassword,
@@ -247,6 +251,56 @@ function runSingleUserSourceChecks() {
     eventsSource,
     /action === "international-evidence-asset-reject"/,
     "International GEO evidence asset rejection should be wired in the event dispatcher"
+  );
+  assert.match(
+    apiSource,
+    /export function getInternationalGeoPublishing\(\)/,
+    "International GEO publishing workflow should have a read client API method"
+  );
+  assert.match(
+    apiSource,
+    /export function generateInternationalGeoPublishingPackages\(\)/,
+    "International GEO publishing workflow should have a package generation client API method"
+  );
+  assert.match(
+    apiSource,
+    /export function reviewInternationalGeoPublishingPackage\(packageId, payload = \{\}\)/,
+    "International GEO publishing workflow should have a package review client API method"
+  );
+  assert.match(
+    apiSource,
+    /export function updateInternationalGeoPublishingTracking\(trackingId, payload = \{\}\)/,
+    "International GEO publishing workflow should have a tracking update client API method"
+  );
+  assert.match(
+    mainSource,
+    /generateInternationalGeoPublishingPackages as generateInternationalGeoPublishingPackagesApi/,
+    "International GEO publishing package generation should be imported into the browser action layer"
+  );
+  assert.match(
+    mainSource,
+    /updateInternationalGeoPublishingTracking as updateInternationalGeoPublishingTrackingApi/,
+    "International GEO publishing tracking update should be imported into the browser action layer"
+  );
+  assert.match(
+    eventsSource,
+    /action === "international-publishing-packages-generate"/,
+    "International GEO publishing package generation should be wired in the event dispatcher"
+  );
+  assert.match(
+    eventsSource,
+    /action === "international-publishing-package-approve"/,
+    "International GEO publishing package approval should be wired in the event dispatcher"
+  );
+  assert.match(
+    eventsSource,
+    /action === "international-publishing-package-reject"/,
+    "International GEO publishing package rejection should be wired in the event dispatcher"
+  );
+  assert.match(
+    eventsSource,
+    /action === "international-publishing-tracking-demo-update"/,
+    "International GEO publishing tracking update should be wired in the event dispatcher"
   );
 }
 
@@ -1359,6 +1413,143 @@ async function runMockDataChecks() {
     reviewInternationalGeoEvidenceAssetAction("missing_evidence_asset", { action: "approve" }),
     null,
     "Unknown evidence asset ids should return null"
+  );
+
+  const publishingInitial = getInternationalGeoPublishingState();
+  assert.ok(publishingInitial.summary, "Publishing workflow should expose a summary");
+  assert.ok(Array.isArray(publishingInitial.platforms), "Publishing workflow should expose platform rows");
+  assert.ok(Array.isArray(publishingInitial.packages), "Publishing workflow should expose package rows");
+  assert.ok(Array.isArray(publishingInitial.tracking), "Publishing workflow should expose tracking rows");
+
+  const expectedPlatformKeys = [
+    "official_blog",
+    "docs",
+    "github",
+    "linkedin_company",
+    "linkedin_founder",
+    "reddit",
+    "quora",
+    "youtube",
+    "medium",
+    "devto",
+    "hashnode",
+    "product_hunt",
+    "g2",
+    "capterra",
+    "alternative_to",
+    "saasworthy"
+  ];
+  const platformKeys = new Set(publishingInitial.platforms.map((item) => item.platform_key));
+  expectedPlatformKeys.forEach((platformKey) => {
+    assert.ok(platformKeys.has(platformKey), `Publishing platform matrix should include ${platformKey}`);
+  });
+  assert.ok(
+    publishingInitial.platforms.every(
+      (item) =>
+        item.ai_visibility_fit?.chatgpt_search &&
+        item.ai_visibility_fit?.gemini &&
+        item.ai_visibility_fit?.claude &&
+        item.risk_level &&
+        item.publishing_mode &&
+        Array.isArray(item.supported_package_types)
+    ),
+    "Publishing platform rows should include engine fit, risk, publishing mode, and package types"
+  );
+
+  const publishingGenerated = generateInternationalGeoPublishingPackagesAction();
+  const generatedPackageTypes = new Set(publishingGenerated.packages.map((item) => item.package_type));
+  [
+    "website_article_brief",
+    "docs_update_brief",
+    "github_readme_update",
+    "linkedin_post",
+    "reddit_answer",
+    "quora_answer"
+  ].forEach((packageType) => {
+    assert.ok(generatedPackageTypes.has(packageType), `Generated packages should include ${packageType}`);
+  });
+  assert.ok(
+    publishingGenerated.packages.every(
+      (item) =>
+        item.source_asset_id &&
+        item.evidence_source_type &&
+        item.evidence_source_id &&
+        item.evidence_summary &&
+        item.content.includes("Manual handoff")
+    ),
+    "Generated publishing packages should preserve evidence provenance and manual handoff copy"
+  );
+  assert.equal(
+    publishingGenerated.packages.some((item) => /full article/i.test(item.content)),
+    false,
+    "Generated publishing packages should not claim to be full articles"
+  );
+
+  const packageToApprove = publishingGenerated.packages[0];
+  const approvedPackage = reviewInternationalGeoPublishingPackageAction(packageToApprove.id, {
+    action: "approve",
+    human_notes: "Approved for manual handoff."
+  });
+  assert.equal(approvedPackage.review_status, "approved", "Publishing package review should approve packages");
+  assert.equal(approvedPackage.package_status, "approved_package", "Approved packages should expose approved package status");
+
+  const packageToReject = publishingGenerated.packages.find((item) => item.id !== packageToApprove.id);
+  const rejectedPackage = reviewInternationalGeoPublishingPackageAction(packageToReject.id, {
+    action: "reject",
+    human_notes: "Needs more proof."
+  });
+  assert.equal(rejectedPackage.review_status, "rejected", "Publishing package review should reject packages");
+  assert.equal(rejectedPackage.package_status, "rejected_package", "Rejected packages should expose rejected package status");
+
+  assert.throws(
+    () => reviewInternationalGeoPublishingPackageAction(packageToApprove.id, { action: "publish" }),
+    /VALIDATION_ERROR/,
+    "Invalid publishing package review actions should be rejected"
+  );
+  assert.equal(
+    reviewInternationalGeoPublishingPackageAction("missing_publishing_package", { action: "approve" }),
+    null,
+    "Unknown publishing package ids should return null"
+  );
+
+  const trackingRecord = publishingGenerated.tracking.find((item) => item.package_id === packageToApprove.id);
+  const updatedTracking = updateInternationalGeoPublishingTrackingAction(trackingRecord.id, {
+    publication_status: "manually_published",
+    published_url: "https://example.com/geo-publishing-package",
+    canonical_url: "https://example.com",
+    indexing_status: "indexed",
+    ai_mention_status: "mentioned",
+    citation_status: "cited",
+    recommendation_status: "recommended",
+    evidence_url: "https://example.com/manual-evidence",
+    evidence_note: "Manual reviewer checked the public URL."
+  });
+  assert.equal(updatedTracking.publication_status, "manually_published", "Tracking should record manual publication");
+  assert.equal(updatedTracking.indexing_status, "indexed", "Tracking should record indexing status");
+  assert.equal(updatedTracking.ai_mention_status, "mentioned", "Tracking should record AI mention status");
+  assert.equal(updatedTracking.citation_status, "cited", "Tracking should record citation status");
+  assert.equal(updatedTracking.recommendation_status, "recommended", "Tracking should record recommendation status");
+  assert.throws(
+    () =>
+      updateInternationalGeoPublishingTrackingAction(trackingRecord.id, {
+        publication_status: "manually_published",
+        published_url: ""
+      }),
+    /VALIDATION_ERROR/,
+    "Manual publication tracking should require an http published URL"
+  );
+  assert.throws(
+    () =>
+      updateInternationalGeoPublishingTrackingAction(trackingRecord.id, {
+        indexing_status: "ranking_first"
+      }),
+    /VALIDATION_ERROR/,
+    "Invalid tracking status values should be rejected"
+  );
+  assert.equal(
+    updateInternationalGeoPublishingTrackingAction("missing_tracking_record", { indexing_status: "indexed" }),
+    null,
+    "Unknown tracking ids should return null"
   );
 
   assert.throws(
@@ -3461,6 +3652,16 @@ function runInternationalGeoUiChecks() {
   assert.match(siteAuditHtml, /证据来源/, "International GEO assets should render provenance metadata");
   assert.match(siteAuditHtml, /审核通过/, "International GEO evidence assets should expose approve action");
   assert.match(siteAuditHtml, /驳回/, "International GEO evidence assets should expose reject action");
+  assert.match(siteAuditHtml, /发布平台矩阵/, "International GEO page should render publishing platform matrix");
+  assert.match(siteAuditHtml, /发布包队列/, "International GEO page should render publishing package queue");
+  assert.match(siteAuditHtml, /收录与推荐追踪/, "International GEO page should render publishing tracking ledger");
+  assert.match(siteAuditHtml, /Manual \/ local/, "Publishing UI should expose the manual local boundary");
+  assert.match(siteAuditHtml, /ChatGPT Search/, "Publishing matrix should show ChatGPT Search fit");
+  assert.match(siteAuditHtml, /Gemini/, "Publishing matrix should show Gemini fit");
+  assert.match(siteAuditHtml, /Claude/, "Publishing matrix should show Claude fit");
+  assert.match(siteAuditHtml, /data-action="international-publishing-packages-generate"/);
+  assert.match(siteAuditHtml, /data-action="international-publishing-package-approve"/);
+  assert.match(siteAuditHtml, /data-action="international-publishing-package-reject"/);
   assert.match(siteAuditHtml, /AI 可见度测量/, "International GEO should render AI visibility measurement panel");
   assert.match(siteAuditHtml, /引擎数据源状态/, "International GEO should render engine provider readiness");
   assert.match(siteAuditHtml, /Prompt 测量快照/, "International GEO should render prompt measurement snapshots");
@@ -4131,6 +4332,14 @@ async function runMultiUserAccessHttpChecks() {
 
     const viewerLogin = await loginHttp(port, "viewer1", "viewer-pass-1234");
     assert.equal(viewerLogin.response.status, 200, "Viewer login should succeed");
+    const ownerHeaders = {
+      "Content-Type": "application/json",
+      Cookie: ownerLogin.cookie
+    };
+    const viewerHeaders = {
+      "Content-Type": "application/json",
+      Cookie: viewerLogin.cookie
+    };
     const viewerWrite = await httpRequest(port, "/api/v1/topic-ideas", {
       method: "POST",
       headers: {
@@ -4400,6 +4609,113 @@ async function runMultiUserAccessHttpChecks() {
       }
     );
     assert.equal(invalidEvidenceAssetReview.status, 400, "Invalid evidence asset review should fail");
+
+    const viewerPublishing = await httpRequest(port, "/api/v1/international-geo/publishing", {
+      headers: viewerHeaders
+    });
+    assert.equal(viewerPublishing.status, 200, "Viewer should read International GEO publishing workflow");
+    assert.ok(viewerPublishing.body?.data?.summary, "Publishing HTTP response should include a summary");
+    assert.ok(
+      viewerPublishing.body?.data?.platforms?.length >= 16,
+      "Publishing HTTP response should include default platform rows"
+    );
+
+    const viewerGeneratePublishing = await httpRequest(port, "/api/v1/international-geo/publishing/packages/generate", {
+      method: "POST",
+      headers: viewerHeaders
+    });
+    assert.equal(viewerGeneratePublishing.status, 403, "Viewer should not generate publishing packages");
+
+    const ownerGeneratePublishing = await httpRequest(port, "/api/v1/international-geo/publishing/packages/generate", {
+      method: "POST",
+      headers: ownerHeaders
+    });
+    assert.equal(ownerGeneratePublishing.status, 201, "Owner should generate publishing packages");
+    assert.ok(
+      ownerGeneratePublishing.body?.data?.packages?.length >= 6,
+      "Owner publishing package generation should return package rows"
+    );
+
+    const generatedPublishingPackageId = ownerGeneratePublishing.body.data.packages[0].id;
+    const viewerReviewPublishing = await httpRequest(
+      port,
+      `/api/v1/international-geo/publishing/packages/${generatedPublishingPackageId}/review`,
+      {
+        method: "POST",
+        headers: viewerHeaders,
+        body: JSON.stringify({ action: "approve" })
+      }
+    );
+    assert.equal(viewerReviewPublishing.status, 403, "Viewer should not review publishing packages");
+
+    const ownerReviewPublishing = await httpRequest(
+      port,
+      `/api/v1/international-geo/publishing/packages/${generatedPublishingPackageId}/review`,
+      {
+        method: "POST",
+        headers: ownerHeaders,
+        body: JSON.stringify({ action: "approve" })
+      }
+    );
+    assert.equal(ownerReviewPublishing.status, 200, "Owner should review publishing packages");
+    assert.equal(ownerReviewPublishing.body?.data?.review_status, "approved");
+
+    const invalidPublishingReview = await httpRequest(
+      port,
+      `/api/v1/international-geo/publishing/packages/${generatedPublishingPackageId}/review`,
+      {
+        method: "POST",
+        headers: ownerHeaders,
+        body: JSON.stringify({ action: "publish" })
+      }
+    );
+    assert.equal(invalidPublishingReview.status, 400, "Invalid publishing package review should fail");
+
+    const generatedTrackingId = ownerGeneratePublishing.body.data.tracking[0].id;
+    const viewerTrackingUpdate = await httpRequest(
+      port,
+      `/api/v1/international-geo/publishing/tracking/${generatedTrackingId}`,
+      {
+        method: "PUT",
+        headers: viewerHeaders,
+        body: JSON.stringify({ indexing_status: "indexed" })
+      }
+    );
+    assert.equal(viewerTrackingUpdate.status, 403, "Viewer should not update publishing tracking");
+
+    const ownerTrackingUpdate = await httpRequest(
+      port,
+      `/api/v1/international-geo/publishing/tracking/${generatedTrackingId}`,
+      {
+        method: "PUT",
+        headers: ownerHeaders,
+        body: JSON.stringify({
+          publication_status: "manually_published",
+          published_url: "https://example.com/manual-published-package",
+          canonical_url: "https://example.com",
+          indexing_status: "indexed",
+          ai_mention_status: "mentioned",
+          citation_status: "cited",
+          recommendation_status: "recommended"
+        })
+      }
+    );
+    assert.equal(ownerTrackingUpdate.status, 200, "Owner should update publishing tracking");
+    assert.equal(ownerTrackingUpdate.body?.data?.publication_status, "manually_published");
+
+    const invalidTrackingUpdate = await httpRequest(
+      port,
+      `/api/v1/international-geo/publishing/tracking/${generatedTrackingId}`,
+      {
+        method: "PUT",
+        headers: ownerHeaders,
+        body: JSON.stringify({
+          publication_status: "manually_published",
+          published_url: ""
+        })
+      }
+    );
+    assert.equal(invalidTrackingUpdate.status, 400, "Invalid publishing tracking update should fail");
 
     const createdEditor = await httpRequest(port, "/api/v1/users", {
       method: "POST",
