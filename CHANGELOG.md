@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.14.0 - 2026-07-07
+
+Evidence-driven International GEO asset opportunities and review queue.
+
+### Added
+
+- Evidence-driven International GEO content opportunities derived from site audit scoring, crawl evidence, AI visibility gaps, and rule-first input.
+- Local asset generation queue and review states for generated GEO asset previews.
+- API routes for evidence asset state, opportunities, queue, local generation, and approve/reject review.
+- International GEO UI panels for evidence opportunities, asset queue status, and provenance metadata.
+
+### Boundaries
+
+- v0.14 generates reviewable local assets only.
+- v0.14 does not publish externally, create full article drafts, or perform real ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, Bing, SERP, or AI visibility provider monitoring.
+- Evidence assets do not represent measured AI engine inclusion, citation presence, recommendation rank, or external distribution.
+
+### Verification
+
+- `npm run check`
+
 ## 0.13.0 - 2026-07-07
 
 International GEO AI visibility measurement foundation.

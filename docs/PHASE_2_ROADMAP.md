@@ -2,16 +2,16 @@
 
 ## Purpose
 
-Phase 2 turns the current v0.13 evidence-scored GEO audit and visibility foundation into a broader measured and integration-ready GEO operating system.
+Phase 2 turns the current v0.14 evidence-scored GEO audit, visibility foundation, and local evidence-asset review workflow into a broader measured and integration-ready GEO operating system.
 
-The current product can prepare audits and assets from local inputs, attach guarded public-site crawl evidence, explain a deterministic 100-point scoring breakdown, and store prompt sets, provider readiness, visibility runs, and prompt snapshots with explicit data-status labels. Phase 2 should next add evidence-driven content/asset production, measured AI visibility data from approved providers, controlled external distribution, and stronger production foundations before the project claims live engine inclusion or recommendation monitoring.
+The current product can prepare audits and assets from local inputs, attach guarded public-site crawl evidence, explain a deterministic 100-point scoring breakdown, store prompt sets, provider readiness, visibility runs, and prompt snapshots with explicit data-status labels, and generate evidence-driven local asset opportunities with review state. Phase 2 should next add export packages, connector handoff contracts, measured AI visibility data from approved providers, controlled external distribution, and stronger production foundations before the project claims live engine inclusion or recommendation monitoring.
 
 ## Phase 2 Direction
 
 Build in this order:
 
 1. AI visibility monitoring through approved data sources.
-2. Content and asset production from evidence.
+2. Export packages and connector handoff contracts for reviewed assets.
 3. External distribution connectors with manual guardrails.
 4. Production hardening for hosted team use.
 
@@ -88,6 +88,8 @@ Acceptance:
 
 ## Track 4: Content And Asset Production Upgrade
 
+Status: v0.14 baseline complete for local review assets. Export packages, connector handoff contracts, and publication connectors remain future work.
+
 Goal: generate better GEO content from crawl evidence, score deductions, and prompt visibility gaps.
 
 Scope:
@@ -103,6 +105,10 @@ Acceptance:
 - Generated assets cite which evidence they used.
 - Operators can review, copy, and regenerate each asset.
 - Existing v0.10 asset types remain backward compatible.
+
+Boundary:
+
+- v0.14 adds evidence-driven International GEO asset opportunities, queue items, generated local previews, and approve/reject review state. The workflow creates reviewable local assets only; it does not publish externally, generate full long-form articles, or call live AI search engines for inclusion/ranking measurement.
 
 ## Track 5: External Distribution Connectors
 
@@ -165,8 +171,8 @@ Acceptance:
 - `v0.11`: live site crawl and evidence collection. Complete baseline.
 - `v0.12`: deeper evidence-backed GEO scoring. Complete baseline.
 - `v0.13`: AI visibility measurement foundation. Complete baseline; measured provider integrations remain future work.
-- `v0.14`: content and asset production upgrade from evidence.
-- `v0.15`: external distribution connectors with approval gates.
+- `v0.14`: evidence-driven local content and asset production upgrade. Complete baseline; external publishing and full article generation remain future work.
+- `v0.15`: export packages and connector handoff contracts with approval gates.
 - `v0.16`: database persistence, secrets, monitoring, and production hardening.
 - `v0.17+`: multi-tenant SaaS readiness if the product direction requires it.
 

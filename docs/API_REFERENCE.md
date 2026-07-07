@@ -56,7 +56,7 @@ System scripts can still use:
 X-GEO-API-Key: <runtime-key>
 ```
 
-The browser client config endpoint does not expose the mutation API key in v0.13.0. Keep `GEO_INTERNAL_API_KEY` for automation, diagnostics, and controlled scripts.
+The browser client config endpoint does not expose the mutation API key in v0.14.0. Keep `GEO_INTERNAL_API_KEY` for automation, diagnostics, and controlled scripts.
 
 Roles:
 
@@ -210,6 +210,16 @@ Site audit create requests require `website_url` and `product_name`. The generat
 The crawl route safely fetches only the submitted homepage plus origin `robots.txt`, `sitemap.xml`, and `/llms.txt`. It stores the connector-shaped snapshot under `crawl_evidence` with `provider_id`, `execution_mode`, `status`, `resources`, and `issues`, then rebuilds evidence-aware checks and recalculates the weighted score breakdown. Unsafe crawl targets return `400 CRAWL_TARGET_BLOCKED`; normal network failures return a stored failed or partial evidence snapshot instead of crashing the server.
 
 Mutation routes require an editor/admin/owner browser session or `X-GEO-API-Key`. Viewer sessions can read audits but cannot create audits, generate assets, or run crawls.
+
+### International GEO Evidence Assets
+
+- `GET /api/v1/international-geo/evidence-assets`: returns `{ summary, opportunities, queue, assets }`.
+- `GET /api/v1/international-geo/evidence-assets/opportunities`: returns evidence-driven opportunity rows.
+- `GET /api/v1/international-geo/evidence-assets/queue`: returns local generation queue rows.
+- `POST /api/v1/international-geo/evidence-assets/generate`: owner/editor/admin action that derives opportunities and generates local reviewable assets.
+- `POST /api/v1/international-geo/evidence-assets/:id/review`: owner/editor/admin action with `{ "action": "approve" }` or `{ "action": "reject", "human_notes": "..." }`.
+
+Evidence assets are local review artifacts. They are not automatically published and do not represent measured AI engine inclusion.
 
 Visibility routes add the v0.13 measurement foundation:
 

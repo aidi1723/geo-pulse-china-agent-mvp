@@ -71,6 +71,13 @@ Do this only when the repository owner accepts history rewriting. For establishe
 
 ## Maintenance Log
 
+### 2026-07-07 - v0.14 Evidence-Driven Asset Review Closeout
+
+- Scope: added International GEO evidence-driven opportunities, local generation queue rows, generated local previews with provenance metadata, and approve/reject review state.
+- Local gate: `npm run check` returned `verify-mvp: OK`.
+- Documentation aligned: README, API reference, architecture guide, development guide, production deployment guide, roadmap, documentation index, phase 2 roadmap, open-source release checklist, changelog, maintenance guide, and v0.14 closeout docs.
+- Boundary: v0.14 generates reviewable local assets only. It does not publish externally, generate full long-form articles, call live AI search engines, or claim measured engine inclusion, citation presence, recommendation rank, or external distribution.
+
 ### 2026-07-07 - v0.13 AI Visibility Measurement Foundation Closeout
 
 - Scope: added International GEO prompt sets, provider readiness, visibility runs, prompt snapshots, UI panels, and browser button wiring for ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude, and Copilot / Bing readiness.
@@ -120,9 +127,9 @@ Do this only when the repository owner accepts history rewriting. For establishe
 - No evidence found of real local absolute paths, real personal email addresses, tracked `.env` files, tracked runtime state, or real credential patterns in the current tree or existing Git history.
 - History rewrite: not performed.
 
-## Post-v0.13 Production Hardening
+## Post-v0.14 Production Hardening
 
-v0.13.0 is deployable as a controlled one-organization team-access service behind an external access layer. Before treating it as a real SaaS, real-time AI search monitoring platform, or broadly exposed hosted service, production hardening should include:
+v0.14.0 is deployable as a controlled one-organization team-access service behind an external access layer. Before treating it as a real SaaS, real-time AI search monitoring platform, external publishing system, or broadly exposed hosted service, production hardening should include:
 
 - Database persistence, migrations, and database-grade backup policy.
 - Monitoring and alerting.
@@ -130,6 +137,7 @@ v0.13.0 is deployable as a controlled one-organization team-access service behin
 - OAuth/SSO and MFA if external identity integration is required.
 - Real provider, connector, and source adapter implementations.
 - Measured AI visibility data sources and external publishing connectors before claiming real engine inclusion, recommendation tracking, or automatic distribution.
+- Export packages and connector handoff contracts before moving reviewed evidence assets outside the local workflow.
 - Security contact ownership and incident response process.
 - Multi-tenant workspace isolation if multiple organizations use the service.
 - Data retention, deletion, and privacy policy.

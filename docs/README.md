@@ -1,12 +1,12 @@
 # Documentation Index
 
-This directory contains the maintainer-facing documentation for GEO Pulse China Agent v0.13.0.
+This directory contains the maintainer-facing documentation for GEO Pulse China Agent v0.14.0.
 
 ## Start Here
 
 - [Development Guide](DEVELOPMENT.md): local setup, test gate, environment variables, UI rules, and contribution workflow.
 - [Architecture Guide](ARCHITECTURE.md): runtime structure, module boundaries, data flow, security model, and extension points.
-- [Production Deployment Guide](PRODUCTION_DEPLOYMENT.md): one-organization v0.13.0 deployment, built-in login, roles, International GEO site audit, guarded crawl evidence, evidence-backed scoring, AI visibility measurement foundation, asset generation, environment, Docker, health checks, launch preflight, backup, import, CI gate, and rollback.
+- [Production Deployment Guide](PRODUCTION_DEPLOYMENT.md): one-organization v0.14.0 deployment, built-in login, roles, International GEO site audit, guarded crawl evidence, evidence-backed scoring, AI visibility measurement foundation, evidence-driven local asset review workflow, environment, Docker, health checks, launch preflight, backup, import, CI gate, and rollback.
 - [v0.2 Stage Closeout](STAGE_V0_2_CLOSEOUT.md): stage result, launch boundary, verification evidence, and closing copy.
 - [v0.3 Stage Closeout](STAGE_V0_3_CLOSEOUT.md): single-user complete stage result, launch boundary, verification evidence, and closing copy.
 - [v0.4 Stage Closeout](STAGE_V0_4_CLOSEOUT.md): connector integration-readiness stage result, launch boundary, verification evidence, and closing copy.
@@ -20,11 +20,12 @@ This directory contains the maintainer-facing documentation for GEO Pulse China 
 - [v0.11 Stage Closeout](STAGE_V0_11_CLOSEOUT.md): live site crawl evidence stage result, safety boundary, verification evidence, and closing copy.
 - [v0.12 Stage Closeout](STAGE_V0_12_CLOSEOUT.md): evidence-backed scoring stage result, API/UI surface, verification evidence, and closing copy.
 - [v0.13 Stage Closeout](STAGE_V0_13_CLOSEOUT.md): AI visibility measurement foundation stage result, API/UI surface, data-source boundary, verification commands, and next stage.
+- [v0.14 Stage Closeout](STAGE_V0_14_CLOSEOUT.md): evidence-driven local asset opportunities, queue, previews, review state, operating boundary, verification commands, and next stage.
 - [API Reference](API_REFERENCE.md): current mock API groups, route behavior, mutation requirements, and response shape.
 - [Extension Guide](EXTENDING.md): how to add providers, connectors, source adapters, UI pages, tests, and static preview data.
 - [Maintenance Guide](MAINTENANCE.md): routine maintenance, release gate, runtime state, security defaults, and production backlog.
 - [Privacy Release Review](PRIVACY_RELEASE_REVIEW.md): public-branch privacy scans, cleanup rules, and history-rewrite guidance.
-- [Roadmap](ROADMAP.md): what is done, what remains local-first, and what belongs to post-v0.13 production hardening.
+- [Roadmap](ROADMAP.md): what is done, what remains local-first, and what belongs to post-v0.14 production hardening.
 - [Phase 2 Roadmap](PHASE_2_ROADMAP.md): development tracks for deeper evidence scoring, measured AI visibility, external distribution, production hardening, and SaaS readiness.
 - [Open Source Release Checklist](OPEN_SOURCE_RELEASE.md): publication readiness, GitHub settings, and release-note draft.
 - [Minimal CI Plan](superpowers/plans/2026-07-06-minimal-ci.md): GitHub Actions quality gate plan for `npm run check`.
@@ -51,4 +52,4 @@ The root-level Chinese product documents are retained as product context:
 - `AgentCoreOS-GEO-Suite-产品拆解方案.md`
 - `AgentCoreOS-GEO-网站优化与内容方案.md`
 
-The `reports/` directory contains audit, benchmark, and security hardening notes used during MVP, v0.2, v0.3, v0.4, v0.5, v0.6, v0.7, v0.8, v0.9, v0.9.1, v0.10, v0.11, v0.12, and v0.13 preparation.
+The `reports/` directory contains audit, benchmark, and security hardening notes used during MVP, v0.2, v0.3, v0.4, v0.5, v0.6, v0.7, v0.8, v0.9, v0.9.1, v0.10, v0.11, v0.12, v0.13, and v0.14 preparation.
