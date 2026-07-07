@@ -6323,6 +6323,20 @@ function normalizeUrlArray(value, field) {
   return items;
 }
 
+function normalizeOptionalHttpUrl(value, field) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  try {
+    const url = new URL(text);
+    if (!["http:", "https:"].includes(url.protocol)) {
+      throw new Error("invalid protocol");
+    }
+  } catch {
+    throw visibilityValidationError(field, `${field} must be a valid http(s) URL.`);
+  }
+  return text;
+}
+
 function normalizeRecommendationRank(value) {
   if (value === null || value === undefined || String(value).trim() === "") return null;
   const rank = Number(value);
@@ -6340,6 +6354,15 @@ function normalizeCapturedAt(value) {
     throw visibilityValidationError("captured_at", "captured_at must be a valid date.");
   }
   return date.toISOString();
+}
+
+function normalizeOwnedCitationCount(value, citationUrls) {
+  if (value === null || value === undefined || String(value).trim() === "") return citationUrls.length;
+  const count = Number(value);
+  if (!Number.isInteger(count) || count < 0 || !Number.isFinite(count)) {
+    throw visibilityValidationError("owned_citation_count", "owned_citation_count must be a non-negative integer.");
+  }
+  return count;
 }
 
 function normalizeVisibilityImportPayload(payload = {}) {
@@ -6364,6 +6387,8 @@ function normalizeVisibilityImportPayload(payload = {}) {
   const brandMentioned = normalizeBooleanField(payload.brand_mentioned, "brand_mentioned");
   const capturedAt = normalizeCapturedAt(payload.captured_at);
   const citationUrls = normalizeUrlArray(payload.citation_urls || [], "citation_urls");
+  const sourceUrl = normalizeOptionalHttpUrl(payload.source_url, "source_url");
+  const ownedCitationCount = normalizeOwnedCitationCount(payload.owned_citation_count, citationUrls);
   const recommendationRank = normalizeRecommendationRank(payload.recommendation_rank);
   const competitorsMentioned = normalizeStringArray(payload.competitors_mentioned || []);
   const rawObservation = String(payload.raw_observation || "").trim();
@@ -6392,13 +6417,10 @@ function normalizeVisibilityImportPayload(payload = {}) {
     provider_id: "manual_import",
     source_type: sourceType,
     source_label: String(payload.source_label || "Manual measured evidence").trim(),
-    source_url: String(payload.source_url || "").trim(),
+    source_url: sourceUrl,
     captured_at: capturedAt,
     brand_mentioned: brandMentioned,
-    owned_citation_count:
-      payload.owned_citation_count === null || payload.owned_citation_count === undefined || payload.owned_citation_count === ""
-        ? citationUrls.length
-        : Number(payload.owned_citation_count),
+    owned_citation_count: ownedCitationCount,
     citation_urls: citationUrls,
     recommendation_rank: recommendationRank,
     competitors_mentioned: competitorsMentioned,
