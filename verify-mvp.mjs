@@ -3567,6 +3567,81 @@ function runInternationalGeoUiChecks() {
         created_at: "2026-07-06T00:00:00.000Z"
       }
     ],
+    publishing: {
+      summary: {
+        platform_count: 1,
+        package_count: 1,
+        approved_package_count: 0,
+        manually_published_count: 0,
+        indexed_count: 0,
+        mentioned_count: 0,
+        cited_count: 0,
+        recommended_count: 0
+      },
+      platforms: [
+        {
+          id: "geopub_official_blog",
+          platform_key: "official_blog",
+          platform_name: "Official Blog",
+          platform_type: "owned",
+          category: "owned_site",
+          recommended_asset_types: ["comparison_brief", "definition_brief"],
+          supported_package_types: ["website_article_brief"],
+          ai_visibility_fit: {
+            chatgpt_search: "high",
+            gemini: "high",
+            claude: "high",
+            perplexity: "high",
+            google_ai_overviews: "high",
+            copilot_bing: "medium"
+          },
+          indexing_value: "high",
+          citation_value: "high",
+          entity_validation_value: "medium",
+          risk_level: "low",
+          publishing_mode: "manual",
+          connector_status: "not_supported"
+        }
+      ],
+      packages: [
+        {
+          id: "geopkg-ui",
+          source_asset_id: "asset-test",
+          source_asset_type: "comparison_brief",
+          platform_id: "geopub_official_blog",
+          platform_name: "Official Blog",
+          package_type: "website_article_brief",
+          title: "Official Blog package",
+          target_prompt: "best GEO platform for B2B exporters",
+          package_status: "draft_package",
+          review_status: "pending_review",
+          content_type: "text/markdown",
+          evidence_source_type: "score_deduction",
+          evidence_source_id: "sga-test:third_party_validation",
+          evidence_summary: "Manual/local package fixture",
+          confidence: "medium"
+        }
+      ],
+      tracking: [
+        {
+          id: "geotrack-ui",
+          package_id: "geopkg-ui",
+          platform_id: "geopub_official_blog",
+          platform_name: "Official Blog",
+          source_asset_id: "asset-test",
+          published_url: "",
+          canonical_url: "https://example.com",
+          target_prompt: "best GEO platform for B2B exporters",
+          publication_status: "packaged",
+          indexing_status: "unknown",
+          ai_mention_status: "unknown",
+          citation_status: "unknown",
+          recommendation_status: "unknown",
+          evidence_note: "Manual/local tracking only.",
+          updated_at: "2026-07-07T00:00:00.000Z"
+        }
+      ]
+    },
     visibility: {
       provider_readiness: [
         {

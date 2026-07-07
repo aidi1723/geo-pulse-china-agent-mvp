@@ -882,13 +882,25 @@ function reviewStatusLabel(value) {
   );
 }
 
-function renderSafeExternalLink(url, label = url) {
+function compactUrlLabel(url) {
+  const value = String(url || "");
+  try {
+    const parsed = new URL(value);
+    const path = `${parsed.pathname || "/"}${parsed.search || ""}`;
+    const compactPath = path.length > 28 ? `${path.slice(0, 25)}...` : path;
+    return `${parsed.hostname}${compactPath === "/" ? "" : compactPath}`;
+  } catch {
+    return value.length > 32 ? `${value.slice(0, 29)}...` : value;
+  }
+}
+
+function renderSafeExternalLink(url, label = compactUrlLabel(url)) {
   const value = String(url || "");
   const isSafe = /^https?:\/\//i.test(value);
   if (!isSafe) {
     return escapeHtml(value || "-");
   }
-  return `<a href="${escapeHtml(value)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label || value)}</a>`;
+  return `<a href="${escapeHtml(value)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(value)}">${escapeHtml(label || compactUrlLabel(value))}</a>`;
 }
 
 function renderPublishingPlatformMatrix(publishing = {}) {
@@ -973,17 +985,7 @@ function renderPublishingPackageQueue(publishing = {}) {
           </tr>
         `
       )
-    : [
-        `<tr>
-          <td colspan="5"><div class="empty-state">暂无发布包。</div></td>
-          <td>
-            <div class="actions-row">
-              <button class="ghost-btn" data-action="international-publishing-package-reject" data-package-id="" disabled>驳回</button>
-              <button class="secondary-btn" data-action="international-publishing-package-approve" data-package-id="" disabled>审核通过</button>
-            </div>
-          </td>
-        </tr>`
-      ];
+    : [`<tr><td colspan="6"><div class="empty-state">暂无发布包。请先审核通过证据资产，再生成发布包。</div></td></tr>`];
 
   return `
     <section class="surface panel" data-international-panel="publishing-packages">
@@ -1014,11 +1016,11 @@ function renderPublishingTrackingLedger(publishing = {}) {
             <td>
               ${
                 item.published_url
-                  ? renderSafeExternalLink(item.published_url, item.published_url)
+                  ? renderSafeExternalLink(item.published_url)
                   : `<button class="ghost-btn" data-action="international-publishing-tracking-demo-update" data-tracking-id="${escapeHtml(item.id || "")}">记录人工发布</button>`
               }
             </td>
-            <td>${item.canonical_url ? renderSafeExternalLink(item.canonical_url, item.canonical_url) : escapeHtml("-")}</td>
+            <td>${item.canonical_url ? renderSafeExternalLink(item.canonical_url) : escapeHtml("-")}</td>
             <td>${statusMarkup(publishingStatusLabel(item.publication_status))}</td>
             <td>${statusMarkup(publishingStatusLabel(item.indexing_status))}</td>
             <td>${statusMarkup(publishingStatusLabel(item.ai_mention_status))}</td>
