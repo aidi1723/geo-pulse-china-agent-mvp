@@ -7474,70 +7474,118 @@ export function getInternationalGeoContentGenerationState() {
 
 export function generateInternationalGeoArticlesAction() {
   ensureInternationalGeoStateShape();
+  const contentGeneration = internationalGeoState.content_generation;
   const approvedAssets = (internationalGeoState.geo_assets || []).filter(
-    (item) => item.opportunity_id && item.review_status === "approved"
-  );
-  if (!approvedAssets.length) {
-    return getInternationalGeoContentGenerationState();
-  }
-
-  const sourceAssets = [...approvedAssets].sort((left, right) => String(left.id).localeCompare(String(right.id)));
-  const sourceAssetKey = sourceAssets.map((item) => item.id).join(":");
-  const existingArticle = (internationalGeoState.content_generation.articles || []).find(
-    (item) => item.source_asset_key === sourceAssetKey
+    (item) => item.review_status === "approved" && (item.opportunity_id || item.queue_item_id)
   );
   const createdAt = nowIso();
 
-  if (!existingArticle) {
-    const input = internationalGeoState.input || defaultInternationalGeoInput;
-    const sourceAssetTypes = [...new Set(sourceAssets.map((item) => item.asset_type).filter(Boolean))];
-    const evidenceSummary = sourceAssets
-      .map((asset) => `${asset.asset_type || "asset"}: ${asset.evidence_summary || asset.title || asset.id}`)
-      .join("\n");
-    const article = {
-      id: uniqueId("geoarticle"),
+  if (!approvedAssets.length) {
+    contentGeneration.runs.unshift({
+      id: uniqueId("georun"),
+      run_type: "article_generation",
+      status: "blocked",
       generator_provider: "local_rules",
-      source_asset_key: sourceAssetKey,
-      source_asset_ids: sourceAssets.map((item) => item.id),
-      source_asset_types: sourceAssetTypes,
-      title: generatedArticleTitle(sourceAssets),
-      target_prompt: input.primary_query || sourceAssets[0]?.target_prompt || "AI search visibility",
-      target_url: input.website_url || workspaceInput.website_url || sourceAssets[0]?.target_url || "",
-      canonical_url: input.website_url || workspaceInput.website_url || sourceAssets[0]?.target_url || "",
-      article_status: "draft",
-      review_status: "pending_review",
-      content_type: "text/markdown",
-      content: generatedArticleContent(sourceAssets),
-      outline: [
-        "Direct answer upfront",
-        "Category or problem definition",
-        "Product positioning",
-        "Evidence table",
-        "Human review checklist"
-      ],
-      evidence_summary: evidenceSummary,
-      human_notes: "",
-      created_at: createdAt,
-      reviewed_at: null
-    };
-    internationalGeoState.content_generation.articles.unshift(article);
+      source_asset_count: 0,
+      output_article_count: 0,
+      created_count: 0,
+      diagnostic: "Approve at least one evidence asset before article generation.",
+      started_at: createdAt,
+      completed_at: nowIso()
+    });
+    internationalGeoState.updated_at = nowIso();
+    recordAuditEvent("international_geo.content_generation.article.generate", "international_geo_generated_article", "batch", {
+      status: "blocked",
+      source_asset_count: 0,
+      article_count: contentGeneration.articles.length
+    });
+    persistState();
+    return getInternationalGeoContentGenerationState();
   }
 
-  internationalGeoState.content_generation.runs.unshift({
+  const usedAssetIds = new Set(
+    (contentGeneration.articles || [])
+      .filter((item) => item.review_status !== "rejected")
+      .flatMap((item) => (Array.isArray(item.source_asset_ids) ? item.source_asset_ids : []))
+  );
+  const newApprovedAssets = approvedAssets.filter((asset) => !usedAssetIds.has(asset.id));
+  if (!newApprovedAssets.length) {
+    contentGeneration.runs.unshift({
+      id: uniqueId("georun"),
+      run_type: "article_generation",
+      status: "completed",
+      generator_provider: "local_rules",
+      source_asset_count: approvedAssets.length,
+      output_article_count: 0,
+      created_count: 0,
+      diagnostic: "No new approved evidence assets required article generation.",
+      started_at: createdAt,
+      completed_at: nowIso()
+    });
+    internationalGeoState.updated_at = nowIso();
+    recordAuditEvent("international_geo.content_generation.article.generate", "international_geo_generated_article", "batch", {
+      status: "completed",
+      source_asset_count: approvedAssets.length,
+      output_article_count: 0,
+      article_count: contentGeneration.articles.length
+    });
+    persistState();
+    return getInternationalGeoContentGenerationState();
+  }
+
+  const sourceAssets = [...newApprovedAssets].sort((left, right) => String(left.id).localeCompare(String(right.id)));
+  const sourceAssetKey = sourceAssets.map((item) => item.id).join(":");
+  const input = internationalGeoState.input || defaultInternationalGeoInput;
+  const sourceAssetTypes = [...new Set(sourceAssets.map((item) => item.asset_type).filter(Boolean))];
+  const evidenceSummary = sourceAssets
+    .map((asset) => `${asset.asset_type || "asset"}: ${asset.evidence_summary || asset.title || asset.id}`)
+    .join("\n");
+  const article = {
+    id: uniqueId("geoarticle"),
+    generator_provider: "local_rules",
+    source_asset_key: sourceAssetKey,
+    source_asset_ids: sourceAssets.map((item) => item.id),
+    source_asset_types: sourceAssetTypes,
+    title: generatedArticleTitle(sourceAssets),
+    target_prompt: input.primary_query || sourceAssets[0]?.target_prompt || "AI search visibility",
+    target_url: input.website_url || workspaceInput.website_url || sourceAssets[0]?.target_url || "",
+    canonical_url: input.website_url || workspaceInput.website_url || sourceAssets[0]?.target_url || "",
+    article_status: "draft",
+    review_status: "pending_review",
+    content_type: "text/markdown",
+    content: generatedArticleContent(sourceAssets),
+    outline: [
+      "Direct answer upfront",
+      "Category or problem definition",
+      "Product positioning",
+      "Evidence table",
+      "Human review checklist"
+    ],
+    evidence_summary: evidenceSummary,
+    human_notes: "",
+    created_at: createdAt,
+    reviewed_at: null
+  };
+  contentGeneration.articles.unshift(article);
+
+  contentGeneration.runs.unshift({
     id: uniqueId("georun"),
     run_type: "article_generation",
     status: "completed",
     generator_provider: "local_rules",
     source_asset_key: sourceAssetKey,
     source_asset_count: sourceAssets.length,
-    created_count: existingArticle ? 0 : 1,
+    output_article_count: 1,
+    created_count: 1,
+    diagnostic: "Generated one article from new approved evidence assets.",
     started_at: createdAt,
     completed_at: nowIso()
   });
   internationalGeoState.updated_at = nowIso();
   recordAuditEvent("international_geo.content_generation.article.generate", "international_geo_generated_article", "batch", {
     source_asset_count: sourceAssets.length,
-    article_count: internationalGeoState.content_generation.articles.length
+    output_article_count: 1,
+    article_count: contentGeneration.articles.length
   });
   persistState();
   return getInternationalGeoContentGenerationState();
