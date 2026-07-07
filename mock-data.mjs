@@ -1219,6 +1219,8 @@ const INTERNATIONAL_GEO_TRACKING_STATUSES = {
   citation_status: new Set(["unknown", "not_checked", "not_cited", "cited", "blocked"]),
   recommendation_status: new Set(["unknown", "not_checked", "not_recommended", "recommended", "blocked"])
 };
+const INTEGRATION_FOUNDATION_STATUSES = new Set(["reserved", "configured", "blocked", "disabled"]);
+const VISIBILITY_PROVIDER_APPROVAL_STATUSES = new Set(["not_requested", "requested", "approved", "rejected"]);
 
 const internationalGeoState = {
   input: { ...defaultInternationalGeoInput },
@@ -1246,9 +1248,11 @@ const internationalGeoState = {
   visibility_snapshots: [],
   visibility_runs: [],
   visibility_import_batches: [],
+  visibility_provider_configs: [],
   publishing_platforms: [],
   publishing_packages: [],
   publishing_tracking: [],
+  publishing_connectors: [],
   content_generation: {
     providers: [],
     articles: [],
@@ -2641,6 +2645,7 @@ export function getRuntimeStatus() {
     connectors: getConnectorSummary(),
     prompts: getPromptSummary(),
     backups: getRuntimeBackupSummary(),
+    production_readiness: getProductionReadinessState(),
     counts: {
       keywords: keywords.length,
       topics: topicIdeas.length,
@@ -2657,6 +2662,228 @@ export function getRuntimeStatus() {
     },
     updated_at: nowIso()
   };
+}
+
+function productionReadinessCheck(id, category, label, status, message, recommendation = "") {
+  return {
+    id,
+    category,
+    label,
+    status,
+    message,
+    recommendation
+  };
+}
+
+function productionReadinessStatus(checks = []) {
+  if (checks.some((item) => item.status === "failed")) return "blocked";
+  if (checks.some((item) => item.status === "warning")) return "review";
+  return "ready";
+}
+
+function productionReadinessSummary(checks = []) {
+  return {
+    passed: checks.filter((item) => item.status === "passed").length,
+    warnings: checks.filter((item) => item.status === "warning").length,
+    failed: checks.filter((item) => item.status === "failed").length,
+    blocked: checks.filter((item) => item.status === "failed").length
+  };
+}
+
+function productionReadinessScore(checks = []) {
+  if (!checks.length) return 0;
+  const points = checks.reduce((sum, item) => {
+    if (item.status === "passed") return sum + 1;
+    if (item.status === "warning") return sum + 0.5;
+    return sum;
+  }, 0);
+  return Math.round((points / checks.length) * 100);
+}
+
+function buildMaskedSecretInventory() {
+  ensureInternationalGeoStateShape();
+  const rows = [
+    {
+      id: "geo_internal_api_key",
+      scope: "runtime",
+      label: "GEO_INTERNAL_API_KEY",
+      status: process.env.GEO_INTERNAL_API_KEY ? "configured" : "missing",
+      masked_value: maskSecret(process.env.GEO_INTERNAL_API_KEY || ""),
+      raw_secret_exposed: false
+    },
+    {
+      id: "geo_bootstrap_owner_password",
+      scope: "runtime",
+      label: "GEO_BOOTSTRAP_OWNER_PASSWORD",
+      status: process.env.GEO_BOOTSTRAP_OWNER_PASSWORD ? "configured" : "missing",
+      masked_value: maskSecret(process.env.GEO_BOOTSTRAP_OWNER_PASSWORD || ""),
+      raw_secret_exposed: false
+    }
+  ];
+  automationConnectors.forEach((connector) => {
+    rows.push({
+      id: `automation_${connector.id}`,
+      scope: "automation_connector",
+      label: connector.label,
+      status: connector.config?.api_key ? "configured" : "missing",
+      masked_value: maskSecret(connector.config?.api_key || ""),
+      raw_secret_exposed: false
+    });
+  });
+  internationalGeoState.visibility_provider_configs.forEach((provider) => {
+    rows.push({
+      id: provider.id,
+      scope: "visibility_provider",
+      label: provider.provider_label,
+      status: provider.config?.api_key ? "configured" : "missing",
+      masked_value: maskSecret(provider.config?.api_key || ""),
+      raw_secret_exposed: false
+    });
+  });
+  internationalGeoState.publishing_connectors.forEach((connector) => {
+    rows.push({
+      id: connector.id,
+      scope: "publishing_connector",
+      label: connector.platform_name,
+      status: connector.config?.api_key ? "configured" : "missing",
+      masked_value: maskSecret(connector.config?.api_key || ""),
+      raw_secret_exposed: false
+    });
+  });
+  return rows;
+}
+
+function buildProductionHandoffChecklist() {
+  return [
+    {
+      id: "docs_aligned",
+      label: "Documentation aligned",
+      status: "warning",
+      recommendation: "Confirm README, deployment, API, roadmap, maintenance, and stage closeout docs before release."
+    },
+    {
+      id: "backup_verified",
+      label: "Backup and restore verified",
+      status: runtimeBackups.length ? "passed" : "warning",
+      recommendation: "Create and validate a runtime backup before handoff."
+    },
+    {
+      id: "external_access_layer",
+      label: "External access layer",
+      status: process.env.GEO_ALLOW_REMOTE_ACCESS === "1" ? "warning" : "passed",
+      recommendation: "Use HTTPS, reverse proxy auth, VPN, or IP allowlist before internet exposure."
+    },
+    {
+      id: "integration_boundary",
+      label: "Integration boundary",
+      status: "passed",
+      recommendation: "Provider and publishing connector tests are dry-run only in v0.19."
+    }
+  ];
+}
+
+export function getProductionReadinessState() {
+  ensureInternationalGeoStateShape();
+  const visibilityProviders = getInternationalGeoVisibilityProviderState();
+  const publishingConnectors = getInternationalGeoPublishingConnectorState();
+  const backupSummary = getRuntimeBackupSummary();
+  const checks = [
+    productionReadinessCheck(
+      "persistence",
+      "data",
+      "Local persistence",
+      persistenceEnabled ? "passed" : "warning",
+      persistenceEnabled ? "Local JSON persistence is enabled." : "Local JSON persistence is disabled.",
+      "Enable GEO_ENABLE_PERSISTENCE=1 for controlled deployment."
+    ),
+    productionReadinessCheck(
+      "backup_recovery",
+      "data",
+      "Backup recovery",
+      backupSummary.count > 0 ? "passed" : "warning",
+      backupSummary.count > 0 ? `${backupSummary.count} local backup(s) available.` : "No local runtime backup exists.",
+      "Create and validate a backup before handoff."
+    ),
+    productionReadinessCheck(
+      "auth_sessions",
+      "security",
+      "Built-in auth sessions",
+      users.some((item) => item.role === "owner") ? "passed" : "failed",
+      "Built-in owner/admin/editor/viewer role model is available.",
+      "Keep browser sessions behind an external access layer for internet exposure."
+    ),
+    productionReadinessCheck(
+      "api_key",
+      "security",
+      "Mutation API key",
+      process.env.GEO_INTERNAL_API_KEY ? "passed" : "warning",
+      process.env.GEO_INTERNAL_API_KEY ? "Fixed API key is configured." : "Fixed API key is not configured in env.",
+      "Set a long GEO_INTERNAL_API_KEY before production use."
+    ),
+    productionReadinessCheck(
+      "remote_access",
+      "security",
+      "Remote access boundary",
+      process.env.GEO_ALLOW_REMOTE_ACCESS === "1" ? "warning" : "passed",
+      process.env.GEO_ALLOW_REMOTE_ACCESS === "1"
+        ? "Remote access is enabled and requires external protection."
+        : "Remote access is disabled by default.",
+      "Use VPN, reverse proxy auth, HTTPS, and IP allowlists before exposure."
+    ),
+    productionReadinessCheck(
+      "automation_connectors",
+      "integrations",
+      "Automation connectors",
+      automationConnectors.length ? "passed" : "warning",
+      `${automationConnectors.length} automation connector(s) are registered.`,
+      "Run connector diagnostics before relying on external workflows."
+    ),
+    productionReadinessCheck(
+      "visibility_providers",
+      "integrations",
+      "Visibility providers",
+      visibilityProviders.summary.provider_count >= 6 ? "warning" : "failed",
+      `${visibilityProviders.summary.provider_count} visibility provider foundation row(s) are registered.`,
+      "v0.19 provider rows are dry-run only and do not create measured snapshots."
+    ),
+    productionReadinessCheck(
+      "publishing_connectors",
+      "integrations",
+      "Publishing connectors",
+      publishingConnectors.summary.connector_count >= 8 ? "warning" : "failed",
+      `${publishingConnectors.summary.connector_count} publishing connector foundation row(s) are registered.`,
+      "v0.19 publishing connector rows are dry-run only and do not publish externally."
+    ),
+    productionReadinessCheck(
+      "geo_static",
+      "geo",
+      "GEO static routes",
+      "passed",
+      "robots.txt, sitemap.xml, llms.txt, favicon, and health routes are served by the app.",
+      "Confirm GEO_PUBLIC_SITE_URL before public deployment."
+    )
+  ];
+  const summary = productionReadinessSummary(checks);
+  return deepClone({
+    status: productionReadinessStatus(checks),
+    score: productionReadinessScore(checks),
+    summary,
+    checks,
+    masked_secret_inventory: buildMaskedSecretInventory(),
+    handoff_checklist: buildProductionHandoffChecklist(),
+    generated_at: nowIso()
+  });
+}
+
+export function runProductionReadinessCheckAction() {
+  const state = getProductionReadinessState();
+  recordAuditEvent("system.production_readiness.check", "system", "production_readiness", {
+    status: state.status,
+    score: state.score,
+    checks: state.checks.map((item) => ({ id: item.id, status: item.status }))
+  });
+  persistState();
+  return state;
 }
 
 export function resetRuntimeState() {
@@ -3172,7 +3399,7 @@ function withPublishTaskCalendar(task) {
   };
 }
 
-function approvalStatusLabel(status) {
+function visibilityProviderApprovalStatusLabel(status) {
   return (
     {
       pending: "待审批",
@@ -5837,6 +6064,15 @@ function ensureInternationalGeoStateShape() {
   if (!Array.isArray(internationalGeoState.visibility_import_batches)) {
     internationalGeoState.visibility_import_batches = [];
   }
+  if (!Array.isArray(internationalGeoState.visibility_provider_configs)) {
+    internationalGeoState.visibility_provider_configs = defaultInternationalGeoVisibilityProviderConfigs();
+  }
+  if (!internationalGeoState.visibility_provider_configs.length) {
+    internationalGeoState.visibility_provider_configs = defaultInternationalGeoVisibilityProviderConfigs();
+  }
+  internationalGeoState.visibility_provider_configs = hydrateInternationalGeoVisibilityProviderConfigs(
+    internationalGeoState.visibility_provider_configs
+  );
   if (!Array.isArray(internationalGeoState.publishing_platforms)) {
     internationalGeoState.publishing_platforms = defaultInternationalGeoPublishingPlatforms();
   }
@@ -5852,6 +6088,15 @@ function ensureInternationalGeoStateShape() {
   if (!Array.isArray(internationalGeoState.publishing_tracking)) {
     internationalGeoState.publishing_tracking = [];
   }
+  if (!Array.isArray(internationalGeoState.publishing_connectors)) {
+    internationalGeoState.publishing_connectors = defaultInternationalGeoPublishingConnectors();
+  }
+  if (!internationalGeoState.publishing_connectors.length) {
+    internationalGeoState.publishing_connectors = defaultInternationalGeoPublishingConnectors();
+  }
+  internationalGeoState.publishing_connectors = hydrateInternationalGeoPublishingConnectors(
+    internationalGeoState.publishing_connectors
+  );
   if (!internationalGeoState.content_generation || typeof internationalGeoState.content_generation !== "object") {
     internationalGeoState.content_generation = {
       providers: [],
@@ -5992,6 +6237,332 @@ function defaultInternationalGeoProviderReadiness() {
     last_measured_at: null,
     diagnostics: [`No approved visibility provider configured for ${engine.label}.`]
   }));
+}
+
+function integrationStatusLabel(status) {
+  return (
+    {
+      reserved: "Reserved",
+      configured: "Configured",
+      blocked: "Blocked",
+      disabled: "Disabled"
+    }[status] || status || "Reserved"
+  );
+}
+
+function approvalStatusLabel(status) {
+  return (
+    {
+      not_requested: "Not requested",
+      requested: "Requested",
+      approved: "Approved",
+      rejected: "Rejected"
+    }[status] || status || "Not requested"
+  );
+}
+
+function integrationCredentialStatus(config = {}) {
+  return config.api_key ? "masked" : "missing";
+}
+
+function sanitizeIntegrationConfig(config = {}) {
+  return {
+    endpoint: String(config.endpoint || "").trim(),
+    api_key: "",
+    masked_api_key: maskSecret(config.api_key),
+    timeout_ms: Math.max(500, Number(config.timeout_ms || 10000)),
+    retry_count: Math.max(0, Number(config.retry_count || 0)),
+    notes: String(config.notes || "").trim()
+  };
+}
+
+function validateIntegrationEndpoint(endpoint = "") {
+  const text = String(endpoint || "").trim();
+  if (!text) {
+    return { ok: false, status: "warning", message: "Endpoint is not configured." };
+  }
+  try {
+    validateProviderEndpoint(text);
+    return { ok: true, status: "passed", message: "Endpoint passed local safety validation." };
+  } catch (error) {
+    return {
+      ok: false,
+      status: "failed",
+      message: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
+function dryRunCheck(id, label, status, message, recommendation = "") {
+  return {
+    id,
+    label,
+    status,
+    message,
+    recommendation
+  };
+}
+
+function dryRunOverallStatus(checks = []) {
+  if (checks.some((item) => item.status === "failed")) return "blocked";
+  if (checks.some((item) => item.status === "warning")) return "warning";
+  return "ready";
+}
+
+function defaultInternationalGeoVisibilityProviderConfigs() {
+  return INTERNATIONAL_GEO_VISIBILITY_ENGINES.map((engine) => ({
+    id: `visprov_${engine.id}`,
+    engine_id: engine.id,
+    engine_label: engine.label,
+    provider_key: engine.id,
+    provider_label: `${engine.label} Provider`,
+    provider_type: engine.id === "google_ai_overviews" || engine.id === "copilot_bing" ? "serp_provider" : "ai_search",
+    status: "reserved",
+    status_label: "Reserved",
+    approval_status: "not_requested",
+    approval_status_label: "Not requested",
+    connector_id: "",
+    config: {
+      endpoint: "",
+      api_key: "",
+      timeout_ms: 10000,
+      retry_count: 0,
+      notes: ""
+    },
+    endpoint: "",
+    credential_status: "missing",
+    allowed_actions: ["visibility:dry_run", "visibility:readiness"],
+    dangerous_actions: ["visibility:live_query", "visibility:write_measured_snapshot"],
+    permission_boundary: "dry_run_only",
+    last_test_status: "not_run",
+    last_tested_at: "",
+    last_diagnostic_status: "warning",
+    last_diagnosed_at: "",
+    diagnostics: [`${engine.label} is reserved for future approved provider evidence. No live API is called.`],
+    notes: "Dry-run foundation only."
+  }));
+}
+
+function sanitizeVisibilityProvider(provider = {}) {
+  const config = sanitizeIntegrationConfig(provider.config || {});
+  return {
+    ...deepClone(provider),
+    endpoint: config.endpoint,
+    credential_status: integrationCredentialStatus(provider.config || {}),
+    config,
+    status_label: integrationStatusLabel(provider.status),
+    approval_status_label: visibilityProviderApprovalStatusLabel(provider.approval_status)
+  };
+}
+
+function hydrateInternationalGeoVisibilityProviderConfigs(configs = []) {
+  const currentById = new Map((configs || []).map((item) => [item.id, item]));
+  return defaultInternationalGeoVisibilityProviderConfigs().map((defaults) => {
+    const current = currentById.get(defaults.id) || {};
+    const config = {
+      ...(defaults.config || {}),
+      ...(current.config || {})
+    };
+    if (current.endpoint && !config.endpoint) config.endpoint = current.endpoint;
+    return {
+      ...defaults,
+      ...current,
+      config,
+      endpoint: config.endpoint || "",
+      status: INTEGRATION_FOUNDATION_STATUSES.has(current.status) ? current.status : defaults.status,
+      status_label: integrationStatusLabel(current.status || defaults.status),
+      approval_status: VISIBILITY_PROVIDER_APPROVAL_STATUSES.has(current.approval_status)
+        ? current.approval_status
+        : defaults.approval_status,
+      approval_status_label: visibilityProviderApprovalStatusLabel(current.approval_status || defaults.approval_status),
+      credential_status: integrationCredentialStatus(config),
+      diagnostics: Array.isArray(current.diagnostics) && current.diagnostics.length ? current.diagnostics : defaults.diagnostics
+    };
+  });
+}
+
+function buildVisibilityProviderDryRun(provider = {}) {
+  const endpointCheck = validateIntegrationEndpoint(provider.config?.endpoint || provider.endpoint || "");
+  const credentialReady = provider.credential_status === "masked" || Boolean(provider.config?.api_key);
+  const checks = [
+    dryRunCheck(
+      "provider_status",
+      "Provider status",
+      provider.status === "disabled" || provider.status === "blocked" ? "failed" : provider.status === "configured" ? "passed" : "warning",
+      provider.status === "configured"
+        ? "Provider is locally configured for future implementation."
+        : `Provider is ${provider.status || "reserved"} and will not run live collection.`,
+      "Set status to configured only after the provider contract is approved."
+    ),
+    dryRunCheck(
+      "approval_status",
+      "Approval status",
+      provider.approval_status === "approved" ? "passed" : "warning",
+      provider.approval_status === "approved"
+        ? "Provider approval is recorded."
+        : "Provider is not approved for automated measured evidence.",
+      "Approved provider evidence is required before automated monitoring claims."
+    ),
+    dryRunCheck(
+      "endpoint_safety",
+      "Endpoint safety",
+      endpointCheck.status,
+      endpointCheck.message,
+      "Use a public HTTPS endpoint or leave empty while reserved."
+    ),
+    dryRunCheck(
+      "credential_boundary",
+      "Credential boundary",
+      credentialReady ? "passed" : "warning",
+      credentialReady ? "Credential is stored as masked local configuration." : "No provider credential is configured.",
+      "Credentials are never returned in API responses."
+    ),
+    dryRunCheck(
+      "live_query_blocked",
+      "Live query boundary",
+      "passed",
+      "v0.19 provider dry-runs do not call AI/search/SERP APIs.",
+      "Implement a future approved provider adapter before live collection."
+    )
+  ];
+  return {
+    id: uniqueId("visptest"),
+    provider_id: provider.id,
+    engine_id: provider.engine_id,
+    provider_label: provider.provider_label,
+    status: dryRunOverallStatus(checks),
+    checks,
+    external_call_performed: false,
+    tested_at: nowIso()
+  };
+}
+
+export function getInternationalGeoVisibilityProviderState() {
+  ensureInternationalGeoStateShape();
+  const providers = internationalGeoState.visibility_provider_configs.map(sanitizeVisibilityProvider);
+  const diagnostics = providers.map((provider) => ({
+    provider_id: provider.id,
+    engine_id: provider.engine_id,
+    status: provider.last_diagnostic_status || provider.last_test_status || "not_run",
+    diagnostics: deepClone(provider.diagnostics || [])
+  }));
+  return deepClone({
+    summary: {
+      provider_count: providers.length,
+      configured_count: providers.filter((item) => item.status === "configured").length,
+      reserved_count: providers.filter((item) => item.status === "reserved").length,
+      blocked_count: providers.filter((item) => item.status === "blocked").length,
+      approved_count: providers.filter((item) => item.approval_status === "approved").length
+    },
+    providers,
+    diagnostics
+  });
+}
+
+export function saveInternationalGeoVisibilityProviderAction(providerId, patch = {}) {
+  ensureInternationalGeoStateShape();
+  const provider = internationalGeoState.visibility_provider_configs.find((item) => item.id === providerId);
+  if (!provider) return null;
+  if (patch.status !== undefined && !INTEGRATION_FOUNDATION_STATUSES.has(String(patch.status))) {
+    throw visibilityValidationError("status", "Unsupported provider status.");
+  }
+  if (
+    patch.approval_status !== undefined &&
+    !VISIBILITY_PROVIDER_APPROVAL_STATUSES.has(String(patch.approval_status))
+  ) {
+    throw visibilityValidationError("approval_status", "Unsupported approval status.");
+  }
+  const nextConfig = {
+    ...(provider.config || {})
+  };
+  if (Object.prototype.hasOwnProperty.call(patch, "endpoint")) {
+    const endpoint = String(patch.endpoint || "").trim();
+    if (endpoint) {
+      const endpointCheck = validateIntegrationEndpoint(endpoint);
+      if (!endpointCheck.ok) throw visibilityValidationError("endpoint", endpointCheck.message);
+    }
+    nextConfig.endpoint = endpoint;
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "api_key")) {
+    const apiKey = String(patch.api_key || "");
+    if (apiKey && !isMaskedConnectorSecret(apiKey)) nextConfig.api_key = apiKey;
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "notes")) {
+    nextConfig.notes = String(patch.notes || "").trim();
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "timeout_ms")) {
+    nextConfig.timeout_ms = Math.max(500, Number(patch.timeout_ms || nextConfig.timeout_ms || 10000));
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "retry_count")) {
+    nextConfig.retry_count = Math.max(0, Number(patch.retry_count || 0));
+  }
+  provider.config = nextConfig;
+  provider.endpoint = nextConfig.endpoint || "";
+  if (patch.status !== undefined) provider.status = String(patch.status);
+  if (patch.approval_status !== undefined) provider.approval_status = String(patch.approval_status);
+  provider.status_label = integrationStatusLabel(provider.status);
+  provider.approval_status_label = visibilityProviderApprovalStatusLabel(provider.approval_status);
+  provider.credential_status = integrationCredentialStatus(provider.config);
+  provider.notes = String(patch.notes ?? provider.notes ?? "").trim();
+  provider.diagnostics = [
+    provider.status === "configured"
+      ? "Provider configuration is locally stored for dry-run diagnostics. No live API is called."
+      : "Provider remains reserved for future approved provider evidence."
+  ];
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.visibility_provider.update", "international_geo_visibility_provider", provider.id, {
+    changed_fields: Object.keys(patch).filter((key) => key !== "api_key"),
+    status: provider.status,
+    approval_status: provider.approval_status,
+    credential_status: provider.credential_status
+  });
+  persistState();
+  return sanitizeVisibilityProvider(provider);
+}
+
+export function testInternationalGeoVisibilityProviderAction(providerId) {
+  ensureInternationalGeoStateShape();
+  const provider = internationalGeoState.visibility_provider_configs.find((item) => item.id === providerId);
+  if (!provider) return null;
+  const result = buildVisibilityProviderDryRun(sanitizeVisibilityProvider(provider));
+  provider.last_test_status = result.status;
+  provider.last_tested_at = result.tested_at;
+  provider.last_diagnostic_status = result.status;
+  provider.last_diagnosed_at = result.tested_at;
+  provider.diagnostics = result.checks.map((item) => item.message);
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.visibility_provider.test", "international_geo_visibility_provider", provider.id, {
+    status: result.status,
+    external_call_performed: false
+  });
+  persistState();
+  return deepClone(result);
+}
+
+export function diagnoseInternationalGeoVisibilityProvidersAction() {
+  ensureInternationalGeoStateShape();
+  const items = internationalGeoState.visibility_provider_configs.map((provider) => {
+    const result = buildVisibilityProviderDryRun(sanitizeVisibilityProvider(provider));
+    provider.last_diagnostic_status = result.status;
+    provider.last_diagnosed_at = result.tested_at;
+    provider.diagnostics = result.checks.map((item) => item.message);
+    return result;
+  });
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.visibility_provider.diagnose", "international_geo_visibility_provider", "all", {
+    provider_count: items.length,
+    blocked_count: items.filter((item) => item.status === "blocked").length
+  });
+  persistState();
+  return deepClone({
+    summary: {
+      provider_count: items.length,
+      ready_count: items.filter((item) => item.status === "ready").length,
+      warning_count: items.filter((item) => item.status === "warning").length,
+      blocked_count: items.filter((item) => item.status === "blocked").length
+    },
+    items
+  });
 }
 
 function makePublishingPlatform(patch = {}) {
@@ -6288,6 +6859,271 @@ function defaultInternationalGeoPublishingPlatforms() {
       notes: "Directory package should prepare category, positioning, screenshots, and source proof."
     })
   ];
+}
+
+function publishingConnectorTypeForPlatform(platform = {}) {
+  const key = platform.platform_key || "";
+  if (["official_blog", "docs"].includes(key)) return "owned_site";
+  if (["github", "devto", "hashnode"].includes(key)) return "developer";
+  if (["linkedin_company", "linkedin_founder"].includes(key)) return "professional_social";
+  if (["reddit", "quora"].includes(key)) return "community";
+  if (key === "youtube") return "video";
+  if (key === "medium") return "third_party_article";
+  return "directory_review";
+}
+
+function defaultInternationalGeoPublishingConnectors() {
+  const preferred = new Set([
+    "official_blog",
+    "docs",
+    "medium",
+    "linkedin_company",
+    "youtube",
+    "github",
+    "reddit",
+    "quora",
+    "g2"
+  ]);
+  return defaultInternationalGeoPublishingPlatforms()
+    .filter((platform) => preferred.has(platform.platform_key))
+    .map((platform) => ({
+      id: platform.platform_key === "g2" ? "geopubconn_directory_review" : `geopubconn_${platform.platform_key}`,
+      platform_key: platform.platform_key === "g2" ? "directory_review" : platform.platform_key,
+      source_platform_key: platform.platform_key,
+      platform_name: platform.platform_key === "g2" ? "Directory / Review Site" : platform.platform_name,
+      connector_type: publishingConnectorTypeForPlatform(platform),
+      status: "reserved",
+      status_label: "Reserved",
+      approval_required: true,
+      credential_status: "missing",
+      config: {
+        endpoint: "",
+        api_key: "",
+        timeout_ms: 10000,
+        retry_count: 0,
+        notes: ""
+      },
+      endpoint: "",
+      allowed_actions: ["publishing:dry_run", "publishing:handoff"],
+      dangerous_actions: ["publishing:publish", "publishing:delete"],
+      permission_boundary: "dry_run_only",
+      last_test_status: "not_run",
+      last_tested_at: "",
+      last_diagnostic_status: "warning",
+      last_diagnosed_at: "",
+      diagnostics: ["Reserved publishing connector. No external platform API is called in v0.19."],
+      notes: "Manual handoff only."
+    }));
+}
+
+function sanitizePublishingConnector(connector = {}) {
+  const config = sanitizeIntegrationConfig(connector.config || {});
+  return {
+    ...deepClone(connector),
+    endpoint: config.endpoint,
+    credential_status: integrationCredentialStatus(connector.config || {}),
+    config,
+    status_label: integrationStatusLabel(connector.status)
+  };
+}
+
+function hydrateInternationalGeoPublishingConnectors(connectors = []) {
+  const currentById = new Map((connectors || []).map((item) => [item.id, item]));
+  return defaultInternationalGeoPublishingConnectors().map((defaults) => {
+    const current = currentById.get(defaults.id) || {};
+    const config = {
+      ...(defaults.config || {}),
+      ...(current.config || {})
+    };
+    if (current.endpoint && !config.endpoint) config.endpoint = current.endpoint;
+    return {
+      ...defaults,
+      ...current,
+      config,
+      endpoint: config.endpoint || "",
+      status: INTEGRATION_FOUNDATION_STATUSES.has(current.status) ? current.status : defaults.status,
+      status_label: integrationStatusLabel(current.status || defaults.status),
+      credential_status: integrationCredentialStatus(config),
+      diagnostics: Array.isArray(current.diagnostics) && current.diagnostics.length ? current.diagnostics : defaults.diagnostics
+    };
+  });
+}
+
+function buildPublishingConnectorDryRun(connector = {}) {
+  const endpointCheck = validateIntegrationEndpoint(connector.config?.endpoint || connector.endpoint || "");
+  const credentialReady = connector.credential_status === "masked" || Boolean(connector.config?.api_key);
+  const approvedPackageCount = (internationalGeoState.publishing_packages || []).filter(
+    (item) => item.review_status === "approved"
+  ).length;
+  const checks = [
+    dryRunCheck(
+      "connector_status",
+      "Connector status",
+      connector.status === "disabled" || connector.status === "blocked" ? "failed" : connector.status === "configured" ? "passed" : "warning",
+      connector.status === "configured"
+        ? "Connector is locally configured for future implementation."
+        : `Connector is ${connector.status || "reserved"} and remains manual handoff only.`,
+      "Set status to configured only after the platform policy and connector contract are approved."
+    ),
+    dryRunCheck(
+      "endpoint_safety",
+      "Endpoint safety",
+      endpointCheck.status,
+      endpointCheck.message,
+      "Use a public HTTPS endpoint or leave empty while reserved."
+    ),
+    dryRunCheck(
+      "credential_boundary",
+      "Credential boundary",
+      credentialReady ? "passed" : "warning",
+      credentialReady ? "Credential is stored as masked local configuration." : "No platform credential is configured.",
+      "Credentials are never returned in API responses."
+    ),
+    dryRunCheck(
+      "approved_package_available",
+      "Approved package",
+      approvedPackageCount > 0 ? "passed" : "warning",
+      approvedPackageCount > 0
+        ? `${approvedPackageCount} approved package(s) are available for manual handoff.`
+        : "No approved publishing package is ready for handoff.",
+      "Approve a local package before any future connector handoff."
+    ),
+    dryRunCheck(
+      "external_publish_blocked",
+      "External publish boundary",
+      "passed",
+      "No external platform API was called.",
+      "Implement explicit approved publishing connectors before automatic publishing."
+    )
+  ];
+  return {
+    id: uniqueId("pubctest"),
+    connector_id: connector.id,
+    platform_key: connector.platform_key,
+    platform_name: connector.platform_name,
+    status: dryRunOverallStatus(checks),
+    checks,
+    external_call_performed: false,
+    tested_at: nowIso()
+  };
+}
+
+export function getInternationalGeoPublishingConnectorState() {
+  ensureInternationalGeoStateShape();
+  const connectors = internationalGeoState.publishing_connectors.map(sanitizePublishingConnector);
+  const diagnostics = connectors.map((connector) => ({
+    connector_id: connector.id,
+    platform_key: connector.platform_key,
+    status: connector.last_diagnostic_status || connector.last_test_status || "not_run",
+    diagnostics: deepClone(connector.diagnostics || [])
+  }));
+  return deepClone({
+    summary: {
+      connector_count: connectors.length,
+      configured_count: connectors.filter((item) => item.status === "configured").length,
+      reserved_count: connectors.filter((item) => item.status === "reserved").length,
+      blocked_count: connectors.filter((item) => item.status === "blocked").length
+    },
+    connectors,
+    diagnostics
+  });
+}
+
+export function saveInternationalGeoPublishingConnectorAction(connectorId, patch = {}) {
+  ensureInternationalGeoStateShape();
+  const connector = internationalGeoState.publishing_connectors.find((item) => item.id === connectorId);
+  if (!connector) return null;
+  if (patch.status !== undefined && !INTEGRATION_FOUNDATION_STATUSES.has(String(patch.status))) {
+    throw validationError("status", "Unsupported publishing connector status.");
+  }
+  const nextConfig = {
+    ...(connector.config || {})
+  };
+  if (Object.prototype.hasOwnProperty.call(patch, "endpoint")) {
+    const endpoint = String(patch.endpoint || "").trim();
+    if (endpoint) {
+      const endpointCheck = validateIntegrationEndpoint(endpoint);
+      if (!endpointCheck.ok) throw validationError("endpoint", endpointCheck.message);
+    }
+    nextConfig.endpoint = endpoint;
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "api_key")) {
+    const apiKey = String(patch.api_key || "");
+    if (apiKey && !isMaskedConnectorSecret(apiKey)) nextConfig.api_key = apiKey;
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "notes")) {
+    nextConfig.notes = String(patch.notes || "").trim();
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "timeout_ms")) {
+    nextConfig.timeout_ms = Math.max(500, Number(patch.timeout_ms || nextConfig.timeout_ms || 10000));
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "retry_count")) {
+    nextConfig.retry_count = Math.max(0, Number(patch.retry_count || 0));
+  }
+  connector.config = nextConfig;
+  connector.endpoint = nextConfig.endpoint || "";
+  if (patch.status !== undefined) connector.status = String(patch.status);
+  connector.status_label = integrationStatusLabel(connector.status);
+  connector.credential_status = integrationCredentialStatus(connector.config);
+  connector.notes = String(patch.notes ?? connector.notes ?? "").trim();
+  connector.diagnostics = [
+    connector.status === "configured"
+      ? "Publishing connector configuration is locally stored for dry-run diagnostics. No external publish API is called."
+      : "Publishing connector remains reserved for manual handoff and future implementation."
+  ];
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.publishing_connector.update", "international_geo_publishing_connector", connector.id, {
+    changed_fields: Object.keys(patch).filter((key) => key !== "api_key"),
+    status: connector.status,
+    credential_status: connector.credential_status
+  });
+  persistState();
+  return sanitizePublishingConnector(connector);
+}
+
+export function testInternationalGeoPublishingConnectorAction(connectorId) {
+  ensureInternationalGeoStateShape();
+  const connector = internationalGeoState.publishing_connectors.find((item) => item.id === connectorId);
+  if (!connector) return null;
+  const result = buildPublishingConnectorDryRun(sanitizePublishingConnector(connector));
+  connector.last_test_status = result.status;
+  connector.last_tested_at = result.tested_at;
+  connector.last_diagnostic_status = result.status;
+  connector.last_diagnosed_at = result.tested_at;
+  connector.diagnostics = result.checks.map((item) => item.message);
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.publishing_connector.test", "international_geo_publishing_connector", connector.id, {
+    status: result.status,
+    external_call_performed: false
+  });
+  persistState();
+  return deepClone(result);
+}
+
+export function diagnoseInternationalGeoPublishingConnectorsAction() {
+  ensureInternationalGeoStateShape();
+  const items = internationalGeoState.publishing_connectors.map((connector) => {
+    const result = buildPublishingConnectorDryRun(sanitizePublishingConnector(connector));
+    connector.last_diagnostic_status = result.status;
+    connector.last_diagnosed_at = result.tested_at;
+    connector.diagnostics = result.checks.map((item) => item.message);
+    return result;
+  });
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.publishing_connector.diagnose", "international_geo_publishing_connector", "all", {
+    connector_count: items.length,
+    blocked_count: items.filter((item) => item.status === "blocked").length
+  });
+  persistState();
+  return deepClone({
+    summary: {
+      connector_count: items.length,
+      ready_count: items.filter((item) => item.status === "ready").length,
+      warning_count: items.filter((item) => item.status === "warning").length,
+      blocked_count: items.filter((item) => item.status === "blocked").length
+    },
+    items
+  });
 }
 
 function normalizeInternationalGeoVisibilityEngines(engines) {
@@ -6902,6 +7738,7 @@ function internationalGeoVisibilityTrends() {
 function internationalGeoVisibilitySummary() {
   const snapshots = internationalGeoState.visibility_snapshots || [];
   const trends = internationalGeoVisibilityTrends();
+  const providerState = getInternationalGeoVisibilityProviderState();
   const countByStatus = (status) => snapshots.filter((item) => item.data_status === status).length;
   const manualMeasured = snapshots.filter((item) => item.data_status === "measured" && item.provider_id === "manual_import");
   return {
@@ -6915,16 +7752,22 @@ function internationalGeoVisibilitySummary() {
     approved_evidence_count: manualMeasured.filter((item) => item.review_status === "approved").length,
     rejected_evidence_count: manualMeasured.filter((item) => item.review_status === "rejected").length,
     trend_row_count: trends.length,
+    provider_config_count: providerState.summary.provider_count,
+    provider_ready_count: providerState.summary.configured_count,
+    provider_blocked_count: providerState.summary.blocked_count,
     latest_run_status: internationalGeoState.visibility_runs[0]?.status || "not_run"
   };
 }
 
 export function getInternationalGeoVisibilityState() {
   ensureInternationalGeoStateShape();
+  const providerState = getInternationalGeoVisibilityProviderState();
   return deepClone({
     summary: internationalGeoVisibilitySummary(),
     prompt_sets: internationalGeoState.visibility_prompt_sets,
     provider_readiness: internationalGeoState.visibility_provider_readiness,
+    providers: providerState.providers,
+    provider_diagnostics: providerState.diagnostics,
     snapshots: internationalGeoState.visibility_snapshots,
     runs: internationalGeoState.visibility_runs,
     imports: internationalGeoState.visibility_import_batches,
@@ -7925,11 +8768,15 @@ function publishingSummary() {
 
 export function getInternationalGeoPublishingState() {
   ensureInternationalGeoStateShape();
+  const connectorState = getInternationalGeoPublishingConnectorState();
   return deepClone({
     summary: publishingSummary(),
     platforms: internationalGeoState.publishing_platforms,
     packages: internationalGeoState.publishing_packages,
-    tracking: internationalGeoState.publishing_tracking
+    tracking: internationalGeoState.publishing_tracking,
+    connectors: connectorState.connectors,
+    connector_summary: connectorState.summary,
+    connector_diagnostics: connectorState.diagnostics
   });
 }
 
