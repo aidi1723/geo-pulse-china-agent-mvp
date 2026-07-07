@@ -61,6 +61,7 @@ import {
   saveAutomationConnector as saveAutomationConnectorApi,
   saveBrandProfile,
   saveChannel as saveChannelApi,
+  saveInternationalGeoContentGenerationProvider as saveInternationalGeoContentGenerationProviderApi,
   saveInternationalGeoPublishingConnector as saveInternationalGeoPublishingConnectorApi,
   saveInternationalGeoVisibilityProvider as saveInternationalGeoVisibilityProviderApi,
   saveInternationalGeoInput as saveInternationalGeoInputApi,
@@ -71,6 +72,7 @@ import {
   takeoverPublishTaskItem as takeoverPublishTaskItemApi,
   testAutomationProvider as testAutomationProviderApi,
   testAutomationConnector as testAutomationConnectorApi,
+  testInternationalGeoContentGenerationProvider as testInternationalGeoContentGenerationProviderApi,
   testInternationalGeoPublishingConnector as testInternationalGeoPublishingConnectorApi,
   testInternationalGeoVisibilityProvider as testInternationalGeoVisibilityProviderApi,
   updateBillingPlan as updateBillingPlanApi,
@@ -269,6 +271,23 @@ function getInternationalPublishingConnectorPayload(connectorId) {
     endpoint: row.querySelector('[data-publishing-connector-field="endpoint"]')?.value?.trim() || "",
     api_key: row.querySelector('[data-publishing-connector-field="api_key"]')?.value?.trim() || "",
     notes: row.querySelector('[data-publishing-connector-field="notes"]')?.value?.trim() || ""
+  };
+}
+
+function getInternationalGeoContentProviderPayload() {
+  const container = root.querySelector('[data-content-provider="openai_compatible"]');
+  if (!container) return null;
+  const field = (name) => container.querySelector(`[data-content-provider-field="${name}"]`)?.value || "";
+  return {
+    status: field("status"),
+    endpoint: field("endpoint").trim(),
+    model: field("model").trim(),
+    api_key: field("api_key").trim(),
+    temperature: Number(field("temperature") || 0.4),
+    max_tokens: Number(field("max_tokens") || 2400),
+    timeout_ms: Number(field("timeout_ms") || 20000),
+    retry_count: Number(field("retry_count") || 1),
+    notes: field("notes").trim()
   };
 }
 
@@ -1606,7 +1625,7 @@ const actions = {
       const artifact = await getDeliveryBundleApi();
       const filename =
         artifact.delivery_readiness?.bundle?.recommended_filename ||
-        `geo-pulse-delivery-bundle-${artifact.version || "0.20.0"}.json`;
+        `geo-pulse-delivery-bundle-${artifact.version || "0.21.0"}.json`;
       downloadJsonArtifact(filename, artifact);
       showNotice(`已准备下载 ${filename}。`);
     } catch (error) {
@@ -1634,6 +1653,30 @@ const actions = {
       showNotice(action === "approve" ? "证据资产已审核通过。" : "证据资产已驳回。");
     } catch (error) {
       setError(error instanceof Error ? error.message : "审核国际 GEO 证据资产失败");
+      rerender();
+    }
+  },
+  async saveInternationalGeoContentGenerationProvider() {
+    try {
+      const payload = getInternationalGeoContentProviderPayload();
+      if (!payload) return;
+      await saveInternationalGeoContentGenerationProviderApi("openai_compatible", payload);
+      await refreshData();
+      store.page = "international";
+      showNotice("内容生成 LLM Provider 已保存。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "保存内容生成 Provider 失败");
+      rerender();
+    }
+  },
+  async testInternationalGeoContentGenerationProvider() {
+    try {
+      const result = await testInternationalGeoContentGenerationProviderApi("openai_compatible");
+      await refreshData();
+      store.page = "international";
+      showNotice(`内容生成 Provider 测试完成：${result.status || "review"}。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "测试内容生成 Provider 失败");
       rerender();
     }
   },

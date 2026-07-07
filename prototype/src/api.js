@@ -456,6 +456,22 @@ export function getInternationalGeoContentGeneration() {
   return request("/api/v1/international-geo/content-generation");
 }
 
+export function saveInternationalGeoContentGenerationProvider(providerId, payload = {}) {
+  return requestJson(
+    `/api/v1/international-geo/content-generation/providers/${encodeURIComponent(providerId)}`,
+    "PUT",
+    payload
+  );
+}
+
+export function testInternationalGeoContentGenerationProvider(providerId) {
+  return requestJson(
+    `/api/v1/international-geo/content-generation/providers/${encodeURIComponent(providerId)}/test`,
+    "POST",
+    {}
+  );
+}
+
 export function generateInternationalGeoArticles() {
   return requestJson("/api/v1/international-geo/content-generation/articles/generate", "POST", {});
 }

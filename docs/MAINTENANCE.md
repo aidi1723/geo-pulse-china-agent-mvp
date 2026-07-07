@@ -71,6 +71,13 @@ Do this only when the repository owner accepts history rewriting. For establishe
 
 ## Maintenance Log
 
+### 2026-07-07 - v0.21 OpenAI-Compatible LLM Generation Closeout
+
+- Scope: added International GEO OpenAI-compatible provider config, masked credential read model, provider test route, LLM-first article/rewrite generation, provider provenance, local fallback, and delivery-bundle provider summary.
+- Local gate: `npm run check` returned `verify-mvp: OK`.
+- Documentation aligned: README, API reference, architecture guide, development guide, production deployment guide, roadmap, documentation index, phase 2 roadmap, open-source release checklist, changelog, maintenance guide, and v0.21 closeout docs.
+- Boundary: v0.21 may call only the operator-configured OpenAI-compatible content-generation endpoint; no external publishing, account registration, AI visibility measurement, SERP/indexing checks, recommendation verification, or raw-secret export is added.
+
 ### 2026-07-07 - v0.20 Delivery Hardening Closeout
 
 - Scope: added delivery readiness report, sanitized delivery bundle export, delivery readiness check audit event, Settings `交付中心`, delivery boundaries, handoff steps, and restricted delivery bundle download.
@@ -169,9 +176,9 @@ Do this only when the repository owner accepts history rewriting. For establishe
 - No evidence found of real local absolute paths, real personal email addresses, tracked `.env` files, tracked runtime state, or real credential patterns in the current tree or existing Git history.
 - History rewrite: not performed.
 
-## Post-v0.20 Production Hardening
+## Post-v0.21 Production Hardening
 
-v0.20.0 is deployable as a controlled one-organization team-access service behind an external access layer and now includes delivery readiness plus sanitized handoff bundle export. Before treating it as a real SaaS, real-time AI search monitoring platform, external LLM generation system, external publishing system, or broadly exposed hosted service, production hardening should include:
+v0.21.0 is deployable as a controlled one-organization team-access service behind an external access layer and now includes delivery readiness, sanitized handoff bundle export, and configurable OpenAI-compatible content generation. Before treating it as a real SaaS, real-time AI search monitoring platform, external publishing system, or broadly exposed hosted service, production hardening should include:
 
 - Database persistence, migrations, and database-grade backup policy.
 - Monitoring and alerting.
@@ -180,7 +187,7 @@ v0.20.0 is deployable as a controlled one-organization team-access service behin
 - Real provider, connector, and source adapter implementations.
 - Measured AI visibility data sources and external publishing/indexing connectors before claiming automated real engine inclusion, recommendation tracking, indexing, citation, or automatic distribution.
 - Live adapters behind the v0.19 provider and publishing connector registries, with explicit approval gates and diagnostics.
-- Approved external generation providers before claiming external LLM-backed article or rewrite generation.
+- Durable secret storage, quotas, cost controls, and provider audit dashboards before broad hosted use of LLM-backed article or rewrite generation.
 - Connector evidence and approval gates before moving reviewed evidence assets or publishing packages outside the local workflow.
 - Security contact ownership and incident response process.
 - Multi-tenant workspace isolation if multiple organizations use the service.

@@ -1,12 +1,12 @@
 # Documentation Index
 
-This directory contains the maintainer-facing documentation for GEO Pulse China Agent v0.20.0.
+This directory contains the maintainer-facing documentation for GEO Pulse China Agent v0.21.0.
 
 ## Start Here
 
 - [Development Guide](DEVELOPMENT.md): local setup, test gate, environment variables, UI rules, and contribution workflow.
 - [Architecture Guide](ARCHITECTURE.md): runtime structure, module boundaries, data flow, security model, and extension points.
-- [Production Deployment Guide](PRODUCTION_DEPLOYMENT.md): one-organization v0.20.0 deployment, built-in login, roles, International GEO site audit, guarded crawl evidence, evidence-backed scoring, AI visibility measurement foundation, manual measured evidence operations, evidence-driven local asset review workflow, local-rule article generation, platform rewrites, high-authority publishing platform list, package queue, manual tracking, visibility provider dry-run foundation, publishing connector dry-run foundation, production readiness checks, delivery readiness report, sanitized delivery bundle, environment, Docker, health checks, launch preflight, backup, import, CI gate, and rollback.
+- [Production Deployment Guide](PRODUCTION_DEPLOYMENT.md): one-organization v0.21.0 deployment, built-in login, roles, International GEO site audit, guarded crawl evidence, evidence-backed scoring, AI visibility measurement foundation, manual measured evidence operations, evidence-driven local asset review workflow, local-rule article generation, configurable OpenAI-compatible LLM generation, platform rewrites, high-authority publishing platform list, package queue, manual tracking, visibility provider dry-run foundation, publishing connector dry-run foundation, production readiness checks, delivery readiness report, sanitized delivery bundle, environment, Docker, health checks, launch preflight, backup, import, CI gate, and rollback.
 - [v0.2 Stage Closeout](STAGE_V0_2_CLOSEOUT.md): stage result, launch boundary, verification evidence, and closing copy.
 - [v0.3 Stage Closeout](STAGE_V0_3_CLOSEOUT.md): single-user complete stage result, launch boundary, verification evidence, and closing copy.
 - [v0.4 Stage Closeout](STAGE_V0_4_CLOSEOUT.md): connector integration-readiness stage result, launch boundary, verification evidence, and closing copy.
@@ -27,11 +27,12 @@ This directory contains the maintainer-facing documentation for GEO Pulse China 
 - [v0.18 Stage Closeout](STAGE_V0_18_CLOSEOUT.md): measured evidence operations, batch import, import ledger, evidence review, approved-only trends, operating boundary, verification commands, and maintainer notes.
 - [v0.19 Stage Closeout](STAGE_V0_19_CLOSEOUT.md): production integration foundation, visibility provider configs, publishing connector configs, production readiness checks, operating boundary, verification commands, and maintainer notes.
 - [v0.20 Stage Closeout](STAGE_V0_20_CLOSEOUT.md): delivery readiness, sanitized delivery bundle, Settings delivery center, operating boundary, verification commands, and maintainer notes.
+- [v0.21 Stage Closeout](STAGE_V0_21_CLOSEOUT.md): OpenAI-compatible LLM content generation, provider controls, fallback boundary, verification commands, and maintainer notes.
 - [API Reference](API_REFERENCE.md): current mock API groups, route behavior, mutation requirements, and response shape.
 - [Extension Guide](EXTENDING.md): how to add providers, connectors, source adapters, UI pages, tests, and static preview data.
 - [Maintenance Guide](MAINTENANCE.md): routine maintenance, release gate, runtime state, security defaults, and production backlog.
 - [Privacy Release Review](PRIVACY_RELEASE_REVIEW.md): public-branch privacy scans, cleanup rules, and history-rewrite guidance.
-- [Roadmap](ROADMAP.md): what is done, what remains local-first, and what belongs to post-v0.20 production hardening.
+- [Roadmap](ROADMAP.md): what is done, what remains local-first, and what belongs to post-v0.21 production hardening.
 - [Phase 2 Roadmap](PHASE_2_ROADMAP.md): development tracks for deeper evidence scoring, measured AI visibility, external distribution, production hardening, and SaaS readiness.
 - [Open Source Release Checklist](OPEN_SOURCE_RELEASE.md): publication readiness, GitHub settings, and release-note draft.
 - [Minimal CI Plan](superpowers/plans/2026-07-06-minimal-ci.md): GitHub Actions quality gate plan for `npm run check`.

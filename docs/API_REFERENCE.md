@@ -56,7 +56,7 @@ System scripts can still use:
 X-GEO-API-Key: <runtime-key>
 ```
 
-The browser client config endpoint does not expose the mutation API key in v0.20.0. Keep `GEO_INTERNAL_API_KEY` for automation, diagnostics, delivery checks, and controlled scripts.
+The browser client config endpoint does not expose the mutation API key in v0.21.0. Keep `GEO_INTERNAL_API_KEY` for automation, diagnostics, delivery checks, and controlled scripts.
 
 Roles:
 
@@ -220,6 +220,8 @@ Workspace input stores the one-user operating context. Export jobs generate loca
 - `POST /international-geo/publishing/connectors/:id/test`
 - `POST /international-geo/publishing/connectors/diagnose`
 - `GET /international-geo/content-generation`
+- `PUT /international-geo/content-generation/providers/:id`
+- `POST /international-geo/content-generation/providers/:id/test`
 - `POST /international-geo/content-generation/articles/generate`
 - `POST /international-geo/content-generation/articles/:id/review`
 - `POST /international-geo/content-generation/rewrites/generate`
@@ -248,15 +250,17 @@ Evidence assets are local review artifacts. They are not automatically published
 
 ### International GEO Content Generation
 
-- `GET /international-geo/content-generation`: viewer route for content-generation summary, provider rows, generated article drafts, platform rewrites, and generation runs.
-- `POST /international-geo/content-generation/articles/generate`: editor route that creates deterministic article drafts from approved evidence assets that have not already been used by non-rejected generated articles.
+- `GET /international-geo/content-generation`: viewer route for content-generation summary, sanitized provider rows, generated article drafts, platform rewrites, and generation runs.
+- `PUT /international-geo/content-generation/providers/:id`: editor route that saves the OpenAI-compatible content-generation provider config. Responses mask credentials and never return raw `api_key` values.
+- `POST /international-geo/content-generation/providers/:id/test`: editor route that validates the provider config. `mock://openai-compatible` stays local; real calls require a safe `https://` endpoint, model, and API key.
+- `POST /international-geo/content-generation/articles/generate`: editor route that creates article drafts from approved evidence assets. When `openai_compatible` is configured it is tried first; failures fall back to `local_rules` and record provider provenance.
 - `POST /international-geo/content-generation/articles/:id/review`: editor route that approves or rejects a generated article with `{ "action": "approve" }` or `{ "action": "reject", "human_notes": "..." }`.
-- `POST /international-geo/content-generation/rewrites/generate`: editor route that creates deterministic platform rewrites from approved generated articles.
+- `POST /international-geo/content-generation/rewrites/generate`: editor route that creates platform rewrites from approved generated articles. When the OpenAI-compatible provider is configured it is tried first; failures fall back to `local_rules`.
 - `POST /international-geo/content-generation/rewrites/:id/review`: editor route that approves or rejects a platform rewrite with `{ "action": "approve" }` or `{ "action": "reject", "human_notes": "..." }`.
 
 The active generator is `local_rules`. OpenAI, Claude, and Gemini provider rows are reserved extension seams and are not executed in v0.19. Generated article drafts preserve source asset ids, source asset types, evidence summary, target prompt, canonical URL, review status, and `local_rules` provider provenance. Platform rewrites preserve source article id, platform mapping, rewrite type, AI visibility goal, moderation notes, canonical URL, review status, and provider provenance.
 
-Content generation boundary: local deterministic generation and human review only. These routes do not call external LLMs, publish externally, store external platform credentials, verify indexing, query live AI/search/SERP providers, or prove AI inclusion, citation, recommendation, or external distribution.
+Content generation boundary: v0.21 may call only the operator-configured OpenAI-compatible endpoint for article and rewrite generation. It does not publish externally, store external platform credentials, verify indexing, query ChatGPT Search/Gemini/Claude/Perplexity/Google AIO/Copilot/Bing/SERP providers, or prove AI inclusion, citation, recommendation, or external distribution.
 
 ### International GEO Publishing Workflow
 
@@ -380,9 +384,9 @@ Launch preflight is read-only. It returns overall status, score, summary counts,
 
 Production readiness is a v0.19 operational read model. `GET /system/production-readiness` is readable by viewer sessions. `POST /system/production-readiness/check` requires editor/admin/owner permission or the system API key. Responses include readiness checks, a masked secret inventory, and handoff checklist rows; raw secrets are never returned.
 
-Delivery readiness is a v0.20 handoff read model. `GET /system/delivery-readiness` is readable by viewer sessions. `POST /system/delivery-readiness/check` requires editor/admin/owner permission or the system API key and records `system.delivery_readiness.check` in the audit log. `GET /system/delivery-bundle` requires an admin/owner session or the system API key because it returns a broad operational handoff summary.
+Delivery readiness is a v0.21 handoff read model. `GET /system/delivery-readiness` is readable by viewer sessions. `POST /system/delivery-readiness/check` requires editor/admin/owner permission or the system API key and records `system.delivery_readiness.check` in the audit log. `GET /system/delivery-bundle` requires an admin/owner session or the system API key because it returns a broad operational handoff summary.
 
-The delivery bundle response has `kind: "geo-pulse-delivery-bundle"` and includes delivery readiness, production readiness, launch preflight-style checks, safe runtime counts, backup metadata, International GEO provider/connector summaries, operating boundaries, and handoff steps. It is a sanitized handoff report, not a runtime backup: it must not include raw secrets, password hashes, sessions, backup snapshots, full local state, raw audit logs, raw connector configs, `api_key` fields, or article bodies.
+The delivery bundle response has `kind: "geo-pulse-delivery-bundle"` and includes delivery readiness, production readiness, launch preflight-style checks, safe runtime counts, backup metadata, International GEO provider/connector summaries, a safe content-generation provider summary, operating boundaries, and handoff steps. It is a sanitized handoff report, not a runtime backup: it must not include raw secrets, password hashes, sessions, backup snapshots, full local state, raw audit logs, raw connector configs, `api_key` fields, prompts, article bodies, or rewrite bodies.
 
 ## Adding Or Changing APIs
 

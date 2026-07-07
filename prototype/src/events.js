@@ -473,6 +473,16 @@ export function bindEvents(root, store, rerender, actions) {
       return;
     }
 
+    if (action === "save-international-geo-content-provider") {
+      await actions.saveInternationalGeoContentGenerationProvider();
+      return;
+    }
+
+    if (action === "test-international-geo-content-provider") {
+      await actions.testInternationalGeoContentGenerationProvider();
+      return;
+    }
+
     if (action === "international-content-articles-generate") {
       await actions.generateInternationalGeoArticles();
       return;

@@ -1878,7 +1878,7 @@ async function runMockDataChecks() {
   );
   const deliveryBundle = getDeliveryBundleState();
   assert.equal(deliveryBundle.kind, "geo-pulse-delivery-bundle", "Delivery bundle should expose a stable kind");
-  assert.equal(deliveryBundle.version, "0.20.0", "Delivery bundle should expose the current package version");
+  assert.equal(deliveryBundle.version, "0.21.0", "Delivery bundle should expose the current package version");
   assert(deliveryBundle.delivery_readiness?.checks?.length >= 8, "Delivery bundle should include delivery readiness");
   assert(deliveryBundle.production_readiness?.checks?.length >= 8, "Delivery bundle should include production readiness");
   assert(deliveryBundle.launch_preflight?.checks?.length >= 8, "Delivery bundle should include launch preflight");

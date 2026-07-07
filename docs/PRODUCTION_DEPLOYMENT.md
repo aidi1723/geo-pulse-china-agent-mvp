@@ -1,8 +1,8 @@
 # Production Deployment Guide
 
-This guide covers the v0.20.0 one-organization team-access deployment profile for GEO Pulse.
+This guide covers the v0.21.0 one-organization team-access deployment profile for GEO Pulse.
 
-For stage-level scope and closing language, see [v0.9 Stage Closeout](STAGE_V0_9_CLOSEOUT.md), [v0.9.1 Stage Closeout](STAGE_V0_9_1_CLOSEOUT.md), [v0.10 Stage Closeout](STAGE_V0_10_CLOSEOUT.md), [v0.11 Stage Closeout](STAGE_V0_11_CLOSEOUT.md), [v0.12 Stage Closeout](STAGE_V0_12_CLOSEOUT.md), [v0.13 Stage Closeout](STAGE_V0_13_CLOSEOUT.md), [v0.14 Stage Closeout](STAGE_V0_14_CLOSEOUT.md), [v0.15 Stage Closeout](STAGE_V0_15_CLOSEOUT.md), [v0.16 Stage Closeout](STAGE_V0_16_CLOSEOUT.md), [v0.17 Stage Closeout](STAGE_V0_17_CLOSEOUT.md), [v0.18 Stage Closeout](STAGE_V0_18_CLOSEOUT.md), [v0.19 Stage Closeout](STAGE_V0_19_CLOSEOUT.md), and [v0.20 Stage Closeout](STAGE_V0_20_CLOSEOUT.md).
+For stage-level scope and closing language, see [v0.9 Stage Closeout](STAGE_V0_9_CLOSEOUT.md), [v0.9.1 Stage Closeout](STAGE_V0_9_1_CLOSEOUT.md), [v0.10 Stage Closeout](STAGE_V0_10_CLOSEOUT.md), [v0.11 Stage Closeout](STAGE_V0_11_CLOSEOUT.md), [v0.12 Stage Closeout](STAGE_V0_12_CLOSEOUT.md), [v0.13 Stage Closeout](STAGE_V0_13_CLOSEOUT.md), [v0.14 Stage Closeout](STAGE_V0_14_CLOSEOUT.md), [v0.15 Stage Closeout](STAGE_V0_15_CLOSEOUT.md), [v0.16 Stage Closeout](STAGE_V0_16_CLOSEOUT.md), [v0.17 Stage Closeout](STAGE_V0_17_CLOSEOUT.md), [v0.18 Stage Closeout](STAGE_V0_18_CLOSEOUT.md), [v0.19 Stage Closeout](STAGE_V0_19_CLOSEOUT.md), [v0.20 Stage Closeout](STAGE_V0_20_CLOSEOUT.md), and [v0.21 Stage Closeout](STAGE_V0_21_CLOSEOUT.md).
 
 ## Scope
 
@@ -42,7 +42,7 @@ Not included:
 - CSV/file-upload measured evidence imports.
 - Automated measured evidence collection from AI/search providers.
 - Live calls from the v0.19 dry-run visibility provider or publishing connector rows.
-- Raw-secret, session, password-hash, backup snapshot, full-state, raw-audit-log, or article-body export through the v0.20 delivery bundle.
+- Raw-secret, session, password-hash, backup snapshot, full-state, raw-audit-log, prompt, article-body, or rewrite-body export through the v0.21 delivery bundle.
 - Recursive crawling, JavaScript browser rendering, real provider querying, real SERP collection, measured AI engine inclusion checks, indexing verification, recommendation-rank tracking, external platform calls, or automatic third-party publishing.
 - Email invitations or self-service signup.
 
@@ -132,7 +132,7 @@ curl -f http://localhost:3000/favicon.ico
 
 ## Backup And Restore
 
-The v0.20.0 deployment stores state in a local JSON file and provides built-in local backup controls in Settings -> Brand Knowledge -> Runtime and Data.
+The v0.21.0 deployment stores state in a local JSON file and provides built-in local backup controls in Settings -> Brand Knowledge -> Runtime and Data.
 
 Preferred operator flow:
 
@@ -208,14 +208,14 @@ curl -f -H "X-GEO-API-Key: $GEO_INTERNAL_API_KEY" http://localhost:3000/api/v1/s
 If Docker is available:
 
 ```bash
-docker build -t geo-pulse:v0.20.0 .
+docker build -t geo-pulse:v0.21.0 .
 ```
 
 ## Stage Closeout Language
 
-GEO Pulse v0.20.0 is ready for controlled one-organization handoff and team deployment. It includes built-in login, role-based access, local workflows, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, GEO asset generation, AI visibility measurement foundation, manual measured visibility evidence operations, evidence-driven asset opportunities, local generation queue, approve/reject review state, local-rule article generation, platform rewrite generation, generation records, high-authority publishing platform list, review-only package queue, manual tracking records, visibility provider dry-run configs, publishing connector dry-run configs, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production readiness checks, delivery readiness report, sanitized delivery bundle export, production startup guardrails, health checks, GEO/SEO static files, Docker packaging, minimal GitHub CI, and documentation for rollback.
+GEO Pulse v0.21.0 is ready for controlled one-organization handoff and team deployment. It includes built-in login, role-based access, local workflows, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, GEO asset generation, AI visibility measurement foundation, manual measured visibility evidence operations, evidence-driven asset opportunities, local generation queue, approve/reject review state, local-rule article generation, configurable OpenAI-compatible LLM article generation, platform rewrite generation, generation records, high-authority publishing platform list, review-only package queue, manual tracking records, visibility provider dry-run configs, publishing connector dry-run configs, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production readiness checks, delivery readiness report, sanitized delivery bundle export, production startup guardrails, health checks, GEO/SEO static files, Docker packaging, minimal GitHub CI, and documentation for rollback.
 
-v0.20.0 must still be protected by an external access layer and should not be presented as a complete SaaS platform, real-time AI search monitoring platform, external LLM generation system, or external publishing system. Visibility runs default to `unavailable` snapshots and do not query real AI/search providers. Manual evidence import and JSON batch import can create `measured` snapshots from human-entered observations with `manual_import` provenance and `measured_import` runs, but imported snapshots are only as accurate as the operator-entered evidence and do not support automated monitoring claims. v0.19 provider and publishing connector configs are dry-run only, return `external_call_performed: false`, do not publish externally, and do not call live AI/search/SERP/indexing/provider/CMS/social/community APIs. v0.20 delivery bundles are sanitized handoff reports, not runtime backups, and must not export raw secrets, sessions, password hashes, backup snapshots, full local state, raw audit logs, raw connector configs, `api_key` fields, or article bodies. Evidence asset, content-generation, and publishing workflows create reviewable local assets, article drafts, platform rewrites, handoff packages, and manual tracking records only; they do not publish externally, return raw provider or platform credentials, call external LLMs, call live AI/search/SERP/indexing/external platform services, or verify inclusion/recommendation automatically. Durable database storage, OAuth/SSO, MFA, real integrations, monitoring, approved measured AI visibility provider evidence, approved LLM generation providers, approved publishing/indexing connectors, CSV/file-upload imports, automated provider imports, and multi-tenant controls remain future work.
+v0.21.0 must still be protected by an external access layer and should not be presented as a complete SaaS platform, real-time AI search monitoring platform, automated publishing system, or indexing/recommendation verification tool. Visibility runs default to `unavailable` snapshots and do not query real AI/search providers. Manual evidence import and JSON batch import can create `measured` snapshots from human-entered observations with `manual_import` provenance and `measured_import` runs, but imported snapshots are only as accurate as the operator-entered evidence and do not support automated monitoring claims. v0.19 visibility provider and publishing connector configs are dry-run only, return `external_call_performed: false`, do not publish externally, and do not call live AI/search/SERP/indexing/provider/CMS/social/community APIs. v0.21 content generation may call only the operator-configured OpenAI-compatible endpoint for reviewable article drafts and platform rewrites. v0.21 delivery bundles are sanitized handoff reports, not runtime backups, and must not export raw secrets, sessions, password hashes, backup snapshots, full local state, raw audit logs, raw connector configs, `api_key` fields, prompts, article bodies, or rewrite bodies. Evidence asset, content-generation, and publishing workflows do not publish externally, return raw provider or platform credentials, call live AI/search/SERP/indexing/external platform services, or verify inclusion/recommendation automatically. Durable database storage, OAuth/SSO, MFA, real visibility integrations, monitoring, approved measured AI visibility provider evidence, approved publishing/indexing connectors, CSV/file-upload imports, automated provider imports, and multi-tenant controls remain future work.
 
 ## Rollback
 

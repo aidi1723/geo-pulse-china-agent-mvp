@@ -25,7 +25,7 @@ const persistenceFile = process.env.GEO_DATA_FILE
   ? path.resolve(process.env.GEO_DATA_FILE)
   : path.join(__dirname, "data", "geo-pulse-state.json");
 const packageName = "geo-pulse-china-agent-mvp";
-const packageVersion = "0.20.0";
+const packageVersion = "0.21.0";
 
 const keywords = [
   {
@@ -2004,6 +2004,12 @@ function isMaskedConnectorSecret(value) {
   return /^\*{4,}.{0,8}$/.test(String(value || ""));
 }
 
+function clampNumber(value, min, max, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(min, number));
+}
+
 function connectorStatusLabel(status) {
   return (
     {
@@ -2947,7 +2953,7 @@ function buildDeliveryHandoffSteps() {
       id: "export_bundle",
       label: "Export sanitized delivery bundle",
       owner: "operator",
-      expected_artifact: "geo-pulse-delivery-bundle v0.20.0"
+      expected_artifact: "geo-pulse-delivery-bundle v0.21.0"
     }
   ];
 }
@@ -3094,6 +3100,7 @@ export function getDeliveryBundleState() {
   const backupSummary = getRuntimeBackupSummary();
   const visibilityProviderState = getInternationalGeoVisibilityProviderState();
   const publishingConnectorState = getInternationalGeoPublishingConnectorState();
+  const contentGenerationState = getInternationalGeoContentGenerationState();
   return deepClone({
     kind: "geo-pulse-delivery-bundle",
     package: packageName,
@@ -3119,7 +3126,15 @@ export function getDeliveryBundleState() {
     launch_preflight: buildLaunchPreflightState(deliveryReadiness, productionReadiness),
     international_geo: {
       visibility_provider_summary: visibilityProviderState.summary,
-      publishing_connector_summary: publishingConnectorState.summary
+      publishing_connector_summary: publishingConnectorState.summary,
+      content_generation_provider_summary: {
+        provider_count: contentGenerationState.summary.provider_count,
+        active_provider: contentGenerationState.summary.active_provider,
+        configured_count: (contentGenerationState.providers || []).filter((item) => item.status === "configured").length,
+        masked_credential_count: (contentGenerationState.providers || []).filter(
+          (item) => item.credential_status === "masked"
+        ).length
+      }
     },
     operating_boundaries: deliveryReadiness.boundaries,
     handoff_steps: deliveryReadiness.handoff_steps
@@ -6400,13 +6415,29 @@ function defaultInternationalGeoGenerationProviders() {
       notes: "Deterministic local generator. No external AI calls."
     },
     {
-      id: "openai",
-      label: "OpenAI",
+      id: "openai_compatible",
+      label: "OpenAI-compatible",
       status: "reserved",
-      provider_type: "external_llm",
+      provider_type: "openai_compatible",
       external_credentials_required: true,
       supported_outputs: ["article", "platform_rewrite"],
-      notes: "Reserved provider seam. Not executed in v0.16."
+      config: {
+        endpoint: "mock://openai-compatible",
+        model: "gpt-4.1-mini",
+        api_key: "",
+        temperature: 0.4,
+        max_tokens: 2400,
+        timeout_ms: 20000,
+        retry_count: 1,
+        notes: ""
+      },
+      endpoint: "mock://openai-compatible",
+      model: "gpt-4.1-mini",
+      credential_status: "missing",
+      last_test_status: "not_run",
+      last_tested_at: "",
+      last_error_message: "",
+      notes: "OpenAI Chat Completions compatible provider for article and rewrite generation."
     },
     {
       id: "claude",
@@ -6433,8 +6464,35 @@ function hydrateInternationalGeoGenerationProviders(providers = []) {
   const currentById = new Map(providers.map((item) => [item.id, item]));
   return defaultInternationalGeoGenerationProviders().map((defaults) => ({
     ...defaults,
-    ...(currentById.get(defaults.id) || {})
+    ...(currentById.get(defaults.id) || {}),
+    config: {
+      ...(defaults.config || {}),
+      ...((currentById.get(defaults.id) || {}).config || {})
+    }
   }));
+}
+
+function sanitizeContentGenerationProvider(provider = {}) {
+  const config = provider.config || {};
+  const endpoint = String(config.endpoint || provider.endpoint || "").trim();
+  const apiKey = String(config.api_key || "");
+  return {
+    ...deepClone(provider),
+    endpoint,
+    model: String(config.model || provider.model || "").trim(),
+    credential_status: apiKey ? "masked" : "missing",
+    config: {
+      endpoint,
+      model: String(config.model || provider.model || "").trim(),
+      api_key: "",
+      credential_hint: maskSecret(apiKey),
+      temperature: clampNumber(config.temperature, 0, 2, 0.4),
+      max_tokens: clampNumber(config.max_tokens, 512, 8000, 2400),
+      timeout_ms: clampNumber(config.timeout_ms, 1000, 60000, 20000),
+      retry_count: clampNumber(config.retry_count, 0, 3, 1),
+      notes: String(config.notes || "").trim()
+    }
+  };
 }
 
 function internationalGeoEngineLabel(engineId) {
@@ -9006,6 +9064,274 @@ function publishingSummary() {
   };
 }
 
+function contentProviderReady(provider = {}) {
+  const config = provider.config || {};
+  const endpoint = String(config.endpoint || provider.endpoint || "").trim();
+  const model = String(config.model || provider.model || "").trim();
+  if (provider.status !== "configured" || !endpoint || !model) return false;
+  return endpoint.startsWith("mock://") || Boolean(config.api_key);
+}
+
+function activeContentGenerationProvider() {
+  ensureInternationalGeoStateShape();
+  const provider = internationalGeoState.content_generation.providers.find((item) => item.id === "openai_compatible");
+  return contentProviderReady(provider) ? provider : null;
+}
+
+function openAiCompatibleMessages(kind, payload = {}) {
+  return [
+    {
+      role: "system",
+      content:
+        "You are a GEO content strategist. Write factual, reviewable, evidence-backed content. Do not claim measured AI inclusion, indexing, citation, or recommendation unless evidence says so."
+    },
+    {
+      role: "user",
+      content: JSON.stringify({ kind, ...payload }, null, 2)
+    }
+  ];
+}
+
+function mockOpenAiCompatibleArticle(payload = {}) {
+  const product = payload.input?.product_name || "GEO Pulse";
+  const prompt = payload.input?.primary_query || "AI search visibility";
+  return {
+    title: `${product}: GEO answer for ${prompt}`,
+    content: `# ${product}: GEO answer for ${prompt}\n\n## Direct Answer\n${product} helps teams prepare source-backed content for AI search retrieval.\n\n## Evidence\n${payload.evidence_summary || "Reviewed evidence assets should be checked by a human operator."}\n\n## FAQ\n\n### What should be reviewed before publishing?\nReview claims, sources, canonical URL, and platform rules before manual publication.\n\n## Human review checklist\n- Confirm every claim against approved evidence.\n- Preserve the canonical URL.\n- Publish manually only after approval.\n`,
+    diagnostic: "Generated by mock OpenAI-compatible provider."
+  };
+}
+
+function mockOpenAiCompatibleRewrite(payload = {}) {
+  const platform = payload.platform?.platform_name || "Target Platform";
+  const title = payload.article?.title || "Approved GEO article";
+  return {
+    content: `# ${platform} rewrite\n\nSource: ${title}\n\nUse this reviewed, evidence-backed summary for manual publication. Preserve canonical URL and platform rules.\n\n## Human review checklist\n- Remove unsupported claims.\n- Confirm the canonical URL.\n- Submit manually after review.\n`,
+    diagnostic: "Generated by mock OpenAI-compatible provider."
+  };
+}
+
+function parseProviderContent(content, fallback = {}) {
+  try {
+    const parsed = JSON.parse(String(content || ""));
+    if (parsed && typeof parsed === "object") {
+      return {
+        ...fallback,
+        ...parsed,
+        content: String(parsed.content || fallback.content || "")
+      };
+    }
+  } catch {
+    // Treat plain text provider responses as body content.
+  }
+  return {
+    ...fallback,
+    content: String(content || fallback.content || "")
+  };
+}
+
+async function callOpenAiCompatibleProvider(provider, messages, options = {}) {
+  const config = provider.config || {};
+  const endpoint = String(config.endpoint || "").trim();
+  if (endpoint === "mock://openai-compatible") {
+    return {
+      ok: true,
+      external_call_performed: false,
+      content: JSON.stringify(
+        options.kind === "rewrite"
+          ? mockOpenAiCompatibleRewrite(options.payload)
+          : mockOpenAiCompatibleArticle(options.payload)
+      )
+    };
+  }
+  if (endpoint === "mock://openai-compatible-fail") {
+    return {
+      ok: false,
+      external_call_performed: false,
+      error_message: "Mock OpenAI-compatible provider failure."
+    };
+  }
+  const endpointCheck = validateIntegrationEndpoint(endpoint);
+  if (!endpointCheck.ok) {
+    return { ok: false, external_call_performed: false, error_message: endpointCheck.message };
+  }
+  if (!config.api_key || !config.model) {
+    return {
+      ok: false,
+      external_call_performed: false,
+      error_message: "Endpoint, model, and API key are required before external generation."
+    };
+  }
+
+  const retryCount = clampNumber(config.retry_count, 0, 3, 1);
+  let lastError = "";
+  for (let attempt = 0; attempt <= retryCount; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), clampNumber(config.timeout_ms, 1000, 60000, 20000));
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${config.api_key}`
+        },
+        body: JSON.stringify({
+          model: config.model,
+          messages,
+          temperature: clampNumber(config.temperature, 0, 2, 0.4),
+          max_tokens: clampNumber(config.max_tokens, 512, 8000, 2400)
+        }),
+        signal: controller.signal
+      });
+      const text = await response.text();
+      if (!response.ok) {
+        lastError = `HTTP ${response.status}: ${text.slice(0, 180)}`;
+      } else {
+        const json = JSON.parse(text);
+        return {
+          ok: true,
+          external_call_performed: true,
+          content: json.choices?.[0]?.message?.content || ""
+        };
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  return {
+    ok: false,
+    external_call_performed: true,
+    error_message: lastError || "OpenAI-compatible provider request failed."
+  };
+}
+
+async function runOpenAiCompatibleProviderTest(provider = {}) {
+  const testedAt = nowIso();
+  if (provider.id !== "openai_compatible") {
+    return {
+      provider_id: provider.id,
+      status: "blocked",
+      external_call_performed: false,
+      tested_at: testedAt,
+      error_message: "Only OpenAI-compatible content generation provider testing is executable in v0.21."
+    };
+  }
+  const config = provider.config || {};
+  const endpoint = String(config.endpoint || "").trim();
+  const model = String(config.model || "").trim();
+  if (endpoint === "mock://openai-compatible") {
+    return {
+      provider_id: provider.id,
+      status: "ready",
+      external_call_performed: false,
+      tested_at: testedAt,
+      message: "Mock OpenAI-compatible provider is ready."
+    };
+  }
+  if (endpoint === "mock://openai-compatible-fail") {
+    return {
+      provider_id: provider.id,
+      status: "blocked",
+      external_call_performed: false,
+      tested_at: testedAt,
+      error_message: "Mock OpenAI-compatible provider failure."
+    };
+  }
+  if (!endpoint || !model || !config.api_key) {
+    return {
+      provider_id: provider.id,
+      status: "blocked",
+      external_call_performed: false,
+      tested_at: testedAt,
+      error_message: "Endpoint, model, and API key are required before testing."
+    };
+  }
+  const result = await callOpenAiCompatibleProvider(
+    provider,
+    openAiCompatibleMessages("provider_test", { instruction: "Return a short provider readiness response." }),
+    { kind: "provider_test", payload: {} }
+  );
+  return {
+    provider_id: provider.id,
+    status: result.ok ? "ready" : "blocked",
+    external_call_performed: result.external_call_performed,
+    tested_at: testedAt,
+    error_message: result.ok ? "" : result.error_message || "Provider test failed."
+  };
+}
+
+export function saveInternationalGeoContentGenerationProviderAction(providerId, patch = {}) {
+  ensureInternationalGeoStateShape();
+  const provider = internationalGeoState.content_generation.providers.find((item) => item.id === providerId);
+  if (!provider) return null;
+  if (patch.status !== undefined && !["reserved", "configured", "disabled", "blocked"].includes(String(patch.status))) {
+    throw validationError("status", "Unsupported content generation provider status.");
+  }
+  const nextConfig = { ...(provider.config || {}) };
+  if (Object.prototype.hasOwnProperty.call(patch, "endpoint")) {
+    const endpoint = String(patch.endpoint || "").trim();
+    if (endpoint && !endpoint.startsWith("mock://")) {
+      const endpointCheck = validateIntegrationEndpoint(endpoint);
+      if (!endpointCheck.ok) throw validationError("endpoint", endpointCheck.message);
+    }
+    nextConfig.endpoint = endpoint;
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "api_key")) {
+    const apiKey = String(patch.api_key || "");
+    if (apiKey && !isMaskedConnectorSecret(apiKey)) nextConfig.api_key = apiKey;
+    if (!apiKey) nextConfig.api_key = "";
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "model")) nextConfig.model = String(patch.model || "").trim();
+  if (Object.prototype.hasOwnProperty.call(patch, "temperature")) {
+    nextConfig.temperature = clampNumber(patch.temperature, 0, 2, 0.4);
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "max_tokens")) {
+    nextConfig.max_tokens = clampNumber(patch.max_tokens, 512, 8000, 2400);
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "timeout_ms")) {
+    nextConfig.timeout_ms = clampNumber(patch.timeout_ms, 1000, 60000, 20000);
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "retry_count")) {
+    nextConfig.retry_count = clampNumber(patch.retry_count, 0, 3, 1);
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "notes")) nextConfig.notes = String(patch.notes || "").trim();
+
+  provider.config = nextConfig;
+  provider.endpoint = nextConfig.endpoint || "";
+  provider.model = nextConfig.model || "";
+  if (patch.status !== undefined) provider.status = String(patch.status);
+  provider.credential_status = nextConfig.api_key ? "masked" : "missing";
+  provider.notes = nextConfig.notes || provider.notes || "";
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.content_generation.provider.update", "international_geo_content_provider", provider.id, {
+    changed_fields: Object.keys(patch).filter((key) => key !== "api_key"),
+    status: provider.status,
+    credential_status: provider.credential_status
+  });
+  persistState();
+  return sanitizeContentGenerationProvider(provider);
+}
+
+export async function testInternationalGeoContentGenerationProviderAction(providerId) {
+  ensureInternationalGeoStateShape();
+  const provider = internationalGeoState.content_generation.providers.find((item) => item.id === providerId);
+  if (!provider) return null;
+  const result = await runOpenAiCompatibleProviderTest(provider);
+  provider.last_test_status = result.status;
+  provider.last_tested_at = result.tested_at;
+  provider.last_error_message = result.error_message || "";
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.content_generation.provider.test", "international_geo_content_provider", provider.id, {
+    status: result.status,
+    external_call_performed: result.external_call_performed
+  });
+  persistState();
+  return result;
+}
+
 export function getInternationalGeoPublishingState() {
   ensureInternationalGeoStateShape();
   const connectorState = getInternationalGeoPublishingConnectorState();
@@ -9025,6 +9351,7 @@ function contentGenerationSummary() {
   const articles = contentGeneration.articles || [];
   const rewrites = contentGeneration.rewrites || [];
   const runs = contentGeneration.runs || [];
+  const openAiProvider = (contentGeneration.providers || []).find((item) => item.id === "openai_compatible");
   return {
     provider_count: (contentGeneration.providers || []).length,
     article_count: articles.length,
@@ -9032,7 +9359,7 @@ function contentGenerationSummary() {
     rewrite_count: rewrites.length,
     approved_rewrite_count: rewrites.filter((item) => item.review_status === "approved").length,
     run_count: runs.length,
-    active_provider: "local_rules"
+    active_provider: contentProviderReady(openAiProvider) ? "openai_compatible" : "local_rules"
   };
 }
 
@@ -9040,14 +9367,14 @@ export function getInternationalGeoContentGenerationState() {
   ensureInternationalGeoStateShape();
   return deepClone({
     summary: contentGenerationSummary(),
-    providers: internationalGeoState.content_generation.providers,
+    providers: internationalGeoState.content_generation.providers.map(sanitizeContentGenerationProvider),
     articles: internationalGeoState.content_generation.articles,
     rewrites: internationalGeoState.content_generation.rewrites,
     runs: internationalGeoState.content_generation.runs
   });
 }
 
-export function generateInternationalGeoArticlesAction() {
+export async function generateInternationalGeoArticlesAction(options = {}) {
   ensureInternationalGeoStateShape();
   const contentGeneration = internationalGeoState.content_generation;
   const approvedAssets = (internationalGeoState.geo_assets || []).filter(
@@ -9078,12 +9405,14 @@ export function generateInternationalGeoArticlesAction() {
     return getInternationalGeoContentGenerationState();
   }
 
+  const provider = activeContentGenerationProvider();
+  const targetGeneratorProvider = provider ? "openai_compatible" : "local_rules";
   const usedAssetIds = new Set(
     (contentGeneration.articles || [])
-      .filter((item) => item.review_status !== "rejected")
+      .filter((item) => item.review_status !== "rejected" && item.generator_provider === targetGeneratorProvider)
       .flatMap((item) => (Array.isArray(item.source_asset_ids) ? item.source_asset_ids : []))
   );
-  const newApprovedAssets = approvedAssets.filter((asset) => !usedAssetIds.has(asset.id));
+  const newApprovedAssets = options.force_new ? approvedAssets : approvedAssets.filter((asset) => !usedAssetIds.has(asset.id));
   if (!newApprovedAssets.length) {
     contentGeneration.runs.unshift({
       id: uniqueId("georun"),
@@ -9109,26 +9438,85 @@ export function generateInternationalGeoArticlesAction() {
   }
 
   const sourceAssets = [...newApprovedAssets].sort((left, right) => String(left.id).localeCompare(String(right.id)));
-  const sourceAssetKey = sourceAssets.map((item) => item.id).join(":");
+  const sourceAssetKey = `${sourceAssets.map((item) => item.id).join(":")}${options.force_new ? `:${createdAt}` : ""}`;
   const input = internationalGeoState.input || defaultInternationalGeoInput;
   const sourceAssetTypes = [...new Set(sourceAssets.map((item) => item.asset_type).filter(Boolean))];
   const evidenceSummary = sourceAssets
     .map((asset) => `${asset.asset_type || "asset"}: ${asset.evidence_summary || asset.title || asset.id}`)
     .join("\n");
+  let generatorProvider = "local_rules";
+  let providerExecutionMode = "local";
+  let providerErrorMessage = "";
+  let fallbackFromProvider = "";
+  let generatedTitle = generatedArticleTitle(sourceAssets);
+  let generatedContent = generatedArticleContent(sourceAssets);
+  let providerDiagnostic = "Generated one article from new approved evidence assets.";
+
+  if (provider) {
+    const payload = {
+      input,
+      target_url: input.website_url || workspaceInput.website_url || sourceAssets[0]?.target_url || "",
+      canonical_url: input.website_url || workspaceInput.website_url || sourceAssets[0]?.target_url || "",
+      evidence_summary: evidenceSummary,
+      source_assets: sourceAssets.map((asset) => ({
+        id: asset.id,
+        asset_type: asset.asset_type,
+        title: asset.title,
+        evidence_summary: asset.evidence_summary,
+        target_prompt: asset.target_prompt,
+        target_url: asset.target_url
+      })),
+      required_structure: [
+        "Direct Answer upfront",
+        "Evidence-backed sections",
+        "FAQ",
+        "Source notes",
+        "Human review checklist"
+      ],
+      constraints: [
+        "Do not claim measured AI inclusion, indexing, citation, or recommendation without evidence.",
+        "Keep the output reviewable and suitable for manual publishing."
+      ]
+    };
+    const result = await callOpenAiCompatibleProvider(provider, openAiCompatibleMessages("article", payload), {
+      kind: "article",
+      payload
+    });
+    if (result.ok) {
+      const parsed = parseProviderContent(result.content, {
+        title: generatedTitle,
+        content: generatedContent,
+        diagnostic: "Generated by OpenAI-compatible provider."
+      });
+      generatorProvider = "openai_compatible";
+      providerExecutionMode = result.external_call_performed ? "remote" : "mock";
+      generatedTitle = String(parsed.title || generatedTitle).trim();
+      generatedContent = String(parsed.content || generatedContent).trim();
+      providerDiagnostic = String(parsed.diagnostic || "Generated by OpenAI-compatible provider.").trim();
+    } else {
+      providerErrorMessage = result.error_message || "Provider failed.";
+      fallbackFromProvider = "openai_compatible";
+      providerDiagnostic = `OpenAI-compatible provider failed; generated local fallback. ${providerErrorMessage}`;
+    }
+  }
+
   const article = {
     id: uniqueId("geoarticle"),
-    generator_provider: "local_rules",
+    generator_provider: generatorProvider,
+    provider_execution_mode: providerExecutionMode,
+    fallback_from_provider: fallbackFromProvider,
+    provider_error_message: providerErrorMessage,
     source_asset_key: sourceAssetKey,
     source_asset_ids: sourceAssets.map((item) => item.id),
     source_asset_types: sourceAssetTypes,
-    title: generatedArticleTitle(sourceAssets),
+    title: generatedTitle,
     target_prompt: input.primary_query || sourceAssets[0]?.target_prompt || "AI search visibility",
     target_url: input.website_url || workspaceInput.website_url || sourceAssets[0]?.target_url || "",
     canonical_url: input.website_url || workspaceInput.website_url || sourceAssets[0]?.target_url || "",
     article_status: "draft",
     review_status: "pending_review",
     content_type: "text/markdown",
-    content: generatedArticleContent(sourceAssets),
+    content: generatedContent,
     outline: [
       "Direct answer upfront",
       "Category or problem definition",
@@ -9147,12 +9535,15 @@ export function generateInternationalGeoArticlesAction() {
     id: uniqueId("georun"),
     run_type: "article_generation",
     status: "completed",
-    generator_provider: "local_rules",
+    generator_provider: generatorProvider,
+    provider_execution_mode: providerExecutionMode,
+    fallback_from_provider: fallbackFromProvider,
+    provider_error_message: providerErrorMessage,
     source_asset_key: sourceAssetKey,
     source_asset_count: sourceAssets.length,
     output_article_count: 1,
     created_count: 1,
-    diagnostic: "Generated one article from new approved evidence assets.",
+    diagnostic: providerDiagnostic,
     started_at: createdAt,
     completed_at: nowIso()
   });
@@ -9187,7 +9578,7 @@ export function reviewInternationalGeoGeneratedArticleAction(articleId, payload 
   return deepClone(article);
 }
 
-export function generateInternationalGeoPlatformRewritesAction() {
+export async function generateInternationalGeoPlatformRewritesAction() {
   ensureInternationalGeoStateShape();
   const approvedArticles = (internationalGeoState.content_generation.articles || []).filter(
     (item) => item.review_status === "approved"
@@ -9201,14 +9592,70 @@ export function generateInternationalGeoPlatformRewritesAction() {
   );
   const createdAt = nowIso();
   let createdCount = 0;
+  let remoteSuccessCount = 0;
+  let fallbackCount = 0;
+  const provider = activeContentGenerationProvider();
+  let lastProviderError = "";
 
-  approvedArticles.forEach((article) => {
-    (internationalGeoState.publishing_platforms || []).forEach((platform) => {
+  for (const article of approvedArticles) {
+    for (const platform of internationalGeoState.publishing_platforms || []) {
       const sourceArticlePlatformKey = `${article.id}:${platform.platform_key}`;
-      if (existingByKey.has(sourceArticlePlatformKey)) return;
+      if (existingByKey.has(sourceArticlePlatformKey)) continue;
+      let generatorProvider = "local_rules";
+      let providerExecutionMode = "local";
+      let fallbackFromProvider = "";
+      let providerErrorMessage = "";
+      let content = platformRewriteContent(article, platform);
+
+      if (provider) {
+        const payload = {
+          article: {
+            id: article.id,
+            title: article.title,
+            target_prompt: article.target_prompt,
+            canonical_url: article.canonical_url || article.target_url || "",
+            evidence_summary: article.evidence_summary,
+            content_excerpt: String(article.content || "").slice(0, 2400)
+          },
+          platform: {
+            platform_name: platform.platform_name,
+            platform_key: platform.platform_key,
+            category: platform.category,
+            authority_signal: platform.authority_signal,
+            ai_recommendation_note: platform.ai_recommendation_note
+          },
+          rewrite_type: rewriteTypeForPlatform(platform.platform_key),
+          constraints: [
+            "Human review required before external publishing.",
+            "Keep claims evidence-backed and non-promotional.",
+            "Preserve canonical URL and source provenance."
+          ]
+        };
+        const result = await callOpenAiCompatibleProvider(provider, openAiCompatibleMessages("rewrite", payload), {
+          kind: "rewrite",
+          payload
+        });
+        if (result.ok) {
+          const parsed = parseProviderContent(result.content, { content });
+          generatorProvider = "openai_compatible";
+          providerExecutionMode = result.external_call_performed ? "remote" : "mock";
+          content = String(parsed.content || content).trim();
+          remoteSuccessCount += 1;
+        } else {
+          generatorProvider = "local_rules";
+          fallbackFromProvider = "openai_compatible";
+          providerErrorMessage = result.error_message || "Provider failed.";
+          lastProviderError = providerErrorMessage;
+          fallbackCount += 1;
+        }
+      }
+
       const rewrite = {
         id: uniqueId("georewrite"),
-        generator_provider: "local_rules",
+        generator_provider: generatorProvider,
+        provider_execution_mode: providerExecutionMode,
+        fallback_from_provider: fallbackFromProvider,
+        provider_error_message: providerErrorMessage,
         source_article_id: article.id,
         source_article_title: article.title,
         source_article_platform_key: sourceArticlePlatformKey,
@@ -9229,7 +9676,7 @@ export function generateInternationalGeoPlatformRewritesAction() {
         rewrite_status: "draft",
         review_status: "pending_review",
         content_type: "text/markdown",
-        content: platformRewriteContent(article, platform),
+        content,
         human_notes: "",
         created_at: createdAt,
         reviewed_at: null
@@ -9237,17 +9684,22 @@ export function generateInternationalGeoPlatformRewritesAction() {
       internationalGeoState.content_generation.rewrites.unshift(rewrite);
       existingByKey.set(sourceArticlePlatformKey, rewrite);
       createdCount += 1;
-    });
-  });
+    }
+  }
 
   internationalGeoState.content_generation.runs.unshift({
     id: uniqueId("georun"),
     run_type: "platform_rewrite_generation",
     status: "completed",
-    generator_provider: "local_rules",
+    generator_provider: provider && remoteSuccessCount > 0 && fallbackCount === 0 ? "openai_compatible" : "local_rules",
+    provider_execution_mode: provider && remoteSuccessCount > 0 ? "mock_or_remote" : "local",
+    fallback_from_provider: fallbackCount > 0 ? "openai_compatible" : "",
+    provider_error_message: lastProviderError,
     source_article_count: approvedArticles.length,
     platform_count: (internationalGeoState.publishing_platforms || []).length,
     created_count: createdCount,
+    remote_success_count: remoteSuccessCount,
+    fallback_count: fallbackCount,
     started_at: createdAt,
     completed_at: nowIso()
   });

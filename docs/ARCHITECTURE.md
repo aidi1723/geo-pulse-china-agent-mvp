@@ -2,7 +2,7 @@
 
 ## Overview
 
-GEO Pulse China Agent v0.20.0 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes built-in one-organization multi-user access, role-based permissions, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production readiness checks, delivery readiness checks, sanitized delivery bundle export, International GEO site audit records, guarded live crawl evidence, evidence-backed scoring, generated GEO asset previews, AI visibility measurement foundation state, manual measured visibility evidence operations, evidence-driven local asset opportunities and review state, local-rule article generation, multi-platform rewrite generation, a local high-authority publishing platform list, review-only publishing package queue, manual tracking records, visibility provider dry-run foundation, publishing connector dry-run foundation, production startup guardrails, health checks, GEO/SEO static files, and minimal GitHub CI for controlled server use.
+GEO Pulse China Agent v0.21.0 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes built-in one-organization multi-user access, role-based permissions, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production readiness checks, delivery readiness checks, sanitized delivery bundle export, International GEO site audit records, guarded live crawl evidence, evidence-backed scoring, generated GEO asset previews, AI visibility measurement foundation state, manual measured visibility evidence operations, evidence-driven local asset opportunities and review state, local-rule article generation, configurable OpenAI-compatible LLM article generation, multi-platform rewrite generation, a local high-authority publishing platform list, review-only publishing package queue, manual tracking records, visibility provider dry-run foundation, publishing connector dry-run foundation, production startup guardrails, health checks, GEO/SEO static files, and minimal GitHub CI for controlled server use.
 
 ## Runtime Components
 
@@ -35,7 +35,7 @@ GEO Pulse China Agent v0.20.0 is a zero-dependency Node.js application with a br
 | Publishing | Channels, publish tasks, task items, calendar metadata, variants, readiness checks, approval guard, records. | `mock-data.mjs`, `prototype/src/pages/distribution.js` |
 | Automation operations | Provider registry, connector registry, permission matrix, connector health checks, connector diagnostics, automation run steps, scheduler tick, retries. | `automation-providers.mjs`, `mock-data.mjs`, `prototype/src/pages/settings.js` |
 | Analytics | Visibility tracking, SERP snapshots, competitor domains, audience segments, campaign runs. | `mock-data.mjs`, `prototype/src/pages/analytics.js` |
-| International GEO | Overseas AI search readiness, rule-first and crawl-evidenced site audit records, deterministic scoring breakdowns, generated GEO assets, evidence-driven opportunities, local asset queue and review states, local-rule article generation, multi-platform rewrite generation, high-authority publishing platform list with AI recommendation-probability notes, review-only publishing packages, manual tracking records, article and distribution planning, visibility prompt sets, provider readiness, runs, snapshots, manual measured evidence imports, import ledgers, evidence reviews, approved-only trends, visibility provider configs and dry-run diagnostics, publishing connector configs and dry-run diagnostics, and community citation surfaces. | `mock-data.mjs`, `site-crawl.mjs`, `server.mjs`, `prototype/src/pages/international.js` |
+| International GEO | Overseas AI search readiness, rule-first and crawl-evidenced site audit records, deterministic scoring breakdowns, generated GEO assets, evidence-driven opportunities, local asset queue and review states, local-rule article generation, configurable OpenAI-compatible LLM article generation, multi-platform rewrite generation, provider provenance/fallback records, high-authority publishing platform list with AI recommendation-probability notes, review-only publishing packages, manual tracking records, article and distribution planning, visibility prompt sets, provider readiness, runs, snapshots, manual measured evidence imports, import ledgers, evidence reviews, approved-only trends, visibility provider configs and dry-run diagnostics, publishing connector configs and dry-run diagnostics, and community citation surfaces. | `mock-data.mjs`, `site-crawl.mjs`, `server.mjs`, `prototype/src/pages/international.js` |
 | Single-user completion | Workspace input, manual topics, outlines, manual articles, templates, exports, local billing plan switch, and logout action. | `mock-data.mjs`, `server.mjs`, `prototype/src/main.js` |
 | Security and governance | Login sessions, local users, role permissions, API key automation guard, audit events, CSV export safety, connector-scoped permissions, endpoint restrictions, local backup/restore audit trail. | `server.mjs`, `mock-data.mjs`, `reports/security-hardening-log.md` |
 
@@ -50,7 +50,7 @@ Persistence is local JSON, not a production database.
 
 ## Security Model
 
-v0.20.0 uses built-in team access plus local-first production and delivery guardrails:
+v0.21.0 uses built-in team access plus local-first production and delivery guardrails:
 
 - Remote access is disabled unless `GEO_ALLOW_REMOTE_ACCESS=1`.
 - Remote access requires a fixed `GEO_INTERNAL_API_KEY`.
@@ -67,7 +67,7 @@ v0.20.0 uses built-in team access plus local-first production and delivery guard
 - Connector diagnostics summarize endpoint safety, credential status, health checks, permission decisions, audit context, and recent run steps without exposing raw secrets.
 - Launch preflight summarizes readiness checks, including user auth and session security, without exposing raw API keys, secrets, full env vars, or local file contents.
 - Production readiness summarizes persistence, backup, auth, remote access, integration foundation, GEO static routes, masked secret inventory, and handoff checklist rows without exposing raw secrets.
-- Delivery readiness summarizes launch/production handoff state, International GEO summaries, provider/connector dry-run boundaries, and handoff steps. Delivery bundle export is sanitized and does not include raw secrets, password hashes, sessions, backup snapshots, full local state, raw audit logs, raw connector configs, `api_key` fields, or article bodies.
+- Delivery readiness summarizes launch/production handoff state, International GEO summaries, provider/connector dry-run boundaries, content-generation provider summary, and handoff steps. Delivery bundle export is sanitized and does not include raw secrets, password hashes, sessions, backup snapshots, full local state, raw audit logs, raw connector configs, `api_key` fields, prompts, article bodies, or rewrite bodies.
 
 These safeguards are not a replacement for database controls, multi-tenant isolation, MFA, monitoring, incident response, or an external access layer.
 
@@ -83,7 +83,7 @@ v0.14 adds evidence-driven International GEO asset opportunities, queue items, g
 
 v0.15 adds the International GEO publishing platform workflow: a local destination matrix, deterministic packages generated from approved evidence assets, a review-only publishing package queue, and manual/local tracking records for publication URL, canonical URL, indexing status, AI mention status, citation status, and recommendation status.
 
-v0.16 adds local-rule article and platform rewrite generation. `local_rules` is the active deterministic provider; OpenAI, Claude, and Gemini are reserved provider seams only. Generated articles are created from approved evidence assets, must be reviewed, and then can produce platform rewrites. Rewrites preserve platform mapping, canonical URL, moderation notes, and review state.
+v0.16 adds local-rule article and platform rewrite generation. Generated articles are created from approved evidence assets, must be reviewed, and then can produce platform rewrites. Rewrites preserve platform mapping, canonical URL, moderation notes, and review state.
 
 v0.17 adds manual measured visibility evidence import through `POST /api/v1/international-geo/visibility/evidence/import` and the `导入测量证据` UI panel. Imported snapshots are user-supplied evidence and are only as accurate as the operator-entered observation.
 
@@ -93,7 +93,9 @@ v0.19 adds production integration foundation rows for visibility providers and p
 
 v0.20 adds delivery readiness and sanitized delivery bundle export for controlled one-organization handoff. The delivery bundle is a handoff report, not a runtime backup, and keeps the v0.19 no-live-provider and no-auto-publish boundary intact.
 
-The audit, visibility, evidence-asset, content-generation, and publishing workflow foundation is an operational preparation layer, not live AI monitoring or publishing automation. It does not recursively crawl sites, render JavaScript-heavy pages, query ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, Bing, SERP APIs, call indexing or external platform APIs, verify indexing, return raw provider or platform credentials, call external LLMs, or publish to external platforms. Future AI visibility, generation-provider, and publishing integrations should enter through explicit connectors/providers and preserve the same audit/evidence/content/package/tracking/snapshot records as the UI contract.
+v0.21 adds an executable OpenAI-compatible content-generation provider for International GEO article drafts and platform rewrites. It can call an operator-configured safe `https://` Chat Completions-compatible endpoint, masks credentials in all read models, records provider provenance, and falls back to `local_rules` on provider failure.
+
+The audit, visibility, evidence-asset, content-generation, and publishing workflow foundation is an operational preparation layer, not live AI monitoring or publishing automation. It does not recursively crawl sites, render JavaScript-heavy pages, query ChatGPT Search, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, Bing, SERP APIs, call indexing or external platform APIs, verify indexing, return raw provider or platform credentials, or publish to external platforms. v0.21 LLM execution is limited to the configured OpenAI-compatible content-generation endpoint. Future AI visibility and publishing integrations should enter through explicit connectors/providers and preserve the same audit/evidence/content/package/tracking/snapshot records as the UI contract.
 
 ## Operational Routes
 

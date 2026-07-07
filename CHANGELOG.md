@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.21.0 - 2026-07-07
+
+OpenAI-compatible LLM content generation for International GEO.
+
+### Added
+
+- Configurable `openai_compatible` content-generation provider with masked credential read models.
+- Provider save and test APIs under International GEO content generation.
+- LLM-first article draft generation and multi-platform rewrite generation with `local_rules` fallback.
+- UI controls for endpoint, model, API key, generation settings, provider test, and provider provenance.
+- Sanitized delivery-bundle provider summary without raw keys, prompts, article bodies, or rewrite bodies.
+
+### Boundaries
+
+- Real LLM calls happen only after an operator configures a safe OpenAI-compatible endpoint, model, and API key.
+- Generated content remains review-first and publication remains manual.
+- No ChatGPT Search, Gemini, Claude, Perplexity, Google AIO, Copilot, Bing, SERP, indexing, AI visibility, CMS, social, community, or directory APIs are called by this stage.
+- No raw API keys are returned in read models, HTTP responses, UI state, tests, logs, or delivery bundles.
+
+### Verification
+
+- `npm run check`
+
 ## 0.20.0 - 2026-07-07
 
 Delivery hardening for controlled one-organization handoff.

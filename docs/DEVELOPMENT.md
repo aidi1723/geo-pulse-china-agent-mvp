@@ -2,7 +2,7 @@
 
 ## Project Shape
 
-GEO Pulse China Agent v0.20.0 is intentionally small:
+GEO Pulse China Agent v0.21.0 is intentionally small:
 
 - Runtime: Node.js ESM.
 - Dependencies: none.
@@ -118,7 +118,7 @@ When behavior changes, update docs in the same change:
 - International GEO workflow changes: `README.md`, `API_REFERENCE.md`, `ARCHITECTURE.md`, `ROADMAP.md`, `PHASE_2_ROADMAP.md`, `PRODUCTION_DEPLOYMENT.md`, and the current stage closeout doc.
 - Visibility measurement changes: document `measured`, `simulated`, and `unavailable` semantics, manual human-entered evidence requirements, import ledger/review/trend behavior, future provider evidence requirements, approved-only trend rules, and any no-real-provider boundary in the same change.
 - Evidence asset changes: document that generated opportunities, queue items, local previews, and approve/reject state create reviewable local assets only, with no external publishing, no full long-form articles, and no live AI search inclusion/ranking measurement.
-- Content generation changes: document that `local_rules` can create reviewable article drafts from approved evidence assets and platform rewrites from approved generated articles, while external LLM providers remain reserved unless explicitly implemented.
+- Content generation changes: document that `local_rules` remains the deterministic fallback and that the OpenAI-compatible provider can generate reviewable International GEO article drafts and platform rewrites only after an operator configures endpoint, model, and API key.
 - Publishing workflow changes: document that high-authority platform list rows, package queue items, and tracking records are local planning/handoff only; platform notes only describe channels that may increase AI retrieval, citation, and recommendation probability, with no external publishing, no external credentials, no full long-form article generation, no live AI/search/SERP/indexing verification, and manual/local tracking unless future connector evidence exists.
 - Production integration foundation changes: document that visibility provider configs, publishing connector configs, dry-run tests, diagnose-all actions, production readiness, masked secret inventory, and handoff checklist rows are local preparation only, with no live AI/search/SERP/indexing/provider/CMS/social/community calls, no automatic publishing, and no raw credential exposure.
 - Delivery hardening changes: document delivery readiness, sanitized delivery bundle export, Settings `交付中心`, sensitive bundle read permissions, and the distinction between delivery bundles and runtime backups.

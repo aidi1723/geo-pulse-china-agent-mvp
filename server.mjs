@@ -121,6 +121,7 @@ const {
   retryAutomationRunAction,
   saveBrandProfileAction,
   saveChannelAction,
+  saveInternationalGeoContentGenerationProviderAction,
   saveInternationalGeoPublishingConnectorAction,
   saveInternationalGeoVisibilityProviderAction,
   saveInternationalGeoInputAction,
@@ -132,6 +133,7 @@ const {
   saveWorkspaceInputAction,
   testAutomationProviderAction,
   testAutomationConnectorAction,
+  testInternationalGeoContentGenerationProviderAction,
   testInternationalGeoPublishingConnectorAction,
   testInternationalGeoVisibilityProviderAction,
   retryPublishTaskFailedAction,
@@ -2187,13 +2189,49 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "PUT" && pathname.match(/^\/international-geo\/content-generation\/providers\/[^/]+$/)) {
+    const id = pathname.split("/")[4];
+    const body = await parseBody(req).catch(() => null);
+    if (!body) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    try {
+      const result = saveInternationalGeoContentGenerationProviderAction(id, body);
+      if (!result) {
+        sendJson(res, 404, error("NOT_FOUND", "Content generation provider not found", 404).body);
+        return;
+      }
+      sendJson(res, 200, ok(result));
+    } catch (err) {
+      if ((err?.code || err?.message) === "VALIDATION_ERROR") {
+        const message = err.field_errors?.[0]?.message || err.message || "Invalid content generation provider";
+        sendJson(res, 400, error("VALIDATION_ERROR", message).body);
+        return;
+      }
+      throw err;
+    }
+    return;
+  }
+
+  if (req.method === "POST" && pathname.match(/^\/international-geo\/content-generation\/providers\/[^/]+\/test$/)) {
+    const id = pathname.split("/")[4];
+    const result = await testInternationalGeoContentGenerationProviderAction(id);
+    if (!result) {
+      sendJson(res, 404, error("NOT_FOUND", "Content generation provider not found", 404).body);
+      return;
+    }
+    sendJson(res, 200, ok(result));
+    return;
+  }
+
   if (req.method === "POST" && pathname === "/international-geo/content-generation/articles/generate") {
-    sendJson(res, 201, ok(generateInternationalGeoArticlesAction()));
+    sendJson(res, 201, ok(await generateInternationalGeoArticlesAction()));
     return;
   }
 
   if (req.method === "POST" && pathname === "/international-geo/content-generation/rewrites/generate") {
-    sendJson(res, 201, ok(generateInternationalGeoPlatformRewritesAction()));
+    sendJson(res, 201, ok(await generateInternationalGeoPlatformRewritesAction()));
     return;
   }
 

@@ -1613,6 +1613,72 @@ function renderContentGenerationSummary(contentGeneration = {}) {
   `;
 }
 
+function renderContentGenerationProviderPanel(contentGeneration = {}) {
+  const provider = (contentGeneration.providers || []).find((item) => item.id === "openai_compatible") || {};
+  const config = provider.config || {};
+  const statusOptions = ["reserved", "configured", "disabled", "blocked"]
+    .map((status) => `<option value="${status}" ${provider.status === status ? "selected" : ""}>${status}</option>`)
+    .join("");
+  return `
+    <section class="surface panel" data-content-provider="openai_compatible">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">OpenAI-compatible 内容生成</h3>
+          <div class="panel-note">用于国际 GEO 长文章和多平台改写；生成内容仍需人工审核和手动发布。</div>
+        </div>
+        <div class="actions-row">
+          <button class="secondary-btn" data-action="test-international-geo-content-provider">测试 Provider</button>
+          <button class="primary-btn" data-action="save-international-geo-content-provider">保存 Provider</button>
+        </div>
+      </div>
+      <div class="info-grid">
+        <div class="info-row"><span>状态</span><strong>${statusMarkup(contentGenerationStatusLabel(provider.status || "-"))}</strong></div>
+        <div class="info-row"><span>凭据</span><strong>${statusMarkup(provider.credential_status || "missing")}</strong></div>
+        <div class="info-row"><span>上次测试</span><strong>${escapeHtml(provider.last_test_status || "-")}</strong></div>
+        <div class="info-row"><span>生成来源</span><strong>${escapeHtml(contentGeneration.summary?.active_provider || "local_rules")}</strong></div>
+      </div>
+      <div class="form-grid" style="margin-top:14px">
+        <div class="form-field">
+          <label>状态</label>
+          <select data-content-provider-field="status">${statusOptions}</select>
+        </div>
+        <div class="form-field">
+          <label>Endpoint</label>
+          <input data-content-provider-field="endpoint" value="${escapeHtml(config.endpoint || provider.endpoint || "")}" />
+        </div>
+        <div class="form-field">
+          <label>Model</label>
+          <input data-content-provider-field="model" value="${escapeHtml(config.model || provider.model || "")}" />
+        </div>
+        <div class="form-field">
+          <label>API Key</label>
+          <input data-content-provider-field="api_key" value="${escapeHtml(config.credential_hint || "")}" />
+        </div>
+        <div class="form-field">
+          <label>Temperature</label>
+          <input data-content-provider-field="temperature" value="${escapeHtml(config.temperature ?? 0.4)}" />
+        </div>
+        <div class="form-field">
+          <label>Max tokens</label>
+          <input data-content-provider-field="max_tokens" value="${escapeHtml(config.max_tokens ?? 2400)}" />
+        </div>
+        <div class="form-field">
+          <label>Timeout ms</label>
+          <input data-content-provider-field="timeout_ms" value="${escapeHtml(config.timeout_ms ?? 20000)}" />
+        </div>
+        <div class="form-field">
+          <label>Retry count</label>
+          <input data-content-provider-field="retry_count" value="${escapeHtml(config.retry_count ?? 1)}" />
+        </div>
+        <div class="form-field full">
+          <label>Notes</label>
+          <textarea data-content-provider-field="notes">${escapeHtml(config.notes || provider.notes || "")}</textarea>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
 function renderGeneratedArticleQueue(contentGeneration = {}) {
   const articles = contentGeneration.articles || [];
   const rows = articles.length
@@ -1629,6 +1695,7 @@ function renderGeneratedArticleQueue(contentGeneration = {}) {
             </td>
             <td>
               <div class="cell-title">${escapeHtml(item.generator_provider || "local_rules")}</div>
+              <div class="cell-sub">生成来源：${escapeHtml(item.generator_provider || "local_rules")}${item.fallback_from_provider ? ` / fallback: ${escapeHtml(item.fallback_from_provider)}` : ""}</div>
               <div class="cell-sub">${escapeHtml((item.source_asset_types || []).map(assetLabel).join(" / ") || "-")}</div>
             </td>
             <td>
@@ -1659,7 +1726,7 @@ function renderGeneratedArticleQueue(contentGeneration = {}) {
       <div class="panel-head">
         <div>
           <h3 class="panel-title">文章生成队列</h3>
-          <div class="panel-note">从已审核证据资产生成完整 Markdown 草稿；local_rules 为当前唯一启用 provider，外部 AI provider 仅预留。</div>
+          <div class="panel-note">从已审核证据资产生成完整 Markdown 草稿；配置 OpenAI-compatible 后优先使用 LLM，失败回退 local_rules。</div>
         </div>
         <div class="actions-row">
           <button class="secondary-btn" data-action="international-content-articles-generate">生成文章</button>
@@ -1687,6 +1754,7 @@ function renderPlatformRewriteQueue(contentGeneration = {}) {
             </td>
             <td>
               <div class="cell-title">${escapeHtml(item.generator_provider || "local_rules")}</div>
+              <div class="cell-sub">生成来源：${escapeHtml(item.generator_provider || "local_rules")}${item.fallback_from_provider ? ` / fallback: ${escapeHtml(item.fallback_from_provider)}` : ""}</div>
               <div class="cell-sub">${escapeHtml(item.ai_visibility_goal || "-")}</div>
             </td>
             <td>
@@ -2202,6 +2270,7 @@ export function renderInternationalGeo(data = internationalGeo) {
     ${renderEvidenceOpportunitiesPanel(data.evidence_assets || {})}
     ${renderEvidenceAssetQueuePanel(data.evidence_assets || {})}
     ${renderGeoAssetPreviews(mergeGeoAssetPreviews(data.geo_assets || [], data.evidence_assets || {}))}
+    ${renderContentGenerationProviderPanel(contentGeneration)}
     ${renderGeneratedArticleQueue(contentGeneration)}
     ${renderPlatformRewriteQueue(contentGeneration)}
     ${renderContentGenerationRuns(contentGeneration)}

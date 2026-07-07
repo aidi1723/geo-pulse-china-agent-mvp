@@ -2,7 +2,7 @@
 
 ## Current State
 
-The project is a v0.20.0 one-organization team-access workspace with built-in login, RBAC, connector diagnostics, local backup import/restore, launch preflight, production readiness checks, delivery readiness report, sanitized delivery bundle export, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, generated GEO assets, AI visibility measurement foundation, manual measured visibility evidence operations, evidence-driven local asset opportunities, review queue state, local-rule article generation, multi-platform rewrite generation, high-authority publishing platform list, review-only package queue, manual tracking records, visibility provider dry-run foundation, publishing connector dry-run foundation, and minimal GitHub CI.
+The project is a v0.21.0 one-organization team-access workspace with built-in login, RBAC, connector diagnostics, local backup import/restore, launch preflight, production readiness checks, delivery readiness report, sanitized delivery bundle export, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, generated GEO assets, AI visibility measurement foundation, manual measured visibility evidence operations, evidence-driven local asset opportunities, review queue state, local-rule article generation, configurable OpenAI-compatible LLM article generation, multi-platform rewrite generation, high-authority publishing platform list, review-only package queue, manual tracking records, visibility provider dry-run foundation, publishing connector dry-run foundation, and minimal GitHub CI.
 
 Completed mock-first product areas:
 
@@ -32,12 +32,12 @@ Completed mock-first product areas:
 - Delivery hardening: consolidated delivery readiness report, sanitized delivery bundle export, Settings `交付中心`, delivery boundaries, handoff steps, and API routes for controlled handoff.
 - Evidence-driven asset opportunities: opportunity rows derived from audit scoring, crawl evidence, visibility gaps, and rule-first input; local generation queue rows; generated local previews with provenance metadata; and approve/reject review state.
 - International GEO publishing workflow: local high-authority platform list across owned, developer, professional social, community, Q&A, video, directory, review-site, and knowledge-base destinations, with authority signals and AI recommendation-probability notes; deterministic package generation from approved evidence assets; review-only package queue; and manual/local tracking for publication URL, canonical URL, indexing status, AI mention status, citation status, and recommendation status.
-- International GEO content generation workflow: `local_rules` provider seam, deterministic article drafts from approved evidence assets, article approve/reject review, deterministic multi-platform rewrites from approved generated articles, rewrite approve/reject review, and generation run records.
+- International GEO content generation workflow: `local_rules` fallback, configurable OpenAI-compatible provider, article drafts from approved evidence assets, article approve/reject review, multi-platform rewrites from approved generated articles, rewrite approve/reject review, provider provenance, fallback records, and generation run records.
 - Open-source release docs and GPLv3 licensing.
 
 ## Near-Term Maintenance
 
-These items keep v0.20.0 healthy without changing its architecture:
+These items keep v0.21.0 healthy without changing its architecture:
 
 - Keep `npm run check` passing.
 - Expand `verify-mvp.mjs` when new behavior is added.
@@ -69,6 +69,11 @@ These are the immediate product slices. The full second-stage direction is track
 5. Prompt regression dataset.
    - Store sample inputs, expected criteria, generated outputs, and quality score history.
 
+6. Optional production LLM hardening.
+   - Move content-generation credentials into a durable secret store before broader hosted use.
+   - Add provider-specific quota, cost, retry, and audit dashboards.
+   - Keep generated content behind human review and manual publishing.
+
 ## Phase 2 Direction
 
 Phase 2 should move the product from v0.20 evidence-scored audit, visibility foundation, manual measured evidence operations, local evidence-asset review workflow, local content-generation workflow, publishing handoff workflow, provider dry-run foundation, connector dry-run foundation, and delivery handoff foundation to broader measured GEO operations:
@@ -81,7 +86,7 @@ Phase 2 should move the product from v0.20 evidence-scored audit, visibility fou
 
 Phase 2 must preserve a clear distinction between rule-first recommendations, crawl-evidenced findings, manually imported measured evidence, and measured external provider visibility data.
 
-## Post-v0.20 Production Hardening
+## Post-v0.21 Production Hardening
 
 These are required before using the project as a real SaaS or broadly exposed hosted service:
 
@@ -96,7 +101,7 @@ These are required before using the project as a real SaaS or broadly exposed ho
 - Incident response owner and security contact.
 - Data retention, deletion, and privacy policy.
 
-## Non-Goals For v0.20
+## Non-Goals For v0.21
 
 - Production multi-tenant hosting.
 - Real third-party credential management.
@@ -111,8 +116,9 @@ These are required before using the project as a real SaaS or broadly exposed ho
 - Automatic third-party community or CMS publishing.
 - Live provider or publishing connector calls from v0.19 dry-run config rows.
 - Returning raw visibility provider or publishing connector credentials in API/UI responses.
-- Exporting raw secrets, sessions, password hashes, backup snapshots, full local state, raw audit logs, raw connector configs, `api_key` fields, or article bodies through delivery bundles.
-- External LLM article generation or automatic article publication without explicit provider/connector implementation and approval gates.
+- Exporting raw secrets, sessions, password hashes, backup snapshots, full local state, raw audit logs, raw connector configs, `api_key` fields, prompts, article bodies, or rewrite bodies through delivery bundles.
+- LLM calls beyond the operator-configured OpenAI-compatible content-generation endpoint.
+- Automatic article publication without explicit connector implementation and approval gates.
 - Full workflow graph editor.
 - Paid billing integration.
 - Recursive crawler deployment or browser-rendering crawler service.
@@ -120,7 +126,7 @@ These are required before using the project as a real SaaS or broadly exposed ho
 
 ## Release Versioning
 
-Current public snapshot: `0.20.0`.
+Current public snapshot: `0.21.0`.
 
 Suggested version policy:
 
