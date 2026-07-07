@@ -354,8 +354,18 @@ function runSingleUserSourceChecks() {
   );
   assert.match(
     eventsSource,
+    /action === "international-content-article-reject"/,
+    "International GEO generated article rejection should be wired in the event dispatcher"
+  );
+  assert.match(
+    eventsSource,
     /action === "international-content-rewrite-approve"/,
     "International GEO platform rewrite approval should be wired in the event dispatcher"
+  );
+  assert.match(
+    eventsSource,
+    /action === "international-content-rewrite-reject"/,
+    "International GEO platform rewrite rejection should be wired in the event dispatcher"
   );
 }
 
@@ -3818,6 +3828,10 @@ function runInternationalGeoUiChecks() {
   assert.match(siteAuditHtml, /生成记录/, "International GEO should render content generation runs");
   assert.match(siteAuditHtml, /data-action="international-content-articles-generate"/);
   assert.match(siteAuditHtml, /data-action="international-content-rewrites-generate"/);
+  assert.match(siteAuditHtml, /data-action="international-content-article-approve"/);
+  assert.match(siteAuditHtml, /data-action="international-content-article-reject"/);
+  assert.match(siteAuditHtml, /data-action="international-content-rewrite-approve"/);
+  assert.match(siteAuditHtml, /data-action="international-content-rewrite-reject"/);
   assert.match(siteAuditHtml, /local_rules/, "Content generation UI should expose local_rules provider boundary");
   assert.match(siteAuditHtml, /高权重发布平台清单/, "International GEO page should render the publishing platform list");
   assert.match(siteAuditHtml, /推荐概率说明/, "Publishing platform list should explain AI recommendation probability");
