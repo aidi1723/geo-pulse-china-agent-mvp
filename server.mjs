@@ -27,6 +27,7 @@ const {
   createTopicIdeasFromKeywords,
   generateInternationalGeoArtifactsAction,
   generateInternationalGeoEvidenceAssetsAction,
+  generateInternationalGeoPublishingPackagesAction,
   generateInternationalGeoSiteAuditAssetsAction,
   generateTopicOutlineAction,
   getArticle,
@@ -44,6 +45,7 @@ const {
   getExportJobDownload,
   getInternationalGeoState,
   getInternationalGeoEvidenceAssetsState,
+  getInternationalGeoPublishingState,
   getInternationalGeoVisibilityState,
   getInternationalGeoSiteAudit,
   getDashboardSummary,
@@ -90,6 +92,7 @@ const {
   listUsageRecords,
   reviewArticleAction,
   reviewInternationalGeoEvidenceAssetAction,
+  reviewInternationalGeoPublishingPackageAction,
   runInternationalGeoAuditAction,
   runInternationalGeoVisibilityMeasurementAction,
   reconnectChannelAction,
@@ -115,6 +118,7 @@ const {
   submitArticleReviewAction,
   takeoverPublishTaskItemAction,
   updateBillingPlanAction,
+  updateInternationalGeoPublishingTrackingAction,
   updateKeywordAction,
   updateTopicIdeaAction,
   updateArticleAction,
@@ -2127,6 +2131,26 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && pathname === "/international-geo/publishing") {
+    sendJson(res, 200, ok(getInternationalGeoPublishingState()));
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/international-geo/publishing/platforms") {
+    sendJson(res, 200, ok({ items: getInternationalGeoPublishingState().platforms }));
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/international-geo/publishing/packages") {
+    sendJson(res, 200, ok({ items: getInternationalGeoPublishingState().packages }));
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/international-geo/publishing/tracking") {
+    sendJson(res, 200, ok({ items: getInternationalGeoPublishingState().tracking }));
+    return;
+  }
+
   if (req.method === "POST" && pathname === "/international-geo/visibility/prompt-sets") {
     const body = await parseBody(req).catch(() => null);
     if (!body) {
@@ -2154,6 +2178,61 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && pathname === "/international-geo/evidence-assets/generate") {
     sendJson(res, 201, ok(generateInternationalGeoEvidenceAssetsAction()));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/international-geo/publishing/packages/generate") {
+    sendJson(res, 201, ok(generateInternationalGeoPublishingPackagesAction()));
+    return;
+  }
+
+  if (req.method === "POST" && pathname.match(/^\/international-geo\/publishing\/packages\/[^/]+\/review$/)) {
+    const id = pathname.split("/")[4];
+    const body = await parseBody(req).catch(() => null);
+    if (!body) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    try {
+      const result = reviewInternationalGeoPublishingPackageAction(id, body);
+      if (!result) {
+        sendJson(res, 404, error("NOT_FOUND", "Publishing package not found", 404).body);
+        return;
+      }
+      sendJson(res, 200, ok(result));
+    } catch (err) {
+      if ((err?.code || err?.message) === "VALIDATION_ERROR") {
+        const message = err.field_errors?.[0]?.message || "Review action must be approve or reject";
+        sendJson(res, 400, error("VALIDATION_ERROR", message).body);
+        return;
+      }
+      throw err;
+    }
+    return;
+  }
+
+  if (req.method === "PUT" && pathname.match(/^\/international-geo\/publishing\/tracking\/[^/]+$/)) {
+    const id = pathname.split("/")[4];
+    const body = await parseBody(req).catch(() => null);
+    if (!body) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    try {
+      const result = updateInternationalGeoPublishingTrackingAction(id, body);
+      if (!result) {
+        sendJson(res, 404, error("NOT_FOUND", "Publishing tracking record not found", 404).body);
+        return;
+      }
+      sendJson(res, 200, ok(result));
+    } catch (err) {
+      if ((err?.code || err?.message) === "VALIDATION_ERROR") {
+        const message = err.field_errors?.[0]?.message || "Invalid publishing tracking update";
+        sendJson(res, 400, error("VALIDATION_ERROR", message).body);
+        return;
+      }
+      throw err;
+    }
     return;
   }
 
