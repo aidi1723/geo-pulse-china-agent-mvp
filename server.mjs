@@ -57,6 +57,8 @@ const {
   getInternationalGeoVisibilityProviderState,
   getInternationalGeoVisibilityState,
   getInternationalGeoSiteAudit,
+  getDeliveryBundleState,
+  getDeliveryReadinessState,
   getProductionReadinessState,
   getDashboardSummary,
   getKeyword,
@@ -108,6 +110,7 @@ const {
   reviewInternationalGeoPublishingPackageAction,
   runInternationalGeoAuditAction,
   runInternationalGeoVisibilityMeasurementAction,
+  runDeliveryReadinessCheckAction,
   runProductionReadinessCheckAction,
   reconnectChannelAction,
   recordAuditEventAction,
@@ -629,7 +632,7 @@ function isMutationAuthorized(req) {
 }
 
 function isSensitiveReadPath(method, pathname) {
-  return method === "GET" && ["/audit-events", "/audit-events/export.csv"].includes(pathname);
+  return method === "GET" && ["/audit-events", "/audit-events/export.csv", "/system/delivery-bundle"].includes(pathname);
 }
 
 function isSensitiveReadAuthorized(req, pathname) {
@@ -1498,6 +1501,21 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && pathname === "/system/production-readiness/check") {
     sendJson(res, 200, ok(runProductionReadinessCheckAction()));
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/system/delivery-readiness") {
+    sendJson(res, 200, ok(getDeliveryReadinessState()));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/system/delivery-readiness/check") {
+    sendJson(res, 200, ok(runDeliveryReadinessCheckAction()));
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/system/delivery-bundle") {
+    sendJson(res, 200, ok(getDeliveryBundleState()));
     return;
   }
 
