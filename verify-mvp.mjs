@@ -1667,8 +1667,19 @@ async function runMockDataChecks() {
   assert.ok(Array.isArray(contentGenerationInitial.rewrites), "Content generation should expose rewrite rows");
   assert.ok(Array.isArray(contentGenerationInitial.runs), "Content generation should expose generation runs");
 
+  const approvedContentGenerationAssetIds = new Set(
+    getInternationalGeoEvidenceAssetsState()
+      .assets.filter((item) => item.review_status === "approved")
+      .map((item) => item.id)
+  );
   const generatedArticles = generateInternationalGeoArticlesAction();
   assert.ok(generatedArticles.articles.length >= 1, "Article generation should create article drafts");
+  assert.ok(
+    generatedArticles.articles.every((item) =>
+      (item.source_asset_ids || []).every((assetId) => approvedContentGenerationAssetIds.has(assetId))
+    ),
+    "Generated articles should only use approved evidence assets"
+  );
   assert.ok(
     generatedArticles.articles.every(
       (item) =>
