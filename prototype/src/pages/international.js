@@ -1098,7 +1098,9 @@ function mergeGeoAssetPreviews(geoAssets = [], evidenceAssets = {}) {
 }
 
 function renderGeoAssetPreviews(assets = []) {
-  const items = (assets || []).slice(0, 6);
+  const evidenceItems = (assets || []).filter((item) => item?.opportunity_id);
+  const legacyItems = (assets || []).filter((item) => !item?.opportunity_id).slice(0, Math.max(0, 6 - evidenceItems.length));
+  const items = [...evidenceItems, ...legacyItems];
   const previews = items.map(
     (item) => {
       const hasOpportunity = Boolean(item.opportunity_id);

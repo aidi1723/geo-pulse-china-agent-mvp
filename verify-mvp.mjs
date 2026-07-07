@@ -1327,8 +1327,10 @@ async function runMockDataChecks() {
     "json_ld_patch",
     "faq_block",
     "comparison_brief",
+    "alternatives_brief",
     "definition_brief",
-    "product_spec_brief"
+    "product_spec_brief",
+    "buyer_guide_brief"
   ].forEach((assetType) => {
     assert.ok(generatedAssetTypes.has(assetType), `Generated evidence assets should include ${assetType}`);
   });
