@@ -488,9 +488,17 @@ function resourceDetail(resource = {}) {
 function assetLabel(value) {
   const labels = {
     llms_txt: "llms.txt",
+    llms_txt_update: "llms.txt 更新",
     organization_json_ld: "Organization JSON-LD",
     product_json_ld: "Product JSON-LD",
     faq_json_ld: "FAQ JSON-LD",
+    json_ld_patch: "JSON-LD 补丁",
+    faq_block: "FAQ 模块",
+    comparison_brief: "对比简报",
+    alternatives_brief: "替代方案简报",
+    definition_brief: "定义简报",
+    product_spec_brief: "产品规格简报",
+    buyer_guide_brief: "买家指南简报",
     article_brief: "Article brief",
     distribution_brief: "Distribution brief"
   };
@@ -1069,13 +1077,24 @@ function renderEvidenceAssetQueuePanel(evidenceAssets = {}) {
 }
 
 function mergeGeoAssetPreviews(geoAssets = [], evidenceAssets = {}) {
-  const seen = new Set();
-  return [...(geoAssets || []), ...(evidenceAssets.assets || [])].filter((item) => {
-    const key = item?.id || `${item?.asset_type || "asset"}:${item?.title || item?.content_type || ""}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  const merged = [];
+  const idIndex = new Map();
+  const append = (item) => {
+    if (!item?.id) {
+      merged.push(item);
+      return;
+    }
+    if (idIndex.has(item.id)) {
+      merged[idIndex.get(item.id)] = item;
+      return;
+    }
+    idIndex.set(item.id, merged.length);
+    merged.push(item);
+  };
+
+  (geoAssets || []).forEach(append);
+  (evidenceAssets.assets || []).forEach(append);
+  return merged;
 }
 
 function renderGeoAssetPreviews(assets = []) {
@@ -1083,6 +1102,7 @@ function renderGeoAssetPreviews(assets = []) {
   const previews = items.map(
     (item) => {
       const hasOpportunity = Boolean(item.opportunity_id);
+      const canReview = hasOpportunity && (!item.review_status || item.review_status === "pending_review");
       return `
         <article class="compact-panel">
           <div class="panel-head">
@@ -1091,7 +1111,7 @@ function renderGeoAssetPreviews(assets = []) {
               <div class="panel-note">${escapeHtml(item.content_type || "-")}</div>
             </div>
             ${
-              hasOpportunity
+              canReview
                 ? `<div class="actions-row">
                     <button class="ghost-btn" data-action="international-evidence-asset-reject" data-asset-id="${escapeHtml(item.id || "")}">驳回</button>
                     <button class="secondary-btn" data-action="international-evidence-asset-approve" data-asset-id="${escapeHtml(item.id || "")}">审核通过</button>
