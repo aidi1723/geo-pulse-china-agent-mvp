@@ -801,6 +801,181 @@ function renderMeasuredVisibilityEvidenceImportPanel(visibility = {}) {
   `;
 }
 
+function renderMeasuredVisibilityEvidenceBatchImportPanel(visibility = {}) {
+  const promptSet = visibility.prompt_sets?.[0] || {};
+  const sampleRow = visibilityPromptSetId(promptSet)
+    ? {
+        prompt_set_id: visibilityPromptSetId(promptSet),
+        engine_id: visibilityPromptSetEngines(promptSet)[0] || "chatgpt_search",
+        source_type: "manual_observation",
+        captured_at: "",
+        brand_mentioned: false,
+        citation_urls: [],
+        recommendation_rank: "",
+        competitors_mentioned: [],
+        confidence: "medium",
+        raw_observation: "",
+        evidence_note: ""
+      }
+    : {
+        prompt_set_id: "",
+        engine_id: "chatgpt_search",
+        source_type: "manual_observation",
+        captured_at: "",
+        brand_mentioned: false,
+        citation_urls: [],
+        recommendation_rank: "",
+        competitors_mentioned: [],
+        confidence: "medium",
+        raw_observation: "",
+        evidence_note: ""
+      };
+
+  return `
+    <section class="surface panel" data-international-panel="visibility-evidence-batch-import">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">批量导入测量证据</h3>
+          <div class="panel-note">粘贴人工核验后的 JSON rows；本地写入 manual_import / measured_import，不调用外部 provider。</div>
+        </div>
+        <div class="actions-row">
+          <button class="secondary-btn" data-action="international-visibility-evidence-batch-import">批量导入</button>
+        </div>
+      </div>
+      <div class="form-grid compact-form">
+        <label>Source label<input data-visibility-evidence-batch-field="source_label" value="Manual measured evidence batch" /></label>
+        <label>Import note<input data-visibility-evidence-batch-field="import_note" value="" /></label>
+        <label class="span-2">Rows JSON<textarea data-visibility-evidence-batch-field="rows_json" rows="8">${escapeHtml(JSON.stringify([sampleRow], null, 2))}</textarea></label>
+      </div>
+    </section>
+  `;
+}
+
+function renderMeasuredEvidenceImportLedger(imports = []) {
+  const rows = imports.length
+    ? imports.map(
+        (item) => `
+          <tr>
+            <td>
+              <div class="cell-title">${escapeHtml(nullableMetric(item.source_label))}</div>
+              <div class="cell-sub">${escapeHtml(nullableMetric(item.id))}</div>
+            </td>
+            <td>${statusMarkup(nullableMetric(item.status))}</td>
+            <td>
+              <div class="cell-title">${escapeHtml(nullableMetric(item.row_count))} rows / ${escapeHtml(nullableMetric(item.snapshots_created))} snapshots</div>
+              <div class="cell-sub">${escapeHtml(nullableMetric(item.import_mode))}</div>
+            </td>
+            <td>
+              <div class="cell-title">Pending ${escapeHtml(nullableMetric(item.pending_review_count))} / Approved ${escapeHtml(nullableMetric(item.approved_count))}</div>
+              <div class="cell-sub">Rejected ${escapeHtml(nullableMetric(item.rejected_count))}</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml(nullableMetric(item.created_at))}</div>
+              <div class="cell-sub">${escapeHtml(nullableMetric(item.import_note))}</div>
+            </td>
+          </tr>
+        `
+      )
+    : [`<tr><td colspan="5"><div class="empty-state">暂无测量证据导入台账。</div></td></tr>`];
+
+  return `
+    <section class="surface panel" data-international-panel="visibility-evidence-ledger">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">测量证据台账</h3>
+          <div class="panel-note">记录 manual_import / measured_import 批次、来源和复核计数。</div>
+        </div>
+      </div>
+      ${tableMarkup(["来源", "状态", "规模", "复核", "时间 / 备注"], rows)}
+    </section>
+  `;
+}
+
+function renderMeasuredEvidenceReviewTable(snapshots = []) {
+  const measured = snapshots.filter((item) => item.data_status === "measured" && item.provider_id === "manual_import");
+  const rows = measured.length
+    ? measured.map(
+        (item) => `
+          <tr>
+            <td>
+              <div class="cell-title">${escapeHtml(nullableMetric(item.prompt_set_id))}</div>
+              <div class="cell-sub">${escapeHtml(nullableMetric(item.engine_label || item.engine_id))}</div>
+            </td>
+            <td>${statusMarkup(nullableMetric(item.review_status || "pending_review"))}</td>
+            <td>
+              <div class="cell-title">${escapeHtml(nullableMetric(item.captured_at))}</div>
+              <div class="cell-sub">${escapeHtml(nullableMetric(item.source_type))}</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml(nullableMetric(item.brand_mentioned ? "品牌提及" : "未提及"))}</div>
+              <div class="cell-sub">Rank ${escapeHtml(nullableMetric(item.recommendation_rank))} / Citations ${escapeHtml(nullableMetric(item.owned_citation_count))}</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml(nullableMetric(item.evidence_note || item.raw_observation))}</div>
+              <div class="cell-sub">${escapeHtml(nullableMetric(item.review_note))}</div>
+            </td>
+            <td>
+              <div class="actions-row">
+                <button class="ghost-btn" data-action="international-visibility-evidence-reject" data-snapshot-id="${escapeHtml(item.id || "")}">驳回</button>
+                <button class="secondary-btn" data-action="international-visibility-evidence-approve" data-snapshot-id="${escapeHtml(item.id || "")}">审核通过</button>
+              </div>
+            </td>
+          </tr>
+        `
+      )
+    : [`<tr><td colspan="6"><div class="empty-state">暂无可复核的测量证据。</div></td></tr>`];
+
+  return `
+    <section class="surface panel" data-international-panel="visibility-evidence-review">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">证据复核</h3>
+          <div class="panel-note">人工导入证据默认 pending_review；趋势仅统计已通过证据。</div>
+        </div>
+      </div>
+      ${tableMarkup(["Prompt / Engine", "复核状态", "时间 / Source", "结果", "证据 / 备注", "动作"], rows)}
+    </section>
+  `;
+}
+
+function renderVisibilityTrendTable(trends = []) {
+  const rows = trends.length
+    ? trends.map(
+        (item) => `
+          <tr>
+            <td>
+              <div class="cell-title">${escapeHtml(nullableMetric(item.prompt_set_id))}</div>
+              <div class="cell-sub">${escapeHtml(nullableMetric(item.engine_label || item.engine_id))}</div>
+            </td>
+            <td>${escapeHtml(nullableMetric(item.approved_snapshot_count))}</td>
+            <td>${escapeHtml(nullableMetric(item.brand_mentioned_count))}</td>
+            <td>${escapeHtml(nullableMetric(item.owned_citation_count))}</td>
+            <td>
+              <div class="cell-title">Best ${escapeHtml(nullableMetric(item.best_recommendation_rank))}</div>
+              <div class="cell-sub">Latest ${escapeHtml(nullableMetric(item.latest_recommendation_rank))}</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml(nullableMetric(item.latest_captured_at))}</div>
+              <div class="cell-sub">${escapeHtml((item.competitors_mentioned || []).join(" / ") || "-")}</div>
+            </td>
+          </tr>
+        `
+      )
+    : [`<tr><td colspan="6"><div class="empty-state">暂无已通过证据趋势。</div></td></tr>`];
+
+  return `
+    <section class="surface panel" data-international-panel="visibility-trends">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">可见度趋势</h3>
+          <div class="panel-note">仅统计已通过证据；approved evidence only，未复核和已驳回证据不进入趋势。</div>
+        </div>
+      </div>
+      ${tableMarkup(["Prompt / Engine", "Approved", "Brand mentions", "Owned citations", "Rank", "Latest / Competitors"], rows)}
+    </section>
+  `;
+}
+
 function renderProviderReadinessTable(readiness = []) {
   const rows = readiness.length
     ? readiness.map(
@@ -1759,6 +1934,10 @@ export function renderInternationalGeo(data = internationalGeo) {
 
     ${renderVisibilityMeasurementPanel(visibility)}
     ${renderMeasuredVisibilityEvidenceImportPanel(visibility)}
+    ${renderMeasuredVisibilityEvidenceBatchImportPanel(visibility)}
+    ${renderMeasuredEvidenceImportLedger(visibility.imports || [])}
+    ${renderMeasuredEvidenceReviewTable(visibility.snapshots || [])}
+    ${renderVisibilityTrendTable(visibility.trends || [])}
 
     <section class="surface panel">
       <div class="panel-head">
