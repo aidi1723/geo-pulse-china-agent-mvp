@@ -627,6 +627,16 @@ export function bindEvents(root, store, rerender, actions) {
       return;
     }
 
+    if (action === "refresh-delivery-readiness") {
+      await actions.refreshDeliveryReadiness();
+      return;
+    }
+
+    if (action === "download-delivery-bundle") {
+      await actions.downloadDeliveryBundle();
+      return;
+    }
+
     if (action === "create-runtime-backup") {
       await actions.createRuntimeBackup();
       return;

@@ -572,6 +572,18 @@ export function runProductionReadinessCheck() {
   return requestJson("/api/v1/system/production-readiness/check", "POST", {});
 }
 
+export function getDeliveryReadiness() {
+  return request("/api/v1/system/delivery-readiness");
+}
+
+export function runDeliveryReadinessCheck() {
+  return requestJson("/api/v1/system/delivery-readiness/check", "POST", {});
+}
+
+export function getDeliveryBundle() {
+  return request("/api/v1/system/delivery-bundle");
+}
+
 export function listRuntimeBackups() {
   return request("/api/v1/system/backups");
 }

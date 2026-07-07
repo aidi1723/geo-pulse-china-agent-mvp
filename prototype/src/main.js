@@ -30,8 +30,10 @@ import {
   generateTopicOutline as generateTopicOutlineApi,
   getArticleDetail,
   getCurrentSession as getCurrentSessionApi,
+  getDeliveryBundle as getDeliveryBundleApi,
   getLaunchPreflight as getLaunchPreflightApi,
   runProductionReadinessCheck as runProductionReadinessCheckApi,
+  runDeliveryReadinessCheck as runDeliveryReadinessCheckApi,
   getRuntimeBackupDownload as getRuntimeBackupDownloadApi,
   importInternationalGeoVisibilityEvidenceBatch as importInternationalGeoVisibilityEvidenceBatchApi,
   importInternationalGeoVisibilityEvidence as importInternationalGeoVisibilityEvidenceApi,
@@ -131,6 +133,21 @@ function showNotice(message) {
     setNotice("");
     rerender();
   }, 2400);
+}
+
+function downloadJsonArtifact(filename, artifact) {
+  const text = JSON.stringify(artifact, null, 2);
+  if (typeof window !== "undefined" && window.URL && typeof document !== "undefined") {
+    const blob = new Blob([text], { type: "application/json" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  }
 }
 
 function getSelectedArticlePayload(articleId) {
@@ -1293,18 +1310,7 @@ const actions = {
     try {
       const artifact = await getRuntimeBackupDownloadApi(backupId);
       const filename = `${artifact.backup?.id || backupId}.json`;
-      const text = JSON.stringify(artifact, null, 2);
-      if (typeof window !== "undefined" && window.URL && typeof document !== "undefined") {
-        const blob = new Blob([text], { type: "application/json" });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
-      }
+      downloadJsonArtifact(filename, artifact);
       showNotice(`已准备下载 ${filename}。`);
     } catch (error) {
       setError(error instanceof Error ? error.message : "下载本地备份失败");
@@ -1580,6 +1586,31 @@ const actions = {
       showNotice(`生产检查已刷新：${result.status || "review"} / ${result.score ?? "-"}。`);
     } catch (error) {
       setError(error instanceof Error ? error.message : "刷新生产检查失败");
+      rerender();
+    }
+  },
+  async refreshDeliveryReadiness() {
+    try {
+      const result = await runDeliveryReadinessCheckApi();
+      await refreshData();
+      store.page = "settings";
+      store.tabs.settings = "brand";
+      showNotice(`交付检查已刷新：${result.status || "review"} / ${result.score ?? "-"}。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "刷新交付检查失败");
+      rerender();
+    }
+  },
+  async downloadDeliveryBundle() {
+    try {
+      const artifact = await getDeliveryBundleApi();
+      const filename =
+        artifact.delivery_readiness?.bundle?.recommended_filename ||
+        `geo-pulse-delivery-bundle-${artifact.version || "0.20.0"}.json`;
+      downloadJsonArtifact(filename, artifact);
+      showNotice(`已准备下载 ${filename}。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "下载交付包失败");
       rerender();
     }
   },
