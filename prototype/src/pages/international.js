@@ -779,8 +779,8 @@ function renderMeasuredVisibilityEvidenceImportPanel(visibility = {}) {
         <label>Source type
           <select data-visibility-evidence-field="source_type">
             <option value="manual_observation" selected>manual_observation</option>
-            <option value="manual_import">manual_import</option>
-            <option value="measured_import">measured_import</option>
+            <option value="manual_export">manual_export</option>
+            <option value="provider_report">provider_report</option>
           </select>
         </label>
         <label>Captured at<input data-visibility-evidence-field="captured_at" value="" placeholder="YYYY-MM-DD HH:mm" /></label>
