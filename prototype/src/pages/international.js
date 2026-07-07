@@ -820,6 +820,27 @@ function confidenceLabel(value) {
   );
 }
 
+function evidenceSourceLabel(value) {
+  return (
+    {
+      score_deduction: "评分扣分",
+      crawl_evidence: "抓取证据",
+      visibility_gap: "可见度缺口",
+      rule_first: "规则优先"
+    }[value] || value || "-"
+  );
+}
+
+function reviewStatusLabel(value) {
+  return (
+    {
+      pending_review: "待审核",
+      approved: "已通过",
+      rejected: "已驳回"
+    }[value] || value || "-"
+  );
+}
+
 function renderScoreBreakdownPanel(audit = {}) {
   const breakdown = audit?.score_breakdown || {};
   const groups = Array.isArray(breakdown.groups) ? breakdown.groups : [];
@@ -977,20 +998,121 @@ function renderSiteAuditHistory(siteAudits = {}) {
   `;
 }
 
+function renderEvidenceOpportunitiesPanel(evidenceAssets = {}) {
+  const opportunities = evidenceAssets.opportunities || [];
+  const rows = opportunities.length
+    ? opportunities.slice(0, 8).map(
+        (item) => `
+          <tr>
+            <td>
+              <div class="cell-title">${escapeHtml(item.title || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.reason || "-")}</div>
+            </td>
+            <td>${statusMarkup(evidenceSourceLabel(item.source_type))}</td>
+            <td>${statusMarkup(priorityLabel(item.priority))}</td>
+            <td>${escapeHtml(assetLabel(item.asset_type))}</td>
+            <td>
+              <div class="cell-title">${escapeHtml(item.evidence_summary || "-")}</div>
+              <div class="cell-sub">${escapeHtml(item.recommended_action || "-")}</div>
+            </td>
+            <td>${statusMarkup(item.status || "open")}</td>
+          </tr>
+        `
+      )
+    : [`<tr><td colspan="6"><div class="empty-state">暂无证据驱动内容机会。运行站点审计、可见度测量或点击生成证据资产。</div></td></tr>`];
+
+  return `
+    <section class="surface panel" data-international-panel="evidence-opportunities">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">证据驱动内容机会</h3>
+          <div class="panel-note">从评分扣分、抓取证据、AI 可见度缺口和规则输入生成的下一步资产建议。</div>
+        </div>
+        <button class="secondary-btn" data-action="international-evidence-assets-generate">生成证据资产</button>
+      </div>
+      ${tableMarkup(["机会", "来源", "优先级", "资产类型", "证据 / 动作", "状态"], rows)}
+    </section>
+  `;
+}
+
+function renderEvidenceAssetQueuePanel(evidenceAssets = {}) {
+  const queue = evidenceAssets.queue || [];
+  const rows = queue.length
+    ? queue.slice(0, 8).map(
+        (item) => `
+          <tr>
+            <td>
+              <div class="cell-title">${escapeHtml(item.title || item.id)}</div>
+              <div class="cell-sub">${escapeHtml(item.id)}</div>
+            </td>
+            <td>${escapeHtml(assetLabel(item.asset_type))}</td>
+            <td>${statusMarkup(evidenceSourceLabel(item.source_type))}</td>
+            <td>${statusMarkup(item.status || "-")}</td>
+            <td>${statusMarkup(reviewStatusLabel(item.review_status))}</td>
+            <td>${escapeHtml(item.generated_at || item.queued_at || "-")}</td>
+          </tr>
+        `
+      )
+    : [`<tr><td colspan="6"><div class="empty-state">暂无资产生成队列。</div></td></tr>`];
+
+  return `
+    <section class="surface panel" data-international-panel="evidence-asset-queue">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">资产生成队列</h3>
+          <div class="panel-note">本地生成、待人工审核的 GEO 资产队列；不自动发布到外部平台。</div>
+        </div>
+      </div>
+      ${tableMarkup(["队列", "资产类型", "来源", "状态", "审核", "生成时间"], rows)}
+    </section>
+  `;
+}
+
+function mergeGeoAssetPreviews(geoAssets = [], evidenceAssets = {}) {
+  const seen = new Set();
+  return [...(geoAssets || []), ...(evidenceAssets.assets || [])].filter((item) => {
+    const key = item?.id || `${item?.asset_type || "asset"}:${item?.title || item?.content_type || ""}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function renderGeoAssetPreviews(assets = []) {
   const items = (assets || []).slice(0, 6);
   const previews = items.map(
-    (item) => `
-      <article class="compact-panel">
-        <div class="panel-head">
-          <div>
-            <h4 class="panel-title">${escapeHtml(assetLabel(item.asset_type))}</h4>
-            <div class="panel-note">${escapeHtml(item.content_type || "-")}</div>
+    (item) => {
+      const hasOpportunity = Boolean(item.opportunity_id);
+      return `
+        <article class="compact-panel">
+          <div class="panel-head">
+            <div>
+              <h4 class="panel-title">${escapeHtml(assetLabel(item.asset_type))}</h4>
+              <div class="panel-note">${escapeHtml(item.content_type || "-")}</div>
+            </div>
+            ${
+              hasOpportunity
+                ? `<div class="actions-row">
+                    <button class="ghost-btn" data-action="international-evidence-asset-reject" data-asset-id="${escapeHtml(item.id || "")}">驳回</button>
+                    <button class="secondary-btn" data-action="international-evidence-asset-approve" data-asset-id="${escapeHtml(item.id || "")}">审核通过</button>
+                  </div>`
+                : ""
+            }
           </div>
-        </div>
-        <pre class="code-preview">${escapeHtml(item.content || "")}</pre>
-      </article>
-    `
+          ${
+            hasOpportunity
+              ? `<div class="info-grid">
+                  <div class="info-row"><span>证据来源</span><strong>${escapeHtml(evidenceSourceLabel(item.evidence_source_type))}</strong></div>
+                  <div class="info-row"><span>置信度</span><strong>${escapeHtml(confidenceLabel(item.confidence))}</strong></div>
+                  <div class="info-row"><span>审核状态</span><strong>${escapeHtml(reviewStatusLabel(item.review_status))}</strong></div>
+                </div>
+                <div class="panel-note">${escapeHtml(item.evidence_summary || "-")}</div>`
+              : ""
+          }
+          <pre class="code-preview">${escapeHtml(item.content || "")}</pre>
+        </article>
+      `;
+    }
   );
 
   return `
@@ -999,6 +1121,7 @@ function renderGeoAssetPreviews(assets = []) {
         <div>
           <h3 class="panel-title">GEO 资产</h3>
           <div class="panel-note">可复制到站点、CMS 或分发任务中的 llms.txt、JSON-LD、FAQ 和内容简报。</div>
+          <div class="panel-note">证据资产显示证据来源、置信度和审核状态，并支持审核通过 / 驳回。</div>
         </div>
       </div>
       <div class="asset-preview-grid">
@@ -1037,7 +1160,9 @@ export function renderInternationalGeo(data = internationalGeo) {
     ${renderSiteAuditChecks(latestAudit)}
     ${renderCrawlEvidencePanel(latestAudit)}
     ${renderSiteAuditHistory(data.site_audits || {})}
-    ${renderGeoAssetPreviews(data.geo_assets || [])}
+    ${renderEvidenceOpportunitiesPanel(data.evidence_assets || {})}
+    ${renderEvidenceAssetQueuePanel(data.evidence_assets || {})}
+    ${renderGeoAssetPreviews(mergeGeoAssetPreviews(data.geo_assets || [], data.evidence_assets || {}))}
 
     <section class="surface panel">
       <div class="panel-head">
