@@ -1457,6 +1457,20 @@ async function runMockDataChecks() {
   );
 
   const publishingGenerated = generateInternationalGeoPublishingPackagesAction();
+  const approvedEvidenceAssetIds = new Set(
+    getInternationalGeoEvidenceAssetsState()
+      .assets.filter((item) => item.review_status === "approved")
+      .map((item) => item.id)
+  );
+  assert.ok(
+    publishingGenerated.packages.every((item) => approvedEvidenceAssetIds.has(item.source_asset_id)),
+    "Generated publishing packages should only use approved evidence assets"
+  );
+  assert.equal(
+    publishingGenerated.packages.some((item) => item.source_asset_id === rejectedAsset.id),
+    false,
+    "Generated publishing packages should not use rejected evidence assets"
+  );
   const generatedPackageTypes = new Set(publishingGenerated.packages.map((item) => item.package_type));
   [
     "website_article_brief",
