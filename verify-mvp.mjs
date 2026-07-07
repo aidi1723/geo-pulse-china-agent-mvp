@@ -22,6 +22,8 @@ import {
   createTopicIdeaAction,
   createTopicIdeasFromKeywords,
   evaluateConnectorPermission,
+  generateInternationalGeoArticlesAction,
+  generateInternationalGeoPlatformRewritesAction,
   generateInternationalGeoPublishingPackagesAction,
   generateInternationalGeoEvidenceAssetsAction,
   generateInternationalGeoArtifactsAction,
@@ -36,6 +38,7 @@ import {
   getDashboardSummary,
   getExportJobDownload,
   getCampaignAnalytics,
+  getInternationalGeoContentGenerationState,
   getInternationalGeoState,
   getInternationalGeoEvidenceAssetsState,
   getInternationalGeoPublishingState,
@@ -76,7 +79,9 @@ import {
   reconnectChannelAction,
   resetRuntimeState,
   reviewArticleAction,
+  reviewInternationalGeoGeneratedArticleAction,
   reviewInternationalGeoEvidenceAssetAction,
+  reviewInternationalGeoPlatformRewriteAction,
   reviewInternationalGeoPublishingPackageAction,
   approvePublishTaskAction,
   crawlInternationalGeoSiteAuditAction,
@@ -1646,6 +1651,93 @@ async function runMockDataChecks() {
     updateInternationalGeoPublishingTrackingAction("missing_tracking_record", { indexing_status: "indexed" }),
     null,
     "Unknown tracking ids should return null"
+  );
+
+  const contentGenerationInitial = getInternationalGeoContentGenerationState();
+  assert.ok(contentGenerationInitial.summary, "Content generation should expose a summary");
+  assert.ok(
+    contentGenerationInitial.providers.some((item) => item.id === "local_rules" && item.status === "active"),
+    "Content generation should expose local_rules as the active provider"
+  );
+  assert.ok(
+    contentGenerationInitial.providers.every((item) => item.id === "local_rules" || item.status === "reserved"),
+    "External generation providers should be reserved, not active"
+  );
+  assert.ok(Array.isArray(contentGenerationInitial.articles), "Content generation should expose article rows");
+  assert.ok(Array.isArray(contentGenerationInitial.rewrites), "Content generation should expose rewrite rows");
+  assert.ok(Array.isArray(contentGenerationInitial.runs), "Content generation should expose generation runs");
+
+  const generatedArticles = generateInternationalGeoArticlesAction();
+  assert.ok(generatedArticles.articles.length >= 1, "Article generation should create article drafts");
+  assert.ok(
+    generatedArticles.articles.every(
+      (item) =>
+        item.generator_provider === "local_rules" &&
+        item.review_status === "pending_review" &&
+        item.article_status === "draft" &&
+        item.source_asset_ids?.length &&
+        item.source_asset_types?.length &&
+        item.evidence_summary &&
+        item.target_prompt &&
+        item.content?.includes("Direct Answer Upfront") &&
+        item.content?.includes("Human review checklist")
+    ),
+    "Generated articles should preserve local provider, evidence provenance, content, and review state"
+  );
+  assert.ok(
+    generatedArticles.runs.some((item) => item.run_type === "article_generation" && item.status === "completed"),
+    "Article generation should record a completed run"
+  );
+
+  const articleToApprove = generatedArticles.articles[0];
+  const approvedArticle = reviewInternationalGeoGeneratedArticleAction(articleToApprove.id, {
+    action: "approve",
+    human_notes: "Claims checked for rewrite generation."
+  });
+  assert.equal(approvedArticle.review_status, "approved", "Generated article review should approve articles");
+  assert.equal(approvedArticle.article_status, "approved_article", "Approved generated article should update status");
+
+  assert.throws(
+    () => reviewInternationalGeoGeneratedArticleAction(articleToApprove.id, { action: "publish" }),
+    /VALIDATION_ERROR/,
+    "Invalid generated article review actions should fail"
+  );
+
+  const generatedRewrites = generateInternationalGeoPlatformRewritesAction();
+  assert.ok(generatedRewrites.rewrites.length >= 3, "Rewrite generation should create platform rewrites");
+  assert.ok(
+    generatedRewrites.rewrites.every(
+      (item) =>
+        item.generator_provider === "local_rules" &&
+        item.review_status === "pending_review" &&
+        item.rewrite_status === "draft" &&
+        item.source_article_id === approvedArticle.id &&
+        item.platform_key &&
+        item.platform_name &&
+        item.rewrite_type &&
+        item.ai_visibility_goal &&
+        item.moderation_notes?.length &&
+        item.content?.includes("Canonical URL")
+    ),
+    "Generated rewrites should preserve source article, platform mapping, moderation notes, and content"
+  );
+  assert.ok(
+    generatedRewrites.runs.some((item) => item.run_type === "platform_rewrite_generation" && item.status === "completed"),
+    "Rewrite generation should record a completed run"
+  );
+
+  const rewriteToApprove = generatedRewrites.rewrites[0];
+  const approvedRewrite = reviewInternationalGeoPlatformRewriteAction(rewriteToApprove.id, {
+    action: "approve",
+    human_notes: "Platform copy checked."
+  });
+  assert.equal(approvedRewrite.review_status, "approved", "Platform rewrite review should approve rewrites");
+  assert.equal(approvedRewrite.rewrite_status, "approved_rewrite", "Approved platform rewrite should update status");
+
+  assert.throws(
+    () => reviewInternationalGeoPlatformRewriteAction(rewriteToApprove.id, { action: "publish" }),
+    /VALIDATION_ERROR/,
+    "Invalid platform rewrite review actions should fail"
   );
 
   assert.throws(
