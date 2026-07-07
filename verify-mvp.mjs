@@ -302,6 +302,61 @@ function runSingleUserSourceChecks() {
     /action === "international-publishing-tracking-demo-update"/,
     "International GEO publishing tracking update should be wired in the event dispatcher"
   );
+  assert.match(
+    apiSource,
+    /export function getInternationalGeoContentGeneration\(\)/,
+    "International GEO content generation should have a read client API method"
+  );
+  assert.match(
+    apiSource,
+    /export function generateInternationalGeoArticles\(\)/,
+    "International GEO article generation should have a client API method"
+  );
+  assert.match(
+    apiSource,
+    /export function generateInternationalGeoPlatformRewrites\(\)/,
+    "International GEO platform rewrite generation should have a client API method"
+  );
+  assert.match(
+    apiSource,
+    /export function reviewInternationalGeoGeneratedArticle\(articleId, payload = \{\}\)/,
+    "International GEO generated article review should have a client API method"
+  );
+  assert.match(
+    apiSource,
+    /export function reviewInternationalGeoPlatformRewrite\(rewriteId, payload = \{\}\)/,
+    "International GEO platform rewrite review should have a client API method"
+  );
+  assert.match(
+    mainSource,
+    /generateInternationalGeoArticles as generateInternationalGeoArticlesApi/,
+    "International GEO article generation should be imported into the browser action layer"
+  );
+  assert.match(
+    mainSource,
+    /generateInternationalGeoPlatformRewrites as generateInternationalGeoPlatformRewritesApi/,
+    "International GEO platform rewrite generation should be imported into the browser action layer"
+  );
+  assert.match(
+    eventsSource,
+    /action === "international-content-articles-generate"/,
+    "International GEO article generation should be wired in the event dispatcher"
+  );
+  assert.match(
+    eventsSource,
+    /action === "international-content-rewrites-generate"/,
+    "International GEO platform rewrite generation should be wired in the event dispatcher"
+  );
+  assert.match(
+    eventsSource,
+    /action === "international-content-article-approve"/,
+    "International GEO generated article approval should be wired in the event dispatcher"
+  );
+  assert.match(
+    eventsSource,
+    /action === "international-content-rewrite-approve"/,
+    "International GEO platform rewrite approval should be wired in the event dispatcher"
+  );
 }
 
 async function runMockDataChecks() {
@@ -3758,6 +3813,12 @@ function runInternationalGeoUiChecks() {
   assert.match(siteAuditHtml, /证据来源/, "International GEO assets should render provenance metadata");
   assert.match(siteAuditHtml, /审核通过/, "International GEO evidence assets should expose approve action");
   assert.match(siteAuditHtml, /驳回/, "International GEO evidence assets should expose reject action");
+  assert.match(siteAuditHtml, /文章生成队列/, "International GEO should render generated article queue");
+  assert.match(siteAuditHtml, /多平台改写稿/, "International GEO should render platform rewrites");
+  assert.match(siteAuditHtml, /生成记录/, "International GEO should render content generation runs");
+  assert.match(siteAuditHtml, /data-action="international-content-articles-generate"/);
+  assert.match(siteAuditHtml, /data-action="international-content-rewrites-generate"/);
+  assert.match(siteAuditHtml, /local_rules/, "Content generation UI should expose local_rules provider boundary");
   assert.match(siteAuditHtml, /高权重发布平台清单/, "International GEO page should render the publishing platform list");
   assert.match(siteAuditHtml, /推荐概率说明/, "Publishing platform list should explain AI recommendation probability");
   assert.match(siteAuditHtml, /只能增加概率/, "Publishing platform list should avoid guaranteed AI recommendation claims");
