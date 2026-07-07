@@ -686,6 +686,121 @@ function renderVisibilityMeasurementPanel(visibility = {}) {
   `;
 }
 
+function internationalEngineLabel(engineId) {
+  const labels = {
+    chatgpt_search: "ChatGPT Search",
+    perplexity: "Perplexity",
+    google_ai_overviews: "Google AI Overviews",
+    gemini: "Gemini",
+    claude: "Claude",
+    copilot_bing: "Copilot / Bing"
+  };
+  return labels[engineId] || engineId || "-";
+}
+
+function visibilityPromptSetId(promptSet) {
+  return promptSet?.id || promptSet?.prompt_set_id || promptSet?.key || "";
+}
+
+function visibilityPromptSetLabel(promptSet) {
+  return promptSet?.label || promptSet?.name || promptSet?.prompt || visibilityPromptSetId(promptSet);
+}
+
+function visibilityPromptSetEngines(promptSet) {
+  const engines = Array.isArray(promptSet?.engine_ids)
+    ? promptSet.engine_ids
+    : Array.isArray(promptSet?.engines)
+      ? promptSet.engines
+      : [];
+
+  return engines
+    .map((engine) => (typeof engine === "string" ? engine : engine?.id || engine?.engine_id || engine?.engine || ""))
+    .filter(Boolean);
+}
+
+function renderVisibilityPromptOptions(promptSets = []) {
+  const options = promptSets.length ? promptSets : [{ id: "" }];
+  const selectedId = visibilityPromptSetId(options[0]);
+
+  return options
+    .map((promptSet) => {
+      const value = visibilityPromptSetId(promptSet);
+      const label = visibilityPromptSetLabel(promptSet) || "默认 Prompt Set";
+      return `<option value="${escapeHtml(value)}" ${value === selectedId ? "selected" : ""}>${escapeHtml(label)}</option>`;
+    })
+    .join("");
+}
+
+function renderVisibilityEngineOptions(promptSets = []) {
+  const firstPromptSet = promptSets[0] || {};
+  const engines = visibilityPromptSetEngines(firstPromptSet);
+  const options = engines.length ? engines : ["chatgpt_search"];
+  const selectedEngine = options[0] || "chatgpt_search";
+
+  return options
+    .map(
+      (engineId) =>
+        `<option value="${escapeHtml(engineId)}" ${engineId === selectedEngine ? "selected" : ""}>${escapeHtml(internationalEngineLabel(engineId))}</option>`
+    )
+    .join("");
+}
+
+function renderMeasuredVisibilityEvidenceImportPanel(visibility = {}) {
+  return `
+    <section class="surface panel" data-international-panel="visibility-evidence-import">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">导入测量证据</h3>
+          <div class="panel-note">手动录入来自 ChatGPT Search、Gemini、Claude、Perplexity、Google AIO、Copilot/Bing 的可见度证据；这里只记录人工测量结果，不调用外部 provider。</div>
+          <div class="panel-note">支持 manual_import / measured_import 证据标记，默认 source_type 为 manual_observation。</div>
+        </div>
+        <div class="actions-row">
+          <button class="secondary-btn" data-action="international-visibility-evidence-import">导入证据</button>
+        </div>
+      </div>
+      <div class="form-grid compact-form">
+        <label>Prompt set
+          <select data-visibility-evidence-field="prompt_set_id">
+            ${renderVisibilityPromptOptions(visibility.prompt_sets || [])}
+          </select>
+        </label>
+        <label>Engine
+          <select data-visibility-evidence-field="engine_id">
+            ${renderVisibilityEngineOptions(visibility.prompt_sets || [])}
+          </select>
+        </label>
+        <label>Brand mentioned
+          <select data-visibility-evidence-field="brand_mentioned">
+            <option value="false" selected>否</option>
+            <option value="true">是</option>
+          </select>
+        </label>
+        <label>Recommendation rank<input data-visibility-evidence-field="recommendation_rank" value="" inputmode="numeric" /></label>
+        <label>Source type
+          <select data-visibility-evidence-field="source_type">
+            <option value="manual_observation" selected>manual_observation</option>
+            <option value="manual_import">manual_import</option>
+            <option value="measured_import">measured_import</option>
+          </select>
+        </label>
+        <label>Captured at<input data-visibility-evidence-field="captured_at" value="" placeholder="YYYY-MM-DD HH:mm" /></label>
+        <label>Confidence
+          <select data-visibility-evidence-field="confidence">
+            <option value="medium" selected>medium</option>
+            <option value="high">high</option>
+            <option value="low">low</option>
+          </select>
+        </label>
+        <label>Source URL<input data-visibility-evidence-field="source_url" value="" /></label>
+        <label class="span-2">Citation URLs<textarea data-visibility-evidence-field="citation_urls" rows="3"></textarea></label>
+        <label class="span-2">Competitors mentioned<textarea data-visibility-evidence-field="competitors_mentioned" rows="3"></textarea></label>
+        <label class="span-2">Raw observation<textarea data-visibility-evidence-field="raw_observation" rows="4"></textarea></label>
+        <label class="span-2">Evidence note<textarea data-visibility-evidence-field="evidence_note" rows="3"></textarea></label>
+      </div>
+    </section>
+  `;
+}
+
 function renderProviderReadinessTable(readiness = []) {
   const rows = readiness.length
     ? readiness.map(
@@ -713,6 +828,23 @@ function renderProviderReadinessTable(readiness = []) {
   return tableMarkup(["引擎", "Data status", "Provider / Connector", "Permission", "Last measured / Diagnostic"], rows);
 }
 
+function renderPromptSnapshotProvenance(item = {}) {
+  const source = item.provider_id || item.source_type || item.data_source_type || "-";
+  const detail =
+    item.source_url ||
+    item.evidence_note ||
+    item.raw_observation ||
+    item.diagnostics?.[0] ||
+    item.diagnostic ||
+    "-";
+
+  return `
+    <div class="cell-title">${escapeHtml(nullableMetric(item.confidence))}</div>
+    <div class="cell-sub">${escapeHtml(nullableMetric(source))}</div>
+    <div class="cell-sub">${escapeHtml(nullableMetric(detail))}</div>
+  `;
+}
+
 function renderPromptSnapshotTable(snapshots = []) {
   const rows = snapshots.length
     ? snapshots.map(
@@ -731,15 +863,14 @@ function renderPromptSnapshotTable(snapshots = []) {
             <td>${escapeHtml(nullableMetric(item.owned_citation_count ?? item.citation_count))}</td>
             <td>${escapeHtml(nullableMetric(item.recommendation_rank))}</td>
             <td>
-              <div class="cell-title">${escapeHtml(nullableMetric(item.confidence))}</div>
-              <div class="cell-sub">${escapeHtml(nullableMetric(item.diagnostics?.[0] || item.diagnostic))}</div>
+              ${renderPromptSnapshotProvenance(item)}
             </td>
           </tr>
         `
       )
     : [`<tr><td colspan="7"><div class="empty-state">暂无 Prompt 测量快照。</div></td></tr>`];
 
-  return tableMarkup(["Prompt / Captured", "Engine", "Data status", "Brand mention", "Citations", "Rank", "Confidence / Diagnostic"], rows);
+  return tableMarkup(["Prompt / Captured", "Engine", "Data status", "Brand mention", "Citations", "Rank", "Provenance"], rows);
 }
 
 function renderVisibilityRunTable(runs = []) {
@@ -1627,6 +1758,7 @@ export function renderInternationalGeo(data = internationalGeo) {
     </section>
 
     ${renderVisibilityMeasurementPanel(visibility)}
+    ${renderMeasuredVisibilityEvidenceImportPanel(visibility)}
 
     <section class="surface panel">
       <div class="panel-head">
