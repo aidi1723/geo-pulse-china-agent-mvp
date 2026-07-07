@@ -30,6 +30,7 @@ import {
   generateInternationalGeoSiteAuditAssetsAction,
   generateTopicOutlineAction,
   getArticle,
+  importInternationalGeoVisibilityEvidenceAction,
   getAutomationConnector,
   getAutomationRun,
   getAutomationProviderConfig,
@@ -1448,6 +1449,125 @@ async function runMockDataChecks() {
   assert.ok(
     visibilityRun.snapshots.every((item) => item.brand_mentioned === null && item.recommendation_rank === null),
     "Unavailable snapshots should not invent brand mentions or ranks"
+  );
+
+  const measuredPromptSet = createInternationalGeoVisibilityPromptSetAction({
+    prompt: "best AI search optimization platform for exporters",
+    market: "US",
+    language: "en-US",
+    buyer_intent: "decision",
+    product_name: "AgentCore GEO",
+    target_url: "https://example.com/agentcore-geo",
+    target_brand: "AgentCore GEO",
+    competitors: ["Profound", "AthenaHQ"],
+    engines: ["chatgpt_search", "gemini"]
+  });
+
+  const measuredImport = importInternationalGeoVisibilityEvidenceAction({
+    prompt_set_id: measuredPromptSet.id,
+    engine_id: "chatgpt_search",
+    source_type: "manual_observation",
+    source_label: "Manual ChatGPT Search check",
+    source_url: "https://chatgpt.com/",
+    captured_at: "2026-07-07T10:30:00.000Z",
+    brand_mentioned: true,
+    citation_urls: "https://example.com/agentcore-geo\nhttps://example.com/compare",
+    recommendation_rank: "3",
+    competitors_mentioned: "Profound\nAthenaHQ",
+    confidence: "medium",
+    raw_observation: "The answer recommended AgentCore GEO at #3 and cited two owned URLs.",
+    evidence_note: "Manual reviewer copied the result from ChatGPT Search."
+  });
+  assert.equal(measuredImport.snapshot.data_status, "measured", "Measured import should create measured snapshot");
+  assert.equal(measuredImport.snapshot.provider_id, "manual_import", "Measured import should use manual_import provider");
+  assert.equal(measuredImport.snapshot.source_type, "manual_observation", "Measured import should preserve source type");
+  assert.equal(measuredImport.snapshot.owned_citation_count, 2, "Measured import should count citation URLs");
+  assert.deepEqual(
+    measuredImport.snapshot.citation_urls,
+    ["https://example.com/agentcore-geo", "https://example.com/compare"],
+    "Measured import should normalize citation URLs"
+  );
+  assert.equal(measuredImport.snapshot.recommendation_rank, 3, "Measured import should normalize rank");
+  assert.equal(measuredImport.run.data_source_type, "measured_import", "Measured import should create measured_import run");
+  assert.equal(measuredImport.run.snapshots_created, 1, "Measured import run should create one snapshot");
+  assert.ok(
+    measuredImport.summary.measured_snapshots >= 1,
+    "Measured import should increase measured snapshot summary count"
+  );
+
+  const visibilityAfterMeasuredImport = getInternationalGeoVisibilityState();
+  const readinessAfterMeasuredImport = visibilityAfterMeasuredImport.provider_readiness.find(
+    (item) => item.engine_id === "chatgpt_search"
+  );
+  assert.equal(
+    readinessAfterMeasuredImport?.data_status,
+    "measured",
+    "Measured import should update provider readiness to measured"
+  );
+  assert.equal(
+    readinessAfterMeasuredImport?.provider_id,
+    "manual_import",
+    "Measured import should update provider readiness provider id"
+  );
+  assert.ok(
+    visibilityAfterMeasuredImport.snapshots.some(
+      (item) => item.id === measuredImport.snapshot.id && item.import_mode === "manual_single"
+    ),
+    "Measured import should persist manual_single snapshot"
+  );
+
+  assert.throws(
+    () =>
+      importInternationalGeoVisibilityEvidenceAction({
+        prompt_set_id: "missing-prompt-set",
+        engine_id: "chatgpt_search",
+        source_type: "manual_observation",
+        captured_at: "2026-07-07T10:30:00.000Z",
+        brand_mentioned: false,
+        evidence_note: "No mention."
+      }),
+    /VALIDATION_ERROR/,
+    "Measured import should reject unknown prompt set"
+  );
+
+  assert.throws(
+    () =>
+      importInternationalGeoVisibilityEvidenceAction({
+        prompt_set_id: measuredPromptSet.id,
+        engine_id: "claude",
+        source_type: "manual_observation",
+        captured_at: "2026-07-07T10:30:00.000Z",
+        brand_mentioned: false,
+        evidence_note: "No mention."
+      }),
+    /VALIDATION_ERROR/,
+    "Measured import should reject engines not included in the prompt set"
+  );
+
+  assert.throws(
+    () =>
+      importInternationalGeoVisibilityEvidenceAction({
+        prompt_set_id: measuredPromptSet.id,
+        engine_id: "chatgpt_search",
+        source_type: "manual_observation",
+        brand_mentioned: false,
+        evidence_note: "Missing captured_at."
+      }),
+    /VALIDATION_ERROR/,
+    "Measured import should reject missing captured_at"
+  );
+
+  assert.throws(
+    () =>
+      importInternationalGeoVisibilityEvidenceAction({
+        prompt_set_id: measuredPromptSet.id,
+        engine_id: "chatgpt_search",
+        source_type: "manual_observation",
+        captured_at: "2026-07-07T10:30:00.000Z",
+        brand_mentioned: true
+      }),
+    /VALIDATION_ERROR/,
+    "Measured import should reject brand mentions without evidence detail"
   );
 
   const evidenceAssetsInitial = getInternationalGeoEvidenceAssetsState();
