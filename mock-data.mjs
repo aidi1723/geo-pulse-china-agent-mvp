@@ -6357,12 +6357,17 @@ function normalizeCapturedAt(value) {
 }
 
 function normalizeOwnedCitationCount(value, citationUrls) {
-  if (value === null || value === undefined || String(value).trim() === "") return citationUrls.length;
-  const count = Number(value);
-  if (!Number.isInteger(count) || count < 0 || !Number.isFinite(count)) {
+  if (value === null || value === undefined) return citationUrls.length;
+  if (typeof value === "string") {
+    const text = value.trim();
+    if (!text) return citationUrls.length;
+    if (/^\d+$/.test(text)) return Number(text);
     throw visibilityValidationError("owned_citation_count", "owned_citation_count must be a non-negative integer.");
   }
-  return count;
+  if (typeof value === "number" && Number.isInteger(value) && value >= 0 && Number.isFinite(value)) {
+    return value;
+  }
+  throw visibilityValidationError("owned_citation_count", "owned_citation_count must be a non-negative integer.");
 }
 
 function normalizeVisibilityImportPayload(payload = {}) {
