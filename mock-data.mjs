@@ -24,6 +24,8 @@ const persistenceEnabled = process.env.GEO_ENABLE_PERSISTENCE === "1";
 const persistenceFile = process.env.GEO_DATA_FILE
   ? path.resolve(process.env.GEO_DATA_FILE)
   : path.join(__dirname, "data", "geo-pulse-state.json");
+const packageName = "geo-pulse-china-agent-mvp";
+const packageVersion = "0.20.0";
 
 const keywords = [
   {
@@ -2633,7 +2635,7 @@ export function getPersistenceStatus() {
   };
 }
 
-export function getRuntimeStatus() {
+function getRuntimeStatusBase() {
   const providerSummary = getAutomationProviderSummary();
   const providerInvocationSummary = getProviderInvocationSummary();
   return {
@@ -2645,7 +2647,6 @@ export function getRuntimeStatus() {
     connectors: getConnectorSummary(),
     prompts: getPromptSummary(),
     backups: getRuntimeBackupSummary(),
-    production_readiness: getProductionReadinessState(),
     counts: {
       keywords: keywords.length,
       topics: topicIdeas.length,
@@ -2661,6 +2662,15 @@ export function getRuntimeStatus() {
       provider_invocations: providerInvocations.length
     },
     updated_at: nowIso()
+  };
+}
+
+export function getRuntimeStatus() {
+  const runtime = getRuntimeStatusBase();
+  return {
+    ...runtime,
+    production_readiness: getProductionReadinessState(),
+    delivery_readiness: getDeliveryReadinessState(runtime)
   };
 }
 
@@ -2884,6 +2894,236 @@ export function runProductionReadinessCheckAction() {
   });
   persistState();
   return state;
+}
+
+function buildDeliveryBoundaries() {
+  return [
+    {
+      id: "no_live_provider_calls",
+      label: "No live AI/search provider calls",
+      status: "enforced",
+      description: "Visibility provider diagnostics and readiness checks stay in local dry-run mode."
+    },
+    {
+      id: "no_external_publish",
+      label: "No external publish",
+      status: "enforced",
+      description: "Publishing connector diagnostics do not call external platform APIs."
+    },
+    {
+      id: "no_raw_secret_export",
+      label: "No raw secret export",
+      status: "enforced",
+      description: "Delivery summaries expose credential status and masked inventory only."
+    }
+  ];
+}
+
+function buildDeliveryHandoffSteps() {
+  return [
+    {
+      order: 1,
+      id: "run_readiness",
+      label: "Run delivery readiness check",
+      owner: "operator",
+      expected_artifact: "Audit event system.delivery_readiness.check"
+    },
+    {
+      order: 2,
+      id: "create_backup",
+      label: "Create and validate local runtime backup",
+      owner: "operator",
+      expected_artifact: "Runtime backup summary and validation result"
+    },
+    {
+      order: 3,
+      id: "review_boundaries",
+      label: "Review integration and publishing boundaries",
+      owner: "operator",
+      expected_artifact: "Confirmed local-first operating boundary"
+    },
+    {
+      order: 4,
+      id: "export_bundle",
+      label: "Export sanitized delivery bundle",
+      owner: "operator",
+      expected_artifact: "geo-pulse-delivery-bundle v0.20.0"
+    }
+  ];
+}
+
+function deliveryReadinessCheck(id, category, label, status, message, recommendation = "") {
+  return productionReadinessCheck(id, category, label, status, message, recommendation);
+}
+
+export function getDeliveryReadinessState(runtimeOverride = null) {
+  ensureInternationalGeoStateShape();
+  const runtime = runtimeOverride ? deepClone(runtimeOverride) : getRuntimeStatusBase();
+  const productionReadiness = getProductionReadinessState();
+  const backupSummary = getRuntimeBackupSummary();
+  const visibilityProviders = getInternationalGeoVisibilityProviderState();
+  const publishingConnectors = getInternationalGeoPublishingConnectorState();
+  const internationalGeo = getInternationalGeoState();
+  const boundaries = buildDeliveryBoundaries();
+  const handoffSteps = buildDeliveryHandoffSteps();
+  const rawSecretPattern = /provider-secret|publishing-secret|connector-secret-key|geo-owner-change-me/;
+  const maskedInventory = productionReadiness.masked_secret_inventory || [];
+  const rawSecretsExposed = maskedInventory.some((item) => item.raw_secret_exposed === true);
+  const checks = [
+    deliveryReadinessCheck(
+      "persistence",
+      "runtime",
+      "Local persistence",
+      runtime.persistence?.enabled ? "passed" : "warning",
+      runtime.persistence?.enabled ? "Local JSON persistence is enabled." : "Local JSON persistence is disabled.",
+      "Enable local persistence for controlled handoff environments."
+    ),
+    deliveryReadinessCheck(
+      "backup_recovery",
+      "runtime",
+      "Backup recovery",
+      backupSummary.count > 0 ? "passed" : "warning",
+      backupSummary.count > 0 ? `${backupSummary.count} local backup(s) are available.` : "No local runtime backup exists.",
+      "Create and validate a backup before final delivery."
+    ),
+    deliveryReadinessCheck(
+      "production_readiness",
+      "readiness",
+      "Production readiness",
+      productionReadiness.status === "blocked" ? "failed" : productionReadiness.status === "ready" ? "passed" : "warning",
+      `Production readiness is ${productionReadiness.status} with score ${productionReadiness.score}.`,
+      "Resolve blocked production readiness checks before launch."
+    ),
+    deliveryReadinessCheck(
+      "visibility_providers",
+      "integrations",
+      "Visibility provider foundation",
+      visibilityProviders.summary.provider_count >= 6 ? "passed" : "failed",
+      `${visibilityProviders.summary.provider_count} visibility provider foundation row(s) are registered.`,
+      "Keep provider execution dry-run only until approved live adapters exist."
+    ),
+    deliveryReadinessCheck(
+      "publishing_connectors",
+      "integrations",
+      "Publishing connector foundation",
+      publishingConnectors.summary.connector_count >= 8 ? "passed" : "failed",
+      `${publishingConnectors.summary.connector_count} publishing connector foundation row(s) are registered.`,
+      "Keep publishing execution dry-run only until approved platform adapters exist."
+    ),
+    deliveryReadinessCheck(
+      "international_geo",
+      "geo",
+      "International GEO workspace",
+      internationalGeo?.input && internationalGeo?.summary ? "passed" : "warning",
+      "International GEO input, summary, visibility, publishing, and evidence sections are available.",
+      "Review generated artifacts and evidence queues before market handoff."
+    ),
+    deliveryReadinessCheck(
+      "docs_closeout",
+      "handoff",
+      "Documentation closeout",
+      "warning",
+      "Delivery model exposes ordered handoff steps; final document review remains manual.",
+      "Confirm operator-facing docs, routes, and stage closeout notes before release."
+    ),
+    deliveryReadinessCheck(
+      "secret_boundary",
+      "security",
+      "Secret export boundary",
+      !rawSecretsExposed && !rawSecretPattern.test(JSON.stringify(maskedInventory)) ? "passed" : "failed",
+      "Readiness summaries expose masked credential inventory only.",
+      "Remove raw credentials from any handoff artifact before delivery."
+    ),
+    deliveryReadinessCheck(
+      "audit_trail",
+      "operations",
+      "Audit trail",
+      "passed",
+      "Delivery readiness checks record a local audit event when run.",
+      "Retain audit events with the delivery bundle record."
+    )
+  ];
+  const summary = productionReadinessSummary(checks);
+  return deepClone({
+    package: {
+      name: packageName,
+      version: packageVersion
+    },
+    status: productionReadinessStatus(checks),
+    score: productionReadinessScore(checks),
+    summary,
+    checks,
+    boundaries,
+    handoff_steps: handoffSteps,
+    generated_at: nowIso()
+  });
+}
+
+export function runDeliveryReadinessCheckAction() {
+  const state = getDeliveryReadinessState();
+  recordAuditEvent("system.delivery_readiness.check", "system", "delivery_readiness", {
+    status: state.status,
+    score: state.score,
+    checks: state.checks.map((item) => ({ id: item.id, status: item.status }))
+  });
+  persistState();
+  return state;
+}
+
+function buildLaunchPreflightState(deliveryReadiness, productionReadiness) {
+  const checks = deliveryReadiness.checks.map((item) => ({
+    id: item.id,
+    category: item.category,
+    label: item.label,
+    status: item.status,
+    message: item.message
+  }));
+  return {
+    status: deliveryReadiness.status === "blocked" || productionReadiness.status === "blocked" ? "blocked" : deliveryReadiness.status,
+    score: Math.min(deliveryReadiness.score, productionReadiness.score),
+    summary: productionReadinessSummary(checks),
+    checks,
+    generated_at: nowIso()
+  };
+}
+
+export function getDeliveryBundleState() {
+  const runtime = getRuntimeStatusBase();
+  const deliveryReadiness = getDeliveryReadinessState(runtime);
+  const productionReadiness = getProductionReadinessState();
+  const backupSummary = getRuntimeBackupSummary();
+  const visibilityProviderState = getInternationalGeoVisibilityProviderState();
+  const publishingConnectorState = getInternationalGeoPublishingConnectorState();
+  return deepClone({
+    kind: "geo-pulse-delivery-bundle",
+    package: packageName,
+    version: packageVersion,
+    generated_at: nowIso(),
+    runtime: {
+      persistence: runtime.persistence,
+      counts: runtime.counts,
+      backup_summary: {
+        count: backupSummary.count,
+        latest: backupSummary.latest
+          ? {
+              id: backupSummary.latest.id,
+              name: backupSummary.latest.name,
+              version: backupSummary.latest.version,
+              created_at: backupSummary.latest.created_at
+            }
+          : null
+      }
+    },
+    delivery_readiness: deliveryReadiness,
+    production_readiness: productionReadiness,
+    launch_preflight: buildLaunchPreflightState(deliveryReadiness, productionReadiness),
+    international_geo: {
+      visibility_provider_summary: visibilityProviderState.summary,
+      publishing_connector_summary: publishingConnectorState.summary
+    },
+    operating_boundaries: deliveryReadiness.boundaries,
+    handoff_steps: deliveryReadiness.handoff_steps
+  });
 }
 
 export function resetRuntimeState() {
