@@ -6791,11 +6791,12 @@ export function getInternationalGeoEvidenceAssetsState() {
 export function generateInternationalGeoEvidenceAssetsAction() {
   ensureInternationalGeoStateShape();
   const audit = latestInternationalGeoAudit();
-  let opportunities = [
+  const derivedOpportunities = [
     ...deriveScoreDeductionOpportunities(audit),
     ...deriveCrawlEvidenceOpportunities(audit),
     ...deriveVisibilityGapOpportunities()
   ];
+  let opportunities = derivedOpportunities;
   if (!opportunities.length) {
     opportunities = deriveRuleFirstOpportunities();
   }
@@ -6807,27 +6808,34 @@ export function generateInternationalGeoEvidenceAssetsAction() {
   const existingOpportunityMap = new Map(
     (internationalGeoState.asset_opportunities || []).map((item) => [item.id, item])
   );
+  const currentOpportunityMap = new Map();
   opportunities.forEach((opportunity) => {
-    existingOpportunityMap.set(opportunity.id, {
-      ...existingOpportunityMap.get(opportunity.id),
-      ...opportunity
+    const existingOpportunity = existingOpportunityMap.get(opportunity.id);
+    currentOpportunityMap.set(opportunity.id, {
+      ...opportunity,
+      created_at: existingOpportunity?.created_at || opportunity.created_at
     });
   });
-  internationalGeoState.asset_opportunities = [...existingOpportunityMap.values()].sort((left, right) =>
+  const currentOpportunities = [...currentOpportunityMap.values()].sort((left, right) =>
     String(right.created_at || "").localeCompare(String(left.created_at || ""))
   );
+  const currentOpportunityIds = new Set(currentOpportunities.map((item) => item.id));
+  internationalGeoState.asset_opportunities = currentOpportunities;
 
   const existingQueueMap = new Map(
     (internationalGeoState.asset_generation_queue || []).map((item) => [item.opportunity_id, item])
   );
+  const existingQueueById = new Map((internationalGeoState.asset_generation_queue || []).map((item) => [item.id, item]));
   const existingAssetsMap = new Map(
     (internationalGeoState.geo_assets || [])
       .filter((item) => item.opportunity_id)
       .map((item) => [item.opportunity_id, item])
   );
   const createdAt = nowIso();
+  const nextQueueMap = new Map();
+  const nextAssetsMap = new Map();
 
-  internationalGeoState.asset_opportunities.forEach((opportunity) => {
+  currentOpportunities.forEach((opportunity) => {
     const queueItem =
       existingQueueMap.get(opportunity.id) || {
         id: uniqueId("evqueue"),
@@ -6854,10 +6862,15 @@ export function generateInternationalGeoEvidenceAssetsAction() {
       queueItem.reviewed_at = null;
     }
     queueItem.generated_at = queueItem.generated_at || createdAt;
-    existingQueueMap.set(opportunity.id, queueItem);
+    nextQueueMap.set(opportunity.id, queueItem);
 
-    if (!existingAssetsMap.has(opportunity.id)) {
-      existingAssetsMap.set(opportunity.id, {
+    const queueAsset = [...(internationalGeoState.geo_assets || [])].find(
+      (item) => !item.opportunity_id && item.queue_item_id === queueItem.id
+    );
+    const existingAsset = existingAssetsMap.get(opportunity.id) || queueAsset || null;
+
+    if (!existingAsset) {
+      nextAssetsMap.set(opportunity.id, {
         id: uniqueId("geoasset"),
         opportunity_id: opportunity.id,
         queue_item_id: queueItem.id,
@@ -6875,7 +6888,10 @@ export function generateInternationalGeoEvidenceAssetsAction() {
         created_at: createdAt
       });
     } else {
-      const asset = existingAssetsMap.get(opportunity.id);
+      const asset = existingAsset;
+      asset.opportunity_id = asset.opportunity_id || opportunity.id;
+      asset.queue_item_id = asset.queue_item_id || queueItem.id;
+      asset.asset_type = asset.asset_type || opportunity.asset_type;
       asset.title = asset.title || opportunity.title || evidenceAssetTitle(opportunity.asset_type);
       asset.human_notes = asset.human_notes || "";
       if (!Object.prototype.hasOwnProperty.call(asset, "reviewed_at")) {
@@ -6885,14 +6901,38 @@ export function generateInternationalGeoEvidenceAssetsAction() {
       asset.evidence_source_id = asset.evidence_source_id || opportunity.source_id;
       asset.evidence_summary = asset.evidence_summary || opportunity.evidence_summary;
       asset.confidence = asset.confidence || opportunity.confidence;
+      if (["approved", "rejected"].includes(asset.review_status)) {
+        queueItem.status = asset.review_status;
+        queueItem.review_status = asset.review_status;
+        queueItem.reviewed_at = asset.reviewed_at || queueItem.reviewed_at || null;
+      }
+      nextAssetsMap.set(opportunity.id, asset);
     }
   });
 
+  const reviewedHistoricalAssets = (internationalGeoState.geo_assets || [])
+    .filter(
+      (item) =>
+        (item.opportunity_id || item.queue_item_id) &&
+        !currentOpportunityIds.has(item.opportunity_id) &&
+        ["approved", "rejected"].includes(item.review_status)
+    )
+    .map((asset) => {
+      const queueItem = existingQueueById.get(asset.queue_item_id);
+      if (!asset.opportunity_id && queueItem?.opportunity_id) {
+        asset.opportunity_id = queueItem.opportunity_id;
+      }
+      asset.human_notes = asset.human_notes || "";
+      if (!Object.prototype.hasOwnProperty.call(asset, "reviewed_at")) {
+        asset.reviewed_at = null;
+      }
+      return asset;
+    });
   const legacyAssets = (internationalGeoState.geo_assets || []).filter((item) => !item.opportunity_id && !item.queue_item_id);
-  const evidenceAssets = [...existingAssetsMap.values()].sort((left, right) =>
+  const evidenceAssets = [...nextAssetsMap.values(), ...reviewedHistoricalAssets].sort((left, right) =>
     String(right.created_at || "").localeCompare(String(left.created_at || ""))
   );
-  internationalGeoState.asset_generation_queue = [...existingQueueMap.values()].sort((left, right) =>
+  internationalGeoState.asset_generation_queue = [...nextQueueMap.values()].sort((left, right) =>
     String(right.created_at || "").localeCompare(String(left.created_at || ""))
   );
   internationalGeoState.geo_assets = [...evidenceAssets, ...legacyAssets];
@@ -6924,17 +6964,21 @@ export function reviewInternationalGeoEvidenceAssetAction(assetId, payload = {})
   asset.review_status = reviewStatus;
   asset.reviewed_at = nowIso();
   asset.human_notes = String(payload.human_notes || "").trim();
-  const queueItem = internationalGeoState.asset_generation_queue.find((item) => item.id === asset.queue_item_id);
+  const queueItem = internationalGeoState.asset_generation_queue.find(
+    (item) => item.id === asset.queue_item_id || (asset.opportunity_id && item.opportunity_id === asset.opportunity_id)
+  );
   if (queueItem) {
     queueItem.status = reviewStatus;
     queueItem.review_status = reviewStatus;
     queueItem.reviewed_at = asset.reviewed_at;
+    asset.queue_item_id = asset.queue_item_id || queueItem.id;
   }
   internationalGeoState.updated_at = nowIso();
   recordAuditEvent("international_geo.evidence_asset.review", "international_geo_evidence_asset", asset.id, {
     action,
     review_status: reviewStatus,
-    asset_type: asset.asset_type
+    asset_type: asset.asset_type,
+    queue_synced: Boolean(queueItem)
   });
   persistState();
   return deepClone(asset);
