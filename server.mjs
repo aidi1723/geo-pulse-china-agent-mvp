@@ -26,6 +26,7 @@ const {
   createArticleFromTopicAction,
   createTopicIdeasFromKeywords,
   generateInternationalGeoArtifactsAction,
+  generateInternationalGeoEvidenceAssetsAction,
   generateInternationalGeoSiteAuditAssetsAction,
   generateTopicOutlineAction,
   getArticle,
@@ -42,6 +43,7 @@ const {
   getCurrentWorkspace,
   getExportJobDownload,
   getInternationalGeoState,
+  getInternationalGeoEvidenceAssetsState,
   getInternationalGeoVisibilityState,
   getInternationalGeoSiteAudit,
   getDashboardSummary,
@@ -87,6 +89,7 @@ const {
   listTopicIdeas,
   listUsageRecords,
   reviewArticleAction,
+  reviewInternationalGeoEvidenceAssetAction,
   runInternationalGeoAuditAction,
   runInternationalGeoVisibilityMeasurementAction,
   reconnectChannelAction,
@@ -2109,6 +2112,21 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && pathname === "/international-geo/evidence-assets") {
+    sendJson(res, 200, ok(getInternationalGeoEvidenceAssetsState()));
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/international-geo/evidence-assets/opportunities") {
+    sendJson(res, 200, ok({ items: getInternationalGeoEvidenceAssetsState().opportunities }));
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/international-geo/evidence-assets/queue") {
+    sendJson(res, 200, ok({ items: getInternationalGeoEvidenceAssetsState().queue }));
+    return;
+  }
+
   if (req.method === "POST" && pathname === "/international-geo/visibility/prompt-sets") {
     const body = await parseBody(req).catch(() => null);
     if (!body) {
@@ -2131,6 +2149,35 @@ async function handleApi(req, res, url) {
   if (req.method === "POST" && pathname === "/international-geo/visibility/run") {
     const body = await parseBody(req).catch(() => ({}));
     sendJson(res, 200, ok(runInternationalGeoVisibilityMeasurementAction(body || {})));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/international-geo/evidence-assets/generate") {
+    sendJson(res, 201, ok(generateInternationalGeoEvidenceAssetsAction()));
+    return;
+  }
+
+  if (req.method === "POST" && pathname.match(/^\/international-geo\/evidence-assets\/[^/]+\/review$/)) {
+    const id = pathname.split("/")[3];
+    const body = await parseBody(req).catch(() => null);
+    if (!body) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    try {
+      const result = reviewInternationalGeoEvidenceAssetAction(id, body);
+      if (!result) {
+        sendJson(res, 404, error("NOT_FOUND", "Evidence asset not found", 404).body);
+        return;
+      }
+      sendJson(res, 200, ok(result));
+    } catch (err) {
+      if ((err?.code || err?.message) === "VALIDATION_ERROR") {
+        sendJson(res, 400, error("VALIDATION_ERROR", "Review action must be approve or reject").body);
+        return;
+      }
+      throw err;
+    }
     return;
   }
 
