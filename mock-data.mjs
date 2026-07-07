@@ -1248,6 +1248,12 @@ const internationalGeoState = {
   publishing_platforms: [],
   publishing_packages: [],
   publishing_tracking: [],
+  content_generation: {
+    providers: [],
+    articles: [],
+    rewrites: [],
+    runs: []
+  },
   artifacts: {
     llms_txt: "",
     json_ld: "",
@@ -5752,6 +5758,7 @@ export function getInternationalGeoState() {
   state.visibility = getInternationalGeoVisibilityState();
   state.evidence_assets = getInternationalGeoEvidenceAssetsState();
   state.publishing = getInternationalGeoPublishingState();
+  state.content_generation = getInternationalGeoContentGenerationState();
   return state;
 }
 
@@ -5824,6 +5831,32 @@ function ensureInternationalGeoStateShape() {
   if (!Array.isArray(internationalGeoState.publishing_tracking)) {
     internationalGeoState.publishing_tracking = [];
   }
+  if (!internationalGeoState.content_generation || typeof internationalGeoState.content_generation !== "object") {
+    internationalGeoState.content_generation = {
+      providers: [],
+      articles: [],
+      rewrites: [],
+      runs: []
+    };
+  }
+  if (!Array.isArray(internationalGeoState.content_generation.providers)) {
+    internationalGeoState.content_generation.providers = defaultInternationalGeoGenerationProviders();
+  }
+  if (!internationalGeoState.content_generation.providers.length) {
+    internationalGeoState.content_generation.providers = defaultInternationalGeoGenerationProviders();
+  }
+  internationalGeoState.content_generation.providers = hydrateInternationalGeoGenerationProviders(
+    internationalGeoState.content_generation.providers
+  );
+  if (!Array.isArray(internationalGeoState.content_generation.articles)) {
+    internationalGeoState.content_generation.articles = [];
+  }
+  if (!Array.isArray(internationalGeoState.content_generation.rewrites)) {
+    internationalGeoState.content_generation.rewrites = [];
+  }
+  if (!Array.isArray(internationalGeoState.content_generation.runs)) {
+    internationalGeoState.content_generation.runs = [];
+  }
 }
 
 function hydrateInternationalGeoPublishingPlatforms(platforms = []) {
@@ -5847,6 +5880,55 @@ function hydrateInternationalGeoPublishingPlatforms(platforms = []) {
       ai_recommendation_note: platform.ai_recommendation_note || defaults.ai_recommendation_note
     };
   });
+}
+
+function defaultInternationalGeoGenerationProviders() {
+  return [
+    {
+      id: "local_rules",
+      label: "Local Rules",
+      status: "active",
+      provider_type: "local",
+      external_credentials_required: false,
+      supported_outputs: ["article", "platform_rewrite"],
+      notes: "Deterministic local generator. No external AI calls."
+    },
+    {
+      id: "openai",
+      label: "OpenAI",
+      status: "reserved",
+      provider_type: "external_llm",
+      external_credentials_required: true,
+      supported_outputs: ["article", "platform_rewrite"],
+      notes: "Reserved provider seam. Not executed in v0.16."
+    },
+    {
+      id: "claude",
+      label: "Claude",
+      status: "reserved",
+      provider_type: "external_llm",
+      external_credentials_required: true,
+      supported_outputs: ["article", "platform_rewrite"],
+      notes: "Reserved provider seam. Not executed in v0.16."
+    },
+    {
+      id: "gemini",
+      label: "Gemini",
+      status: "reserved",
+      provider_type: "external_llm",
+      external_credentials_required: true,
+      supported_outputs: ["article", "platform_rewrite"],
+      notes: "Reserved provider seam. Not executed in v0.16."
+    }
+  ];
+}
+
+function hydrateInternationalGeoGenerationProviders(providers = []) {
+  const currentById = new Map(providers.map((item) => [item.id, item]));
+  return defaultInternationalGeoGenerationProviders().map((defaults) => ({
+    ...defaults,
+    ...(currentById.get(defaults.id) || {})
+  }));
 }
 
 function internationalGeoEngineLabel(engineId) {
@@ -7165,6 +7247,90 @@ function evidenceAssetContent(opportunity = {}) {
   return `# Buyer guide brief\n\nBuyer prompt: ${prompt}\n\n## Decision path\n1. Define the buyer problem.\n2. List must-have evidence.\n3. Compare source-backed options.\n4. Add review notes and limitations.\n\n${evidenceNote}\n${reviewNote}\n`;
 }
 
+function generatedArticleTitle(assets = []) {
+  const input = internationalGeoState.input || defaultInternationalGeoInput;
+  const prompt = input.primary_query || assets[0]?.target_prompt || "AI search visibility";
+  return `${input.product_name || workspaceInput.product_name || "Product"} guide for ${prompt}`;
+}
+
+function generatedArticleContent(assets = []) {
+  const input = internationalGeoState.input || defaultInternationalGeoInput;
+  const product = input.product_name || workspaceInput.product_name || "Product";
+  const prompt = input.primary_query || assets[0]?.target_prompt || "AI search visibility";
+  const url = input.website_url || workspaceInput.website_url || assets[0]?.target_url || "";
+  const evidenceRows =
+    assets
+      .map((asset) => `| ${asset.asset_type || "asset"} | ${asset.evidence_summary || asset.title || asset.id} | ${asset.id} |`)
+      .join("\n") || "| source | Reviewer must attach approved evidence before publishing. | pending |";
+
+  return `# ${generatedArticleTitle(assets)}
+
+## Direct Answer Upfront
+${product} should answer "${prompt}" with direct, source-backed facts, a canonical URL, structured data, and reviewable evidence. This local draft is generated from approved GEO evidence assets and must be reviewed before external publishing.
+
+## Category Or Problem Definition
+Buyers searching for ${prompt} need a concise explanation of the product category, the buyer problem, and the decision criteria that separate credible options from generic content.
+
+## Product Positioning
+${product} should be positioned with verified capabilities, supported markets, implementation boundaries, and links back to the canonical source.
+
+## Evidence Table
+| Asset type | Evidence summary | Asset id |
+| --- | --- | --- |
+${evidenceRows}
+
+## Recommended Structure
+- Direct answer and category definition
+- Evidence-backed product explanation
+- Buyer decision criteria
+- FAQ and structured-data notes
+- Canonical URL: ${url}
+
+## Human review checklist
+- Verify every product claim against approved source assets.
+- Confirm canonical URL, schema, sitemap, and /llms.txt references.
+- Remove unsupported rankings, guarantees, or live AI visibility claims.
+- Approve this draft before generating platform rewrites.
+`;
+}
+
+function rewriteTypeForPlatform(platformKey) {
+  if (["official_blog", "medium", "devto", "hashnode"].includes(platformKey)) return "article";
+  if (["docs", "github"].includes(platformKey)) return "documentation_update";
+  if (["linkedin_company", "linkedin_founder"].includes(platformKey)) return "social_post";
+  if (["reddit", "quora"].includes(platformKey)) return "community_answer";
+  if (platformKey === "youtube") return "video_outline";
+  if (["g2", "capterra", "alternative_to", "saasworthy"].includes(platformKey)) return "directory_profile";
+  if (platformKey === "product_hunt") return "launch_listing";
+  return "platform_rewrite";
+}
+
+function platformRewriteContent(article, platform) {
+  const input = internationalGeoState.input || defaultInternationalGeoInput;
+  const product = input.product_name || workspaceInput.product_name || "Product";
+  const prompt = article.target_prompt || input.primary_query || "AI search visibility";
+  const canonicalUrl = article.canonical_url || input.website_url || workspaceInput.website_url || "";
+  return `# ${platform.platform_name} rewrite for ${article.title}
+
+Platform: ${platform.platform_name}
+Rewrite type: ${rewriteTypeForPlatform(platform.platform_key)}
+Canonical URL: ${canonicalUrl}
+
+## Angle
+Answer "${prompt}" with useful, source-backed information about ${product}. Keep the copy factual and aligned with the approved article.
+
+## Draft Copy
+${article.title}
+
+${product} should be described with a direct answer, buyer context, approved evidence, and a stable canonical reference. Adapt tone and length to ${platform.platform_name}, but preserve provenance and avoid unsupported claims.
+
+## Moderation Notes
+- Disclose affiliation where the platform expects it.
+- Avoid promotional superlatives and unverified AI visibility claims.
+- Link the canonical source only when it adds clear value.
+`;
+}
+
 const PUBLISHING_ASSET_PLATFORM_MAP = {
   llms_txt_update: ["official_blog", "docs"],
   json_ld_patch: ["official_blog", "docs"],
@@ -7277,6 +7443,219 @@ export function getInternationalGeoPublishingState() {
     packages: internationalGeoState.publishing_packages,
     tracking: internationalGeoState.publishing_tracking
   });
+}
+
+function contentGenerationSummary() {
+  const contentGeneration = internationalGeoState.content_generation || {};
+  const articles = contentGeneration.articles || [];
+  const rewrites = contentGeneration.rewrites || [];
+  const runs = contentGeneration.runs || [];
+  return {
+    provider_count: (contentGeneration.providers || []).length,
+    article_count: articles.length,
+    approved_article_count: articles.filter((item) => item.review_status === "approved").length,
+    rewrite_count: rewrites.length,
+    approved_rewrite_count: rewrites.filter((item) => item.review_status === "approved").length,
+    run_count: runs.length,
+    active_provider: "local_rules"
+  };
+}
+
+export function getInternationalGeoContentGenerationState() {
+  ensureInternationalGeoStateShape();
+  return deepClone({
+    summary: contentGenerationSummary(),
+    providers: internationalGeoState.content_generation.providers,
+    articles: internationalGeoState.content_generation.articles,
+    rewrites: internationalGeoState.content_generation.rewrites,
+    runs: internationalGeoState.content_generation.runs
+  });
+}
+
+export function generateInternationalGeoArticlesAction() {
+  ensureInternationalGeoStateShape();
+  const approvedAssets = (internationalGeoState.geo_assets || []).filter(
+    (item) => item.opportunity_id && item.review_status === "approved"
+  );
+  if (!approvedAssets.length) {
+    return getInternationalGeoContentGenerationState();
+  }
+
+  const sourceAssets = [...approvedAssets].sort((left, right) => String(left.id).localeCompare(String(right.id)));
+  const sourceAssetKey = sourceAssets.map((item) => item.id).join(":");
+  const existingArticle = (internationalGeoState.content_generation.articles || []).find(
+    (item) => item.source_asset_key === sourceAssetKey
+  );
+  const createdAt = nowIso();
+
+  if (!existingArticle) {
+    const input = internationalGeoState.input || defaultInternationalGeoInput;
+    const sourceAssetTypes = [...new Set(sourceAssets.map((item) => item.asset_type).filter(Boolean))];
+    const evidenceSummary = sourceAssets
+      .map((asset) => `${asset.asset_type || "asset"}: ${asset.evidence_summary || asset.title || asset.id}`)
+      .join("\n");
+    const article = {
+      id: uniqueId("geoarticle"),
+      generator_provider: "local_rules",
+      source_asset_key: sourceAssetKey,
+      source_asset_ids: sourceAssets.map((item) => item.id),
+      source_asset_types: sourceAssetTypes,
+      title: generatedArticleTitle(sourceAssets),
+      target_prompt: input.primary_query || sourceAssets[0]?.target_prompt || "AI search visibility",
+      target_url: input.website_url || workspaceInput.website_url || sourceAssets[0]?.target_url || "",
+      canonical_url: input.website_url || workspaceInput.website_url || sourceAssets[0]?.target_url || "",
+      article_status: "draft",
+      review_status: "pending_review",
+      content_type: "text/markdown",
+      content: generatedArticleContent(sourceAssets),
+      outline: [
+        "Direct answer upfront",
+        "Category or problem definition",
+        "Product positioning",
+        "Evidence table",
+        "Human review checklist"
+      ],
+      evidence_summary: evidenceSummary,
+      human_notes: "",
+      created_at: createdAt,
+      reviewed_at: null
+    };
+    internationalGeoState.content_generation.articles.unshift(article);
+  }
+
+  internationalGeoState.content_generation.runs.unshift({
+    id: uniqueId("georun"),
+    run_type: "article_generation",
+    status: "completed",
+    generator_provider: "local_rules",
+    source_asset_key: sourceAssetKey,
+    source_asset_count: sourceAssets.length,
+    created_count: existingArticle ? 0 : 1,
+    started_at: createdAt,
+    completed_at: nowIso()
+  });
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.content_generation.article.generate", "international_geo_generated_article", "batch", {
+    source_asset_count: sourceAssets.length,
+    article_count: internationalGeoState.content_generation.articles.length
+  });
+  persistState();
+  return getInternationalGeoContentGenerationState();
+}
+
+export function reviewInternationalGeoGeneratedArticleAction(articleId, payload = {}) {
+  ensureInternationalGeoStateShape();
+  const action = String(payload.action || "").trim();
+  if (!["approve", "reject"].includes(action)) {
+    throw validationError("action", "Use approve or reject.");
+  }
+  const article = internationalGeoState.content_generation.articles.find((item) => item.id === articleId);
+  if (!article) return null;
+
+  article.review_status = action === "approve" ? "approved" : "rejected";
+  article.article_status = action === "approve" ? "approved_article" : "rejected_article";
+  article.reviewed_at = nowIso();
+  article.human_notes = String(payload.human_notes || "").trim();
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.content_generation.article.review", "international_geo_generated_article", article.id, {
+    review_status: article.review_status
+  });
+  persistState();
+  return deepClone(article);
+}
+
+export function generateInternationalGeoPlatformRewritesAction() {
+  ensureInternationalGeoStateShape();
+  const approvedArticles = (internationalGeoState.content_generation.articles || []).filter(
+    (item) => item.review_status === "approved"
+  );
+  if (!approvedArticles.length) {
+    return getInternationalGeoContentGenerationState();
+  }
+
+  const existingByKey = new Map(
+    (internationalGeoState.content_generation.rewrites || []).map((item) => [item.source_article_platform_key, item])
+  );
+  const createdAt = nowIso();
+  let createdCount = 0;
+
+  approvedArticles.forEach((article) => {
+    (internationalGeoState.publishing_platforms || []).forEach((platform) => {
+      const sourceArticlePlatformKey = `${article.id}:${platform.platform_key}`;
+      if (existingByKey.has(sourceArticlePlatformKey)) return;
+      const rewrite = {
+        id: uniqueId("georewrite"),
+        generator_provider: "local_rules",
+        source_article_id: article.id,
+        source_article_title: article.title,
+        source_article_platform_key: sourceArticlePlatformKey,
+        platform_id: platform.id,
+        platform_key: platform.platform_key,
+        platform_name: platform.platform_name,
+        rewrite_type: rewriteTypeForPlatform(platform.platform_key),
+        ai_visibility_goal:
+          platform.ai_recommendation_note ||
+          "Increase AI retrieval and citation readiness with reviewed, platform-appropriate source-backed copy.",
+        moderation_notes: [
+          "Human review required before external publishing.",
+          "Keep claims evidence-backed and non-promotional.",
+          "Preserve canonical URL and source provenance."
+        ],
+        target_prompt: article.target_prompt,
+        canonical_url: article.canonical_url || article.target_url || "",
+        rewrite_status: "draft",
+        review_status: "pending_review",
+        content_type: "text/markdown",
+        content: platformRewriteContent(article, platform),
+        human_notes: "",
+        created_at: createdAt,
+        reviewed_at: null
+      };
+      internationalGeoState.content_generation.rewrites.unshift(rewrite);
+      existingByKey.set(sourceArticlePlatformKey, rewrite);
+      createdCount += 1;
+    });
+  });
+
+  internationalGeoState.content_generation.runs.unshift({
+    id: uniqueId("georun"),
+    run_type: "platform_rewrite_generation",
+    status: "completed",
+    generator_provider: "local_rules",
+    source_article_count: approvedArticles.length,
+    platform_count: (internationalGeoState.publishing_platforms || []).length,
+    created_count: createdCount,
+    started_at: createdAt,
+    completed_at: nowIso()
+  });
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.content_generation.rewrite.generate", "international_geo_platform_rewrite", "batch", {
+    source_article_count: approvedArticles.length,
+    rewrite_count: internationalGeoState.content_generation.rewrites.length
+  });
+  persistState();
+  return getInternationalGeoContentGenerationState();
+}
+
+export function reviewInternationalGeoPlatformRewriteAction(rewriteId, payload = {}) {
+  ensureInternationalGeoStateShape();
+  const action = String(payload.action || "").trim();
+  if (!["approve", "reject"].includes(action)) {
+    throw validationError("action", "Use approve or reject.");
+  }
+  const rewrite = internationalGeoState.content_generation.rewrites.find((item) => item.id === rewriteId);
+  if (!rewrite) return null;
+
+  rewrite.review_status = action === "approve" ? "approved" : "rejected";
+  rewrite.rewrite_status = action === "approve" ? "approved_rewrite" : "rejected_rewrite";
+  rewrite.reviewed_at = nowIso();
+  rewrite.human_notes = String(payload.human_notes || "").trim();
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.content_generation.rewrite.review", "international_geo_platform_rewrite", rewrite.id, {
+    review_status: rewrite.review_status
+  });
+  persistState();
+  return deepClone(rewrite);
 }
 
 export function generateInternationalGeoPublishingPackagesAction() {
