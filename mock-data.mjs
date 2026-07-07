@@ -5698,6 +5698,7 @@ export function getInternationalGeoState() {
   ensureInternationalGeoStateShape();
   const state = deepClone(internationalGeoState);
   state.visibility = getInternationalGeoVisibilityState();
+  state.evidence_assets = getInternationalGeoEvidenceAssetsState();
   return state;
 }
 
@@ -5726,6 +5727,12 @@ function ensureInternationalGeoStateShape() {
   }
   if (!Array.isArray(internationalGeoState.geo_assets)) {
     internationalGeoState.geo_assets = [];
+  }
+  if (!Array.isArray(internationalGeoState.asset_opportunities)) {
+    internationalGeoState.asset_opportunities = [];
+  }
+  if (!Array.isArray(internationalGeoState.asset_generation_queue)) {
+    internationalGeoState.asset_generation_queue = [];
   }
   if (!internationalGeoState.summary || typeof internationalGeoState.summary !== "object") {
     internationalGeoState.summary = {};
@@ -6433,6 +6440,478 @@ function buildSiteAuditChecks(input) {
 
 function jsonLdAsset(type, data) {
   return JSON.stringify({ "@context": "https://schema.org", "@type": type, ...data }, null, 2);
+}
+
+const EVIDENCE_ASSET_TYPE_BY_CHECK = {
+  llms_txt: "llms_txt_update",
+  json_ld: "json_ld_patch",
+  direct_answer: "definition_brief",
+  fact_density: "product_spec_brief",
+  eeat: "buyer_guide_brief",
+  third_party_validation: "comparison_brief",
+  robots_ai_access: "buyer_guide_brief",
+  sitemap: "definition_brief",
+  url_quality: "definition_brief"
+};
+
+const EVIDENCE_ASSET_TYPES = [
+  "llms_txt_update",
+  "json_ld_patch",
+  "faq_block",
+  "comparison_brief",
+  "alternatives_brief",
+  "definition_brief",
+  "product_spec_brief",
+  "buyer_guide_brief"
+];
+
+function evidenceAssetsSummary() {
+  const queue = internationalGeoState.asset_generation_queue || [];
+  const assets = (internationalGeoState.geo_assets || []).filter((item) => item.opportunity_id || item.queue_item_id);
+  return {
+    opportunity_count: (internationalGeoState.asset_opportunities || []).length,
+    queued_count: queue.filter((item) => item.status === "queued").length,
+    generated_count: queue.filter((item) => ["generated", "approved", "rejected"].includes(item.status)).length,
+    approved_count: assets.filter((item) => item.review_status === "approved").length,
+    rejected_count: assets.filter((item) => item.review_status === "rejected").length
+  };
+}
+
+function latestInternationalGeoAudit() {
+  ensureInternationalGeoStateShape();
+  return (
+    internationalGeoState.site_audits.latest ||
+    [...internationalGeoState.site_audits.items].sort((left, right) =>
+      String(right.created_at || "").localeCompare(String(left.created_at || ""))
+    )[0] ||
+    null
+  );
+}
+
+function opportunityId(sourceType, sourceId, assetType) {
+  return `evopp-${[sourceType, sourceId, assetType]
+    .map((part) =>
+      String(part || "unknown")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+    )
+    .filter(Boolean)
+    .join("-")}`;
+}
+
+function makeEvidenceOpportunity(patch = {}) {
+  const audit = patch.audit || latestInternationalGeoAudit() || {};
+  const input = internationalGeoState.input || {};
+  const assetType = patch.asset_type || "definition_brief";
+  const sourceType = patch.source_type || "rule_first";
+  const sourceId = patch.source_id || assetType;
+  return {
+    id: patch.id || opportunityId(sourceType, sourceId, assetType),
+    source_type: sourceType,
+    source_id: sourceId,
+    asset_type: assetType,
+    market: patch.market || audit.target_market || input.target_market || "Global",
+    language: patch.language || audit.target_language || input.target_language || "en",
+    target_url: patch.target_url || audit.website_url || input.website_url || workspaceInput.website_url,
+    target_prompt: patch.target_prompt || audit.primary_query || input.primary_query || "AI search visibility",
+    reason: patch.reason || "Create a citation-ready evidence asset for this GEO opportunity.",
+    evidence_summary: patch.evidence_summary || "Rule-first recommendation; verify claims before publishing.",
+    recommended_action: patch.recommended_action || "Draft, review, and publish the asset on an owned canonical page.",
+    confidence: patch.confidence || "low",
+    priority: patch.priority || "low",
+    status: patch.status || "open",
+    created_at: patch.created_at || nowIso()
+  };
+}
+
+function deriveScoreDeductionOpportunities(audit) {
+  if (!audit) return [];
+  return (audit.checks || [])
+    .filter((check) => ["high", "medium"].includes(check.priority) && Number(check.score_deduction || 0) > 0)
+    .map((check) => {
+      const assetType = EVIDENCE_ASSET_TYPE_BY_CHECK[check.id];
+      if (!assetType) return null;
+      const sourceId = `${audit.id}:${check.id}`;
+      return makeEvidenceOpportunity({
+        audit,
+        source_type: "score_deduction",
+        source_id: sourceId,
+        asset_type: assetType,
+        reason: check.deduction_reasons?.[0] || check.message || "Audit score deduction requires supporting content.",
+        evidence_summary: `${check.label || check.id}: deducted ${check.score_deduction}/${check.score_weight || 0}. ${
+          check.evidence || check.evidence_status || "No crawl evidence."
+        }`,
+        recommended_action: check.next_actions?.[0] || check.recommendation || SITE_AUDIT_NEXT_ACTIONS[check.id],
+        confidence: check.confidence || "medium",
+        priority: check.priority || "medium"
+      });
+    })
+    .filter(Boolean);
+}
+
+function deriveCrawlEvidenceOpportunities(audit) {
+  if (!audit) return [];
+  const resources = audit.crawl_evidence?.resources || {};
+  const homepage = resources.homepage || null;
+  const llms = resources.llms_txt || null;
+  const robots = resources.robots_txt || null;
+  const sitemap = resources.sitemap_xml || null;
+  const opportunities = [];
+
+  if (!llms || !llms.ok) {
+    opportunities.push(
+      makeEvidenceOpportunity({
+        audit,
+        source_type: "crawl_evidence",
+        source_id: `${audit.id}:llms_txt`,
+        asset_type: "llms_txt_update",
+        reason: "/llms.txt is missing or unavailable in crawl evidence.",
+        evidence_summary: llms ? resourceStatusText(llms) : "No /llms.txt crawl evidence.",
+        recommended_action: SITE_AUDIT_NEXT_ACTIONS.llms_txt,
+        confidence: llms ? "high" : "low",
+        priority: "high"
+      })
+    );
+  }
+
+  if (!homepage || !homepage.ok || !(homepage.json_ld_types || []).length) {
+    opportunities.push(
+      makeEvidenceOpportunity({
+        audit,
+        source_type: "crawl_evidence",
+        source_id: `${audit.id}:homepage_json_ld`,
+        asset_type: "json_ld_patch",
+        reason: "Homepage JSON-LD is missing, unavailable, or too thin for GEO review.",
+        evidence_summary: homepage
+          ? (homepage.json_ld_types || []).join(", ") || homepage.text_excerpt || resourceStatusText(homepage)
+          : "No homepage crawl evidence.",
+        recommended_action: SITE_AUDIT_NEXT_ACTIONS.json_ld,
+        confidence: homepage ? "high" : "low",
+        priority: "high"
+      })
+    );
+  }
+
+  if (!sitemap || !sitemap.ok || Number(sitemap.url_count || 0) === 0) {
+    opportunities.push(
+      makeEvidenceOpportunity({
+        audit,
+        source_type: "crawl_evidence",
+        source_id: `${audit.id}:sitemap_xml`,
+        asset_type: "definition_brief",
+        reason: "Sitemap evidence is missing or has zero discovered URLs.",
+        evidence_summary: sitemap ? `${sitemap.url_count || 0} sitemap URLs; ${resourceStatusText(sitemap)}` : "No sitemap crawl evidence.",
+        recommended_action: SITE_AUDIT_NEXT_ACTIONS.sitemap,
+        confidence: sitemap ? "high" : "low",
+        priority: "medium"
+      })
+    );
+  }
+
+  if (!robots || !robots.ok || !(robots.mentioned_bots || []).length) {
+    opportunities.push(
+      makeEvidenceOpportunity({
+        audit,
+        source_type: "crawl_evidence",
+        source_id: `${audit.id}:robots_txt`,
+        asset_type: "buyer_guide_brief",
+        reason: "robots.txt does not show known AI/search crawler mentions in available evidence.",
+        evidence_summary: robots
+          ? (robots.mentioned_bots || []).join(", ") || robots.text_excerpt || resourceStatusText(robots)
+          : "No robots.txt crawl evidence.",
+        recommended_action: SITE_AUDIT_NEXT_ACTIONS.robots_ai_access,
+        confidence: robots ? "high" : "low",
+        priority: "medium"
+      })
+    );
+  }
+
+  return opportunities;
+}
+
+function assetTypeForPromptSet(promptSet = {}) {
+  const intent = String(promptSet.buyer_intent || promptSet.prompt || "").toLowerCase();
+  if (intent.includes("alternative")) return "alternatives_brief";
+  if (intent.includes("compare") || intent.includes("comparison") || intent.includes("versus") || intent.includes("vs")) {
+    return "comparison_brief";
+  }
+  if (intent.includes("faq") || intent.includes("question")) return "faq_block";
+  if (intent.includes("spec") || intent.includes("feature") || intent.includes("pricing")) return "product_spec_brief";
+  if (intent.includes("guide") || intent.includes("decision") || intent.includes("buy")) return "buyer_guide_brief";
+  return "definition_brief";
+}
+
+function deriveVisibilityGapOpportunities() {
+  ensureInternationalGeoStateShape();
+  const snapshots = internationalGeoState.visibility_snapshots || [];
+  const snapshotsByPrompt = new Map();
+  snapshots.forEach((snapshot) => {
+    const items = snapshotsByPrompt.get(snapshot.prompt_set_id) || [];
+    items.push(snapshot);
+    snapshotsByPrompt.set(snapshot.prompt_set_id, items);
+  });
+
+  return (internationalGeoState.visibility_prompt_sets || []).flatMap((promptSet) => {
+    const promptSnapshots = snapshotsByPrompt.get(promptSet.id) || [];
+    const unavailableSnapshots = promptSnapshots.filter((snapshot) => snapshot.data_status === "unavailable");
+    if (!promptSnapshots.length) {
+      return [
+        makeEvidenceOpportunity({
+          source_type: "visibility_gap",
+          source_id: `${promptSet.id}:no_snapshots`,
+          asset_type: assetTypeForPromptSet(promptSet),
+          market: promptSet.market,
+          language: promptSet.language,
+          target_url: promptSet.target_url,
+          target_prompt: promptSet.prompt,
+          reason: "No AI visibility snapshot has been recorded for this prompt set.",
+          evidence_summary: "Measurement data is unavailable; no brand mention, citation, rank, or recommendation result is inferred.",
+          recommended_action: "Create owned explanatory content for the prompt and rerun measurement when a provider is configured.",
+          confidence: "low",
+          priority: "medium"
+        })
+      ];
+    }
+    return unavailableSnapshots.map((snapshot) =>
+      makeEvidenceOpportunity({
+        source_type: "visibility_gap",
+        source_id: `${promptSet.id}:${snapshot.engine_id}:${snapshot.id}`,
+        asset_type: assetTypeForPromptSet(promptSet),
+        market: promptSet.market,
+        language: promptSet.language,
+        target_url: promptSet.target_url,
+        target_prompt: promptSet.prompt,
+        reason: `${snapshot.engine_label || snapshot.engine_id} visibility data is unavailable for this prompt.`,
+        evidence_summary:
+          "Provider data is unavailable; snapshot does not indicate whether the brand was mentioned, cited, ranked, or recommended.",
+        recommended_action: "Prepare evidence-rich owned content and rerun measurement after provider access is configured.",
+        confidence: snapshot.confidence || "low",
+        priority: "medium"
+      })
+    );
+  });
+}
+
+function deriveRuleFirstOpportunities(assetTypes = ["llms_txt_update", "json_ld_patch", "faq_block", "definition_brief"]) {
+  return assetTypes.map((assetType) =>
+    makeEvidenceOpportunity({
+      source_type: "rule_first",
+      source_id: assetType,
+      asset_type: assetType,
+      reason: "No measured evidence source is available for this asset type yet.",
+      evidence_summary: "Rule-first fallback based on GEO readiness best practices; verify before publishing.",
+      recommended_action: "Draft a conservative owned asset and attach source proof during review.",
+      confidence: "low",
+      priority: "low"
+    })
+  );
+}
+
+function evidenceAssetTitle(assetType) {
+  return (
+    {
+      llms_txt_update: "llms.txt Update",
+      json_ld_patch: "JSON-LD Patch",
+      faq_block: "FAQ Block",
+      comparison_brief: "Comparison Brief",
+      alternatives_brief: "Alternatives Brief",
+      definition_brief: "Definition Brief",
+      product_spec_brief: "Product Spec Brief",
+      buyer_guide_brief: "Buyer Guide Brief"
+    }[assetType] || "Evidence Asset"
+  );
+}
+
+function evidenceAssetContent(opportunity = {}) {
+  const product = String(internationalGeoState.input?.product_name || workspaceInput.product_name || "Product").trim();
+  const url = opportunity.target_url || internationalGeoState.input?.website_url || workspaceInput.website_url;
+  const prompt = opportunity.target_prompt || internationalGeoState.input?.primary_query || "AI search visibility";
+  const evidenceNote = `Evidence note: ${opportunity.evidence_summary || "Review source evidence before publishing."}`;
+  const reviewNote = `Review marker: confidence ${opportunity.confidence || "low"}; source ${opportunity.source_type || "unknown"}:${opportunity.source_id || "unknown"}.`;
+
+  if (opportunity.asset_type === "llms_txt_update") {
+    return `# ${product}\n\nOfficial site: ${url}\nPrimary buyer prompt: ${prompt}\n\n## Summary\n${product} should be described with concise entity facts, canonical pages, and reviewer-approved claims.\n\n## Recommended sections\n- Product overview\n- Best pages for buyers\n- Comparison and FAQ pages\n- Support, security, and company proof\n\n${evidenceNote}\n${reviewNote}\n`;
+  }
+
+  if (opportunity.asset_type === "json_ld_patch") {
+    return jsonLdAsset("Organization", {
+      name: product,
+      url,
+      description: "REVIEW_REQUIRED: Add a factual, source-backed organization description before publishing.",
+      sameAs: ["REVIEW_REQUIRED: Add verified official social/profile URLs only."],
+      subjectOf: [
+        {
+          "@type": "CreativeWork",
+          name: evidenceNote,
+          reviewStatus: "REVIEW_REQUIRED"
+        }
+      ]
+    });
+  }
+
+  if (opportunity.asset_type === "faq_block") {
+    return `## FAQ\n\n### What should buyers know about ${product}?\nAnswer with a direct, source-backed definition tied to ${prompt}.\n\n### What evidence should be reviewed before publishing?\nUse crawl, audit, or provider evidence and remove any unsupported claims.\n\n### Where should this answer point?\nUse the canonical URL: ${url}\n\n${evidenceNote}\n${reviewNote}\n`;
+  }
+
+  if (opportunity.asset_type === "comparison_brief") {
+    return `# Comparison brief\n\nPrimary prompt: ${prompt}\nCanonical URL: ${url}\n\n## Comparison criteria\n- Buyer problem\n- Required proof\n- Differentiators verified by source material\n- Limitations and fit notes\n\n## Evidence notes\n${evidenceNote}\n\n${reviewNote}\n`;
+  }
+
+  if (opportunity.asset_type === "alternatives_brief") {
+    return `# Alternatives brief\n\nPrimary prompt: ${prompt}\n\n## Angle\nExplain when buyers should evaluate ${product} and when alternatives may fit better. Keep claims neutral and source-backed.\n\n## Required proof\n- Product capabilities\n- Target market fit\n- Public documentation or case evidence\n\n${evidenceNote}\n${reviewNote}\n`;
+  }
+
+  if (opportunity.asset_type === "definition_brief") {
+    return `# Definition brief\n\nTerm or prompt: ${prompt}\n\n## Direct answer\nDefine the category and explain where ${product} fits using only reviewer-approved facts.\n\n## Evidence table\n| Evidence | Use |\n| --- | --- |\n| ${opportunity.source_type || "source"}:${opportunity.source_id || "unknown"} | Validate the answer before publishing |\n\n${evidenceNote}\n${reviewNote}\n`;
+  }
+
+  if (opportunity.asset_type === "product_spec_brief") {
+    return `# Product spec brief\n\nProduct: ${product}\nTarget URL: ${url}\n\n## Specs to verify\n- Core capabilities\n- Supported markets and languages\n- Integrations or crawler-readiness details\n- Security, support, and proof points\n\n${evidenceNote}\n${reviewNote}\n`;
+  }
+
+  return `# Buyer guide brief\n\nBuyer prompt: ${prompt}\n\n## Decision path\n1. Define the buyer problem.\n2. List must-have evidence.\n3. Compare source-backed options.\n4. Add review notes and limitations.\n\n${evidenceNote}\n${reviewNote}\n`;
+}
+
+export function getInternationalGeoEvidenceAssetsState() {
+  ensureInternationalGeoStateShape();
+  return deepClone({
+    summary: evidenceAssetsSummary(),
+    opportunities: internationalGeoState.asset_opportunities,
+    queue: internationalGeoState.asset_generation_queue,
+    assets: internationalGeoState.geo_assets.filter((item) => item.opportunity_id || item.queue_item_id)
+  });
+}
+
+export function generateInternationalGeoEvidenceAssetsAction() {
+  ensureInternationalGeoStateShape();
+  const audit = latestInternationalGeoAudit();
+  let opportunities = [
+    ...deriveScoreDeductionOpportunities(audit),
+    ...deriveCrawlEvidenceOpportunities(audit),
+    ...deriveVisibilityGapOpportunities()
+  ];
+  if (!opportunities.length) {
+    opportunities = deriveRuleFirstOpportunities();
+  }
+
+  const presentAssetTypes = new Set(opportunities.map((item) => item.asset_type));
+  const missingAssetTypes = EVIDENCE_ASSET_TYPES.filter((assetType) => !presentAssetTypes.has(assetType));
+  opportunities.push(...deriveRuleFirstOpportunities(missingAssetTypes));
+
+  const existingOpportunityMap = new Map(
+    (internationalGeoState.asset_opportunities || []).map((item) => [item.id, item])
+  );
+  opportunities.forEach((opportunity) => {
+    existingOpportunityMap.set(opportunity.id, {
+      ...existingOpportunityMap.get(opportunity.id),
+      ...opportunity
+    });
+  });
+  internationalGeoState.asset_opportunities = [...existingOpportunityMap.values()].sort((left, right) =>
+    String(right.created_at || "").localeCompare(String(left.created_at || ""))
+  );
+
+  const existingQueueMap = new Map(
+    (internationalGeoState.asset_generation_queue || []).map((item) => [item.opportunity_id, item])
+  );
+  const existingAssetsMap = new Map(
+    (internationalGeoState.geo_assets || [])
+      .filter((item) => item.opportunity_id)
+      .map((item) => [item.opportunity_id, item])
+  );
+  const createdAt = nowIso();
+
+  internationalGeoState.asset_opportunities.forEach((opportunity) => {
+    const queueItem =
+      existingQueueMap.get(opportunity.id) || {
+        id: uniqueId("evqueue"),
+        opportunity_id: opportunity.id,
+        asset_type: opportunity.asset_type,
+        status: "generated",
+        review_status: "pending_review",
+        created_at: createdAt
+      };
+    queueItem.asset_type = opportunity.asset_type;
+    if (!["approved", "rejected"].includes(queueItem.status)) {
+      queueItem.status = "generated";
+    }
+    if (!["approved", "rejected"].includes(queueItem.review_status)) {
+      queueItem.review_status = "pending_review";
+    }
+    queueItem.generated_at = queueItem.generated_at || createdAt;
+    existingQueueMap.set(opportunity.id, queueItem);
+
+    if (!existingAssetsMap.has(opportunity.id)) {
+      existingAssetsMap.set(opportunity.id, {
+        id: uniqueId("geoasset"),
+        opportunity_id: opportunity.id,
+        queue_item_id: queueItem.id,
+        asset_type: opportunity.asset_type,
+        title: evidenceAssetTitle(opportunity.asset_type),
+        content_type: opportunity.asset_type === "json_ld_patch" ? "application/ld+json" : "text/markdown",
+        content: evidenceAssetContent(opportunity),
+        evidence_source_type: opportunity.source_type,
+        evidence_source_id: opportunity.source_id,
+        evidence_summary: opportunity.evidence_summary,
+        confidence: opportunity.confidence,
+        review_status: "pending_review",
+        created_at: createdAt
+      });
+    }
+  });
+
+  const legacyAssets = (internationalGeoState.geo_assets || []).filter((item) => !item.opportunity_id && !item.queue_item_id);
+  const evidenceAssets = [...existingAssetsMap.values()].sort((left, right) =>
+    String(right.created_at || "").localeCompare(String(left.created_at || ""))
+  );
+  internationalGeoState.asset_generation_queue = [...existingQueueMap.values()].sort((left, right) =>
+    String(right.created_at || "").localeCompare(String(left.created_at || ""))
+  );
+  internationalGeoState.geo_assets = [...evidenceAssets, ...legacyAssets];
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.evidence_assets.generate", "international_geo_evidence_assets", "batch", {
+    opportunity_count: internationalGeoState.asset_opportunities.length,
+    asset_count: evidenceAssets.length
+  });
+  persistState();
+  return getInternationalGeoEvidenceAssetsState();
+}
+
+export function reviewInternationalGeoEvidenceAssetAction(assetId, payload = {}) {
+  ensureInternationalGeoStateShape();
+  const action = String(payload.action || "").trim();
+  if (!["approve", "reject"].includes(action)) {
+    const error = new Error("VALIDATION_ERROR");
+    error.code = "VALIDATION_ERROR";
+    error.field_errors = [{ field: "action", message: "Use approve or reject." }];
+    throw error;
+  }
+
+  const asset = internationalGeoState.geo_assets.find(
+    (item) => item.id === assetId && (item.opportunity_id || item.queue_item_id)
+  );
+  if (!asset) return null;
+
+  const reviewStatus = action === "approve" ? "approved" : "rejected";
+  asset.review_status = reviewStatus;
+  asset.reviewed_at = nowIso();
+  asset.human_notes = String(payload.human_notes || "").trim();
+  const queueItem = internationalGeoState.asset_generation_queue.find((item) => item.id === asset.queue_item_id);
+  if (queueItem) {
+    queueItem.status = reviewStatus;
+    queueItem.review_status = reviewStatus;
+    queueItem.reviewed_at = asset.reviewed_at;
+  }
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.evidence_asset.review", "international_geo_evidence_asset", asset.id, {
+    action,
+    review_status: reviewStatus,
+    asset_type: asset.asset_type
+  });
+  persistState();
+  return deepClone(asset);
 }
 
 function internationalGeoLegacyAuditPayload() {
