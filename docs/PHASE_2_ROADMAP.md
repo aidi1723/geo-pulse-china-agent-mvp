@@ -2,15 +2,15 @@
 
 ## Purpose
 
-Phase 2 turns the current v0.16 evidence-scored GEO audit, visibility foundation, local evidence-asset review workflow, local content-generation workflow, and publishing handoff workflow into a broader measured and integration-ready GEO operating system.
+Phase 2 turns the current v0.17 evidence-scored GEO audit, visibility foundation, manual measured evidence import, local evidence-asset review workflow, local content-generation workflow, and publishing handoff workflow into a broader measured and integration-ready GEO operating system.
 
-The current product can prepare audits and assets from local inputs, attach guarded public-site crawl evidence, explain a deterministic 100-point scoring breakdown, store prompt sets, provider readiness, visibility runs, and prompt snapshots with explicit data-status labels, generate evidence-driven local asset opportunities with review state, generate local-rule article drafts from approved evidence assets, generate platform rewrites from approved article drafts, generate review-only publishing packages from approved evidence assets, and track publication/indexing/AI mention/citation/recommendation fields manually. Phase 2 should next add measured AI visibility data from approved providers, controlled external distribution connectors, automation with explicit approval gates, and stronger production foundations before the project claims live engine inclusion, indexing, citation, recommendation, or publication outcomes.
+The current product can prepare audits and assets from local inputs, attach guarded public-site crawl evidence, explain a deterministic 100-point scoring breakdown, store prompt sets, provider readiness, visibility runs, prompt snapshots with explicit data-status labels, manually import human-verified measured visibility evidence, generate evidence-driven local asset opportunities with review state, generate local-rule article drafts from approved evidence assets, generate platform rewrites from approved article drafts, generate review-only publishing packages from approved evidence assets, and track publication/indexing/AI mention/citation/recommendation fields manually. Phase 2 should next add automated measured AI visibility data from approved providers, controlled external distribution connectors, automation with explicit approval gates, and stronger production foundations before the project claims automated live engine monitoring, indexing, citation, recommendation, or publication outcomes.
 
 ## Phase 2 Direction
 
 Build in this order:
 
-1. AI visibility monitoring through approved data sources.
+1. AI visibility monitoring through approved data sources beyond v0.17 manual import.
 2. External distribution connectors with manual guardrails.
 3. Measured indexing, citation, recommendation, and publication evidence through approved connectors.
 4. Production hardening for hosted team use.
@@ -67,7 +67,7 @@ Remaining future depth:
 
 ## Track 3: AI Engine Visibility Monitoring
 
-Status: v0.13 foundation complete. Future provider integrations are still required for measured data.
+Status: v0.17 manual measured-evidence baseline complete. Future provider integrations are still required for automated monitoring claims.
 
 Goal: measure brand inclusion, citations, and recommendation presence using controlled providers or approved APIs.
 
@@ -75,20 +75,21 @@ Scope:
 
 - Track prompt sets by market, language, buyer intent, product or brand context, and supported engines.
 - Store prompt snapshots for ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude, and Copilot/Bing, with default local runs marked `unavailable`.
-- Store measured snapshots only when a compliant data source is configured and approved provider evidence is attached.
+- Store measured snapshots when human-verified evidence is manually imported in v0.17 or when a future compliant data source is configured and approved provider evidence is attached.
 - Record brand mention, citation URL, recommendation rank, competitor mentions, and source timestamp.
 - Separate measured data from simulated or seed data in the UI.
-- Add connector diagnostics for each visibility data provider.
+- Add connector diagnostics for each future visibility data provider.
 
 Acceptance:
 
 - The UI clearly labels measured, simulated, and unavailable engine data.
 - No page claims real engine inclusion without a stored measured snapshot.
+- No page claims automated monitoring unless the snapshot came from future approved provider evidence.
 - Failed provider calls are visible in diagnostics and do not corrupt previous snapshots.
 
 ## Track 4: Content And Asset Production Upgrade
 
-Status: v0.16 baseline complete for local review assets, local-rule article drafts, platform rewrites, publishing package handoff, and manual tracking. Measured providers, external LLM generation providers, connector automation, and publication connectors remain future work.
+Status: v0.17 baseline complete for local review assets, local-rule article drafts, platform rewrites, publishing package handoff, manual tracking, and manual measured visibility evidence import. Automated measured providers, external LLM generation providers, connector automation, and publication connectors remain future work.
 
 Goal: generate better GEO content from crawl evidence, score deductions, and prompt visibility gaps.
 
@@ -113,6 +114,7 @@ Boundary:
 - v0.14 adds evidence-driven International GEO asset opportunities, queue items, generated local previews, and approve/reject review state. The workflow creates reviewable local assets only; it does not publish externally, generate full long-form articles, or call live AI search engines for inclusion/ranking measurement.
 - v0.15 adds local high-authority publishing platform rows, authority signals, AI recommendation-probability notes, deterministic publishing packages from approved evidence assets, review-only package queue state, and manual/local tracking records. The workflow is local planning/handoff only; it does not publish externally, store platform credentials, generate full articles, call live AI/search/SERP/indexing services, or verify real inclusion/recommendation.
 - v0.16 adds local-rule full article drafts and platform rewrites from approved local evidence. The workflow is still local and review-first; it does not call external LLMs, publish externally, store platform credentials, call live AI/search/SERP/indexing services, or verify real inclusion/recommendation.
+- v0.17 adds manual measured visibility evidence import. Imported snapshots use `manual_import` provenance and `measured_import` runs; they are human-entered evidence only and do not call live AI/search/SERP/indexing services, store provider credentials, or support automated monitoring claims.
 
 ## Track 5: External Distribution Connectors
 
@@ -178,18 +180,18 @@ Acceptance:
 - `v0.14`: evidence-driven local content and asset production upgrade. Complete baseline; external publishing and full article generation remain future work.
 - `v0.15`: local high-authority publishing platform list, review-only publishing packages, and manual tracking. Complete baseline; measured providers, connectors, and automation remain future work.
 - `v0.16`: local-rule article generation and platform rewrites. Complete baseline; measured providers, connectors, external LLM generation, and automation remain future work.
-- `v0.17`: measured visibility/tracking providers or controlled connector automation with explicit evidence and approval gates.
+- `v0.17`: manual measured visibility evidence import. Complete baseline; automated measured providers, batch imports, connectors, external LLM generation, external publishing/indexing connectors, and automation remain future work.
 - `v0.18`: database persistence, secrets, monitoring, and production hardening.
 - `v0.19+`: multi-tenant SaaS readiness if the product direction requires it.
 
 ## Phase 2 Boundaries
 
-Do not claim real-time AI engine inclusion, recommendation ranking, or automatic distribution until the relevant connector is implemented, configured, and storing measured evidence.
+Do not claim real-time AI engine inclusion, recommendation ranking, automated monitoring, or automatic distribution until the relevant connector is implemented, configured, and storing approved provider evidence.
 
 Phase 2 should keep five evidence and data-status labels visible in product and docs:
 
 - `Rule-first`: generated from local rules and user input.
 - `Crawl-evidenced`: verified from the target website.
-- `Measured`: captured from an approved external visibility or publishing data source.
+- `Measured`: captured from manually imported human-verified evidence in v0.17 or from an approved external visibility or publishing data source in a future provider integration.
 - `Simulated`: demo or seed visibility data that must not be presented as real engine output.
 - `Unavailable`: no compliant provider data is available for that prompt/provider pair.

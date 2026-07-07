@@ -56,7 +56,7 @@ System scripts can still use:
 X-GEO-API-Key: <runtime-key>
 ```
 
-The browser client config endpoint does not expose the mutation API key in v0.16.0. Keep `GEO_INTERNAL_API_KEY` for automation, diagnostics, and controlled scripts.
+The browser client config endpoint does not expose the mutation API key in v0.17.0. Keep `GEO_INTERNAL_API_KEY` for automation, diagnostics, and controlled scripts.
 
 Roles:
 
@@ -204,6 +204,7 @@ Workspace input stores the one-user operating context. Export jobs generate loca
 - `GET /international-geo/visibility/snapshots`
 - `POST /international-geo/visibility/prompt-sets`
 - `POST /international-geo/visibility/run`
+- `POST /international-geo/visibility/evidence/import`
 - `GET /international-geo/publishing`
 - `GET /international-geo/publishing/platforms`
 - `GET /international-geo/publishing/packages`
@@ -243,7 +244,7 @@ Evidence assets are local review artifacts. They are not automatically published
 - `POST /international-geo/content-generation/rewrites/generate`: editor route that creates deterministic platform rewrites from approved generated articles.
 - `POST /international-geo/content-generation/rewrites/:id/review`: editor route that approves or rejects a platform rewrite with `{ "action": "approve" }` or `{ "action": "reject", "human_notes": "..." }`.
 
-The active generator is `local_rules`. OpenAI, Claude, and Gemini provider rows are reserved extension seams and are not executed in v0.16. Generated article drafts preserve source asset ids, source asset types, evidence summary, target prompt, canonical URL, review status, and `local_rules` provider provenance. Platform rewrites preserve source article id, platform mapping, rewrite type, AI visibility goal, moderation notes, canonical URL, review status, and provider provenance.
+The active generator is `local_rules`. OpenAI, Claude, and Gemini provider rows are reserved extension seams and are not executed in v0.17. Generated article drafts preserve source asset ids, source asset types, evidence summary, target prompt, canonical URL, review status, and `local_rules` provider provenance. Platform rewrites preserve source article id, platform mapping, rewrite type, AI visibility goal, moderation notes, canonical URL, review status, and provider provenance.
 
 Content generation boundary: local deterministic generation and human review only. These routes do not call external LLMs, publish externally, store external platform credentials, verify indexing, query live AI/search/SERP providers, or prove AI inclusion, citation, recommendation, or external distribution.
 
@@ -268,20 +269,25 @@ Visibility routes add the v0.13 measurement foundation:
 - `GET /international-geo/visibility/snapshots` lists prompt snapshots by prompt set, run, engine, capture time, and data status.
 - `POST /international-geo/visibility/prompt-sets` creates a prompt set for one non-empty prompt, optional market, language, buyer intent, product name, target URL, target brand, competitor list, and supported engine ids.
 - `POST /international-geo/visibility/run` creates a local run across active prompt sets and their configured engines.
+- `POST /international-geo/visibility/evidence/import` imports one human-verified measured observation into a `measured` prompt snapshot.
 
 Prompt-set creation requires a non-empty `prompt`. `engines` defaults to all supported visibility engines when omitted, and unsupported engine ids return `400 VALIDATION_ERROR`. Market, language, buyer intent, product name, target URL, target brand, and competitors are optional operating context fields; defaults come from the International GEO input when available. Prompt sets do not store raw provider credentials.
 
+Measured evidence import creates a snapshot with `data_status: "measured"`, `provider_id: "manual_import"`, and a run with `data_source_type: "measured_import"`. Provider readiness for the imported engine is updated with `permission_status: "manual_review"`. The International GEO UI exposes this workflow through `导入测量证据`.
+
 Visibility snapshot `data_status` labels are contract boundaries:
 
-- `measured`: captured from a future approved external visibility provider with stored provider evidence.
+- `measured`: captured from manually imported human-verified evidence in v0.17 or from future approved provider evidence.
 - `simulated`: demo or seed data that must not be presented as real engine output.
 - `unavailable`: no compliant provider data is available for that prompt/provider pair.
 
-Default local visibility runs create `unavailable` snapshots only. They do not call ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude, Copilot, Bing, SERP APIs, or other external AI visibility providers. Snapshot responses may include provider labels, readiness state, prompt text, target brand, competitors, and unavailable reasons, but they must not expose raw provider credentials.
+Default local visibility runs create `unavailable` snapshots only. Manual imports create user-supplied `measured` snapshots but do not call ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude, Copilot, Bing, SERP APIs, indexing APIs, external platform APIs, or other external AI visibility providers. Snapshot responses may include provider labels, readiness state, prompt text, target brand, competitors, unavailable reasons, and manual import provenance, but they must not expose raw provider credentials.
 
-Visibility mutations require an editor/admin/owner browser session or `X-GEO-API-Key`. Viewer sessions can read visibility overview, runs, and snapshots but cannot create prompt sets or runs.
+Imported `measured` snapshots are user-supplied, human-entered evidence and are only as accurate as the operator-entered observation. Only future approved provider evidence supports automated monitoring claims.
 
-Visibility foundation boundary: guarded public site crawling, deterministic evidence-backed scoring, and the AI visibility measurement foundation do not perform recursive crawling, browser rendering, real AI search engine querying, real SERP collection, measured engine inclusion/rank tracking, recommendation-rank tracking, or automatic third-party publishing.
+Visibility mutations require an editor/admin/owner browser session or `X-GEO-API-Key`. Viewer sessions can read visibility overview, runs, and snapshots but cannot create prompt sets, local runs, or evidence imports.
+
+Visibility foundation boundary: guarded public site crawling, deterministic evidence-backed scoring, the AI visibility measurement foundation, and v0.17 manual measured-evidence import do not perform recursive crawling, browser rendering, real AI search engine querying, real SERP collection, indexing checks, automatic provider integrations, batch imports, external LLM generation, external publishing/indexing connector calls, or automatic third-party publishing. External provider credentials are not stored.
 
 ### Publishing
 

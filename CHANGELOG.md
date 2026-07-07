@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.17.0 - 2026-07-07
+
+Manual measured visibility evidence import for International GEO.
+
+### Added
+
+- Manual measured-evidence import for International GEO visibility snapshots.
+- `POST /api/v1/international-geo/visibility/evidence/import` for editor/admin/owner sessions or controlled API-key scripts.
+- Imported visibility snapshots with `data_status: "measured"`, `provider_id: "manual_import"`, run `data_source_type: "measured_import"`, and provider readiness `permission_status: "manual_review"`.
+- International GEO UI panel for `导入测量证据`.
+
+### Boundaries
+
+- imports are user-supplied, human-entered measured evidence only,
+- no live ChatGPT/Gemini/Claude/Perplexity/Google AI Overviews/Copilot/Bing/SERP/indexing/external platform APIs are called,
+- no external provider credentials are stored,
+- imported `measured` snapshots are only as accurate as the operator-entered observation,
+- only future approved provider evidence supports automated monitoring claims,
+- automatic provider integrations, batch imports, external LLM generation, external publishing/indexing connectors, durable DB, OAuth/SSO, MFA, monitoring, and multi-tenant controls remain future work.
+
+### Verification
+
+- `npm run check`
+- `git diff --check`
+
 ## 0.16.0 - 2026-07-07
 
 International GEO article generation and multi-platform rewrite workflow.
@@ -89,7 +114,7 @@ International GEO AI visibility measurement foundation.
 - v0.13 is a measurement foundation, not real AI search monitoring.
 - Default local runs create `unavailable` snapshots only.
 - v0.13 does not query real ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, Bing, SERP, or AI visibility providers.
-- v0.13 does not claim measured engine inclusion, citation presence, recommendation rank, or competitor rank unless future approved provider evidence is stored.
+- v0.13 does not query real providers; as of v0.17, `measured` snapshots can come from manually imported human-verified evidence or future approved provider evidence, and only future provider evidence supports automated monitoring claims.
 - Prompt sets and snapshots never expose raw provider credentials.
 
 ### Verification
