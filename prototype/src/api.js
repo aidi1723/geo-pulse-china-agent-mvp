@@ -404,6 +404,34 @@ export function getInternationalGeoPublishing() {
   return request("/api/v1/international-geo/publishing");
 }
 
+export function getInternationalGeoContentGeneration() {
+  return request("/api/v1/international-geo/content-generation");
+}
+
+export function generateInternationalGeoArticles() {
+  return requestJson("/api/v1/international-geo/content-generation/articles/generate", "POST", {});
+}
+
+export function generateInternationalGeoPlatformRewrites() {
+  return requestJson("/api/v1/international-geo/content-generation/rewrites/generate", "POST", {});
+}
+
+export function reviewInternationalGeoGeneratedArticle(articleId, payload = {}) {
+  return requestJson(
+    `/api/v1/international-geo/content-generation/articles/${encodeURIComponent(articleId)}/review`,
+    "POST",
+    payload
+  );
+}
+
+export function reviewInternationalGeoPlatformRewrite(rewriteId, payload = {}) {
+  return requestJson(
+    `/api/v1/international-geo/content-generation/rewrites/${encodeURIComponent(rewriteId)}/review`,
+    "POST",
+    payload
+  );
+}
+
 export function generateInternationalGeoPublishingPackages() {
   return requestJson("/api/v1/international-geo/publishing/packages/generate", "POST", {});
 }

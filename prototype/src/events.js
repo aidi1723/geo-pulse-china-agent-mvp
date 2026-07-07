@@ -453,6 +453,36 @@ export function bindEvents(root, store, rerender, actions) {
       return;
     }
 
+    if (action === "international-content-articles-generate") {
+      await actions.generateInternationalGeoArticles();
+      return;
+    }
+
+    if (action === "international-content-article-approve") {
+      await actions.reviewInternationalGeoGeneratedArticle(actionButton.dataset.articleId, "approve");
+      return;
+    }
+
+    if (action === "international-content-article-reject") {
+      await actions.reviewInternationalGeoGeneratedArticle(actionButton.dataset.articleId, "reject");
+      return;
+    }
+
+    if (action === "international-content-rewrites-generate") {
+      await actions.generateInternationalGeoPlatformRewrites();
+      return;
+    }
+
+    if (action === "international-content-rewrite-approve") {
+      await actions.reviewInternationalGeoPlatformRewrite(actionButton.dataset.rewriteId, "approve");
+      return;
+    }
+
+    if (action === "international-content-rewrite-reject") {
+      await actions.reviewInternationalGeoPlatformRewrite(actionButton.dataset.rewriteId, "reject");
+      return;
+    }
+
     if (action === "international-publishing-packages-generate") {
       await actions.generateInternationalGeoPublishingPackages();
       return;

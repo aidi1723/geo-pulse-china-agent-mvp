@@ -20,7 +20,9 @@ import {
   createTopicsFromKeywords,
   exportDownloadUrl,
   generateInternationalGeoArtifacts as generateInternationalGeoArtifactsApi,
+  generateInternationalGeoArticles as generateInternationalGeoArticlesApi,
   generateInternationalGeoEvidenceAssets as generateInternationalGeoEvidenceAssetsApi,
+  generateInternationalGeoPlatformRewrites as generateInternationalGeoPlatformRewritesApi,
   generateInternationalGeoPublishingPackages as generateInternationalGeoPublishingPackagesApi,
   generateInternationalGeoSiteAuditAssets as generateInternationalGeoSiteAuditAssetsApi,
   generateTopicOutline as generateTopicOutlineApi,
@@ -33,7 +35,9 @@ import {
   logoutSession as logoutSessionApi,
   resetRuntimeState as resetRuntimeStateApi,
   reconnectChannel as reconnectChannelApi,
+  reviewInternationalGeoGeneratedArticle as reviewInternationalGeoGeneratedArticleApi,
   reviewInternationalGeoEvidenceAsset as reviewInternationalGeoEvidenceAssetApi,
+  reviewInternationalGeoPlatformRewrite as reviewInternationalGeoPlatformRewriteApi,
   reviewInternationalGeoPublishingPackage as reviewInternationalGeoPublishingPackageApi,
   reviewArticle,
   retryAutomationRun as retryAutomationRunApi,
@@ -1398,6 +1402,52 @@ const actions = {
       showNotice(action === "approve" ? "证据资产已审核通过。" : "证据资产已驳回。");
     } catch (error) {
       setError(error instanceof Error ? error.message : "审核国际 GEO 证据资产失败");
+      rerender();
+    }
+  },
+  async generateInternationalGeoArticles() {
+    try {
+      const result = await generateInternationalGeoArticlesApi();
+      await refreshData();
+      store.page = "international";
+      showNotice(`国际 GEO 文章草稿已生成 ${result.articles?.length || 0} 篇。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "生成国际 GEO 文章失败");
+      rerender();
+    }
+  },
+  async reviewInternationalGeoGeneratedArticle(articleId, action) {
+    if (!articleId) return;
+    try {
+      await reviewInternationalGeoGeneratedArticleApi(articleId, { action });
+      await refreshData();
+      store.page = "international";
+      showNotice(action === "approve" ? "生成文章已审核通过。" : "生成文章已驳回。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "审核国际 GEO 文章失败");
+      rerender();
+    }
+  },
+  async generateInternationalGeoPlatformRewrites() {
+    try {
+      const result = await generateInternationalGeoPlatformRewritesApi();
+      await refreshData();
+      store.page = "international";
+      showNotice(`多平台改写稿已生成 ${result.rewrites?.length || 0} 篇。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "生成多平台改写稿失败");
+      rerender();
+    }
+  },
+  async reviewInternationalGeoPlatformRewrite(rewriteId, action) {
+    if (!rewriteId) return;
+    try {
+      await reviewInternationalGeoPlatformRewriteApi(rewriteId, { action });
+      await refreshData();
+      store.page = "international";
+      showNotice(action === "approve" ? "多平台改写稿已审核通过。" : "多平台改写稿已驳回。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "审核多平台改写稿失败");
       rerender();
     }
   },
