@@ -56,7 +56,7 @@ System scripts can still use:
 X-GEO-API-Key: <runtime-key>
 ```
 
-The browser client config endpoint does not expose the mutation API key in v0.15.0. Keep `GEO_INTERNAL_API_KEY` for automation, diagnostics, and controlled scripts.
+The browser client config endpoint does not expose the mutation API key in v0.16.0. Keep `GEO_INTERNAL_API_KEY` for automation, diagnostics, and controlled scripts.
 
 Roles:
 
@@ -208,6 +208,11 @@ Workspace input stores the one-user operating context. Export jobs generate loca
 - `GET /international-geo/publishing/platforms`
 - `GET /international-geo/publishing/packages`
 - `GET /international-geo/publishing/tracking`
+- `GET /international-geo/content-generation`
+- `POST /international-geo/content-generation/articles/generate`
+- `POST /international-geo/content-generation/articles/:id/review`
+- `POST /international-geo/content-generation/rewrites/generate`
+- `POST /international-geo/content-generation/rewrites/:id/review`
 - `POST /international-geo/publishing/packages/generate`
 - `POST /international-geo/publishing/packages/:id/review`
 - `PUT /international-geo/publishing/tracking/:id`
@@ -230,6 +235,18 @@ Mutation routes require an editor/admin/owner browser session or `X-GEO-API-Key`
 
 Evidence assets are local review artifacts. They are not automatically published and do not represent measured AI engine inclusion.
 
+### International GEO Content Generation
+
+- `GET /international-geo/content-generation`: viewer route for content-generation summary, provider rows, generated article drafts, platform rewrites, and generation runs.
+- `POST /international-geo/content-generation/articles/generate`: editor route that creates deterministic article drafts from approved evidence assets that have not already been used by non-rejected generated articles.
+- `POST /international-geo/content-generation/articles/:id/review`: editor route that approves or rejects a generated article with `{ "action": "approve" }` or `{ "action": "reject", "human_notes": "..." }`.
+- `POST /international-geo/content-generation/rewrites/generate`: editor route that creates deterministic platform rewrites from approved generated articles.
+- `POST /international-geo/content-generation/rewrites/:id/review`: editor route that approves or rejects a platform rewrite with `{ "action": "approve" }` or `{ "action": "reject", "human_notes": "..." }`.
+
+The active generator is `local_rules`. OpenAI, Claude, and Gemini provider rows are reserved extension seams and are not executed in v0.16. Generated article drafts preserve source asset ids, source asset types, evidence summary, target prompt, canonical URL, review status, and `local_rules` provider provenance. Platform rewrites preserve source article id, platform mapping, rewrite type, AI visibility goal, moderation notes, canonical URL, review status, and provider provenance.
+
+Content generation boundary: local deterministic generation and human review only. These routes do not call external LLMs, publish externally, store external platform credentials, verify indexing, query live AI/search/SERP providers, or prove AI inclusion, citation, recommendation, or external distribution.
+
 ### International GEO Publishing Workflow
 
 - `GET /international-geo/publishing`: viewer route for publishing workflow summary.
@@ -242,7 +259,7 @@ Evidence assets are local review artifacts. They are not automatically published
 
 Publishing platform notes are planning guidance only. They explain why public, higher-visibility platforms may improve retrieval, citation, and recommendation probability, but they are not measured AI engine evidence.
 
-Publishing workflow boundary: local planning/handoff only. These routes do not publish externally, store external platform credentials, generate full long-form articles, call live ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, Bing, SERP, indexing, or external platform services, or verify real inclusion/recommendation. Tracking values are manual/local unless future connector evidence exists.
+Publishing workflow boundary: local planning/handoff only. These publishing routes do not publish externally, store external platform credentials, generate article drafts, call live ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, Bing, SERP, indexing, or external platform services, or verify real inclusion/recommendation. Tracking values are manual/local unless future connector evidence exists.
 
 Visibility routes add the v0.13 measurement foundation:
 

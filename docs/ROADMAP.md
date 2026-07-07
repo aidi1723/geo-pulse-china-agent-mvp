@@ -2,7 +2,7 @@
 
 ## Current State
 
-The project is a v0.15.0 one-organization team-access workspace with built-in login, RBAC, connector diagnostics, local backup import/restore, launch preflight, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, generated GEO assets, AI visibility measurement foundation, evidence-driven local asset opportunities, review queue state, high-authority publishing platform list, review-only package queue, manual tracking records, and minimal GitHub CI.
+The project is a v0.16.0 one-organization team-access workspace with built-in login, RBAC, connector diagnostics, local backup import/restore, launch preflight, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, generated GEO assets, AI visibility measurement foundation, evidence-driven local asset opportunities, review queue state, local-rule article generation, multi-platform rewrite generation, high-authority publishing platform list, review-only package queue, manual tracking records, and minimal GitHub CI.
 
 Completed mock-first product areas:
 
@@ -28,11 +28,12 @@ Completed mock-first product areas:
 - AI visibility measurement foundation baseline: prompt sets, provider readiness for ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude, and Copilot / Bing, visibility runs, prompt snapshots, UI panels, browser button wiring, and explicit `measured`, `simulated`, and `unavailable` data-status labels.
 - Evidence-driven asset opportunities: opportunity rows derived from audit scoring, crawl evidence, visibility gaps, and rule-first input; local generation queue rows; generated local previews with provenance metadata; and approve/reject review state.
 - International GEO publishing workflow: local high-authority platform list across owned, developer, professional social, community, Q&A, video, directory, review-site, and knowledge-base destinations, with authority signals and AI recommendation-probability notes; deterministic package generation from approved evidence assets; review-only package queue; and manual/local tracking for publication URL, canonical URL, indexing status, AI mention status, citation status, and recommendation status.
+- International GEO content generation workflow: `local_rules` provider seam, deterministic article drafts from approved evidence assets, article approve/reject review, deterministic multi-platform rewrites from approved generated articles, rewrite approve/reject review, and generation run records.
 - Open-source release docs and GPLv3 licensing.
 
 ## Near-Term Maintenance
 
-These items keep v0.15.0 healthy without changing its architecture:
+These items keep v0.16.0 healthy without changing its architecture:
 
 - Keep `npm run check` passing.
 - Expand `verify-mvp.mjs` when new behavior is added.
@@ -68,7 +69,7 @@ These are the immediate product slices. The full second-stage direction is track
 
 ## Phase 2 Direction
 
-Phase 2 should move the product from v0.15 evidence-scored audit, visibility foundation, local evidence-asset review workflow, and publishing handoff workflow to broader measured GEO operations:
+Phase 2 should move the product from v0.16 evidence-scored audit, visibility foundation, local evidence-asset review workflow, local content-generation workflow, and publishing handoff workflow to broader measured GEO operations:
 
 - AI visibility monitoring through approved data sources.
 - External distribution connectors with manual approval gates.
@@ -78,7 +79,7 @@ Phase 2 should move the product from v0.15 evidence-scored audit, visibility fou
 
 Phase 2 must preserve a clear distinction between rule-first recommendations, crawl-evidenced findings, and measured external visibility data.
 
-## Post-v0.15 Production Hardening
+## Post-v0.16 Production Hardening
 
 These are required before using the project as a real SaaS or broadly exposed hosted service:
 
@@ -93,7 +94,7 @@ These are required before using the project as a real SaaS or broadly exposed ho
 - Incident response owner and security contact.
 - Data retention, deletion, and privacy policy.
 
-## Non-Goals For v0.15
+## Non-Goals For v0.16
 
 - Production multi-tenant hosting.
 - Real third-party credential management.
@@ -104,7 +105,7 @@ These are required before using the project as a real SaaS or broadly exposed ho
 - Real indexing verification or external platform calls.
 - Measured engine inclusion, citation presence, recommendation rank, or competitor rank without approved provider evidence.
 - Automatic third-party community or CMS publishing.
-- Full long-form article generation from evidence assets.
+- External LLM article generation or automatic article publication without explicit provider/connector implementation and approval gates.
 - Full workflow graph editor.
 - Paid billing integration.
 - Recursive crawler deployment or browser-rendering crawler service.
@@ -112,7 +113,7 @@ These are required before using the project as a real SaaS or broadly exposed ho
 
 ## Release Versioning
 
-Current public snapshot: `0.15.0`.
+Current public snapshot: `0.16.0`.
 
 Suggested version policy:
 

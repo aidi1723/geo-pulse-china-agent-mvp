@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.16.0 - 2026-07-07
+
+International GEO article generation and multi-platform rewrite workflow.
+
+### Added
+
+- Local-rule International GEO content generation provider seam with `local_rules` active and OpenAI, Claude, and Gemini reserved for future external provider integrations.
+- Deterministic full article draft generation from approved International GEO evidence assets, including evidence provenance, target prompt, canonical URL, Direct Answer Upfront structure, and human review checklist.
+- Approve/reject review workflow for generated article drafts before they can be used for platform rewrites.
+- Deterministic platform rewrite generation from approved article drafts across the configured high-authority publishing platform list.
+- Approve/reject review workflow for platform rewrites, plus generation run records for article and rewrite creation.
+- API routes and browser UI panels for `文章生成队列`, `多平台改写稿`, and `生成记录`.
+
+### Boundaries
+
+- article and rewrite generation is local, deterministic, and review-first,
+- external LLM providers are reserved but not executed,
+- no automatic external publishing,
+- no external platform credentials,
+- no live ChatGPT/Gemini/Claude/Perplexity/Google AI Overviews/Copilot/Bing/SERP/indexing/external platform calls,
+- generated articles and rewrites improve reviewable GEO readiness but do not prove AI inclusion, citation, recommendation, indexing, or external distribution.
+
+### Verification
+
+- `npm run check`
+
 ## 0.15.0 - 2026-07-07
 
 International GEO publishing platform workflow.

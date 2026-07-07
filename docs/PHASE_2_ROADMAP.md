@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Phase 2 turns the current v0.15 evidence-scored GEO audit, visibility foundation, local evidence-asset review workflow, and publishing handoff workflow into a broader measured and integration-ready GEO operating system.
+Phase 2 turns the current v0.16 evidence-scored GEO audit, visibility foundation, local evidence-asset review workflow, local content-generation workflow, and publishing handoff workflow into a broader measured and integration-ready GEO operating system.
 
-The current product can prepare audits and assets from local inputs, attach guarded public-site crawl evidence, explain a deterministic 100-point scoring breakdown, store prompt sets, provider readiness, visibility runs, and prompt snapshots with explicit data-status labels, generate evidence-driven local asset opportunities with review state, generate review-only publishing packages from approved evidence assets, and track publication/indexing/AI mention/citation/recommendation fields manually. Phase 2 should next add measured AI visibility data from approved providers, controlled external distribution connectors, automation with explicit approval gates, and stronger production foundations before the project claims live engine inclusion, indexing, citation, recommendation, or publication outcomes.
+The current product can prepare audits and assets from local inputs, attach guarded public-site crawl evidence, explain a deterministic 100-point scoring breakdown, store prompt sets, provider readiness, visibility runs, and prompt snapshots with explicit data-status labels, generate evidence-driven local asset opportunities with review state, generate local-rule article drafts from approved evidence assets, generate platform rewrites from approved article drafts, generate review-only publishing packages from approved evidence assets, and track publication/indexing/AI mention/citation/recommendation fields manually. Phase 2 should next add measured AI visibility data from approved providers, controlled external distribution connectors, automation with explicit approval gates, and stronger production foundations before the project claims live engine inclusion, indexing, citation, recommendation, or publication outcomes.
 
 ## Phase 2 Direction
 
@@ -88,7 +88,7 @@ Acceptance:
 
 ## Track 4: Content And Asset Production Upgrade
 
-Status: v0.15 baseline complete for local review assets, publishing package handoff, and manual tracking. Measured providers, connector automation, and publication connectors remain future work.
+Status: v0.16 baseline complete for local review assets, local-rule article drafts, platform rewrites, publishing package handoff, and manual tracking. Measured providers, external LLM generation providers, connector automation, and publication connectors remain future work.
 
 Goal: generate better GEO content from crawl evidence, score deductions, and prompt visibility gaps.
 
@@ -98,6 +98,8 @@ Scope:
 - Generate JSON-LD from detected entity gaps.
 - Generate FAQ blocks from prompt gaps and visible product facts.
 - Generate comparison, alternatives, definition, product-spec, and buyer-guide briefs.
+- Generate full article drafts from approved evidence assets with provenance and human review state.
+- Generate platform-specific rewrites from approved article drafts with moderation notes and canonical URL preservation.
 - Add content quality checks for direct answer, citation readiness, fact density, schema alignment, and E-E-A-T.
 
 Acceptance:
@@ -110,6 +112,7 @@ Boundary:
 
 - v0.14 adds evidence-driven International GEO asset opportunities, queue items, generated local previews, and approve/reject review state. The workflow creates reviewable local assets only; it does not publish externally, generate full long-form articles, or call live AI search engines for inclusion/ranking measurement.
 - v0.15 adds local high-authority publishing platform rows, authority signals, AI recommendation-probability notes, deterministic publishing packages from approved evidence assets, review-only package queue state, and manual/local tracking records. The workflow is local planning/handoff only; it does not publish externally, store platform credentials, generate full articles, call live AI/search/SERP/indexing services, or verify real inclusion/recommendation.
+- v0.16 adds local-rule full article drafts and platform rewrites from approved local evidence. The workflow is still local and review-first; it does not call external LLMs, publish externally, store platform credentials, call live AI/search/SERP/indexing services, or verify real inclusion/recommendation.
 
 ## Track 5: External Distribution Connectors
 
@@ -174,9 +177,10 @@ Acceptance:
 - `v0.13`: AI visibility measurement foundation. Complete baseline; measured provider integrations remain future work.
 - `v0.14`: evidence-driven local content and asset production upgrade. Complete baseline; external publishing and full article generation remain future work.
 - `v0.15`: local high-authority publishing platform list, review-only publishing packages, and manual tracking. Complete baseline; measured providers, connectors, and automation remain future work.
-- `v0.16`: measured visibility/tracking providers or controlled connector automation with explicit evidence and approval gates.
-- `v0.17`: database persistence, secrets, monitoring, and production hardening.
-- `v0.18+`: multi-tenant SaaS readiness if the product direction requires it.
+- `v0.16`: local-rule article generation and platform rewrites. Complete baseline; measured providers, connectors, external LLM generation, and automation remain future work.
+- `v0.17`: measured visibility/tracking providers or controlled connector automation with explicit evidence and approval gates.
+- `v0.18`: database persistence, secrets, monitoring, and production hardening.
+- `v0.19+`: multi-tenant SaaS readiness if the product direction requires it.
 
 ## Phase 2 Boundaries
 
