@@ -14,6 +14,8 @@ import {
   createExportJobAction,
   createInternationalGeoVisibilityPromptSetAction,
   createInternationalGeoSiteAuditAction,
+  diagnoseInternationalGeoPublishingConnectorsAction,
+  diagnoseInternationalGeoVisibilityProvidersAction,
   createMediaSourceAction,
   createModelConfigAction,
   createPublishTaskAction,
@@ -42,9 +44,12 @@ import {
   getInternationalGeoContentGenerationState,
   getInternationalGeoState,
   getInternationalGeoEvidenceAssetsState,
+  getInternationalGeoPublishingConnectorState,
   getInternationalGeoPublishingState,
+  getInternationalGeoVisibilityProviderState,
   getInternationalGeoVisibilityState,
   getInternationalGeoSiteAudit,
+  getProductionReadinessState,
   getKeyword,
   getPromptTemplate,
   getPublishTask,
@@ -80,6 +85,7 @@ import {
   logoutSessionAction,
   reconnectChannelAction,
   resetRuntimeState,
+  runProductionReadinessCheckAction,
   reviewArticleAction,
   reviewInternationalGeoVisibilityEvidenceAction,
   reviewInternationalGeoGeneratedArticleAction,
@@ -99,6 +105,8 @@ import {
   saveAutomationConnectorAction,
   saveBrandProfileAction,
   saveChannelAction,
+  saveInternationalGeoPublishingConnectorAction,
+  saveInternationalGeoVisibilityProviderAction,
   saveInternationalGeoInputAction,
   saveMediaSourceAction,
   saveModelConfigAction,
@@ -107,6 +115,8 @@ import {
   startPublishTaskAction,
   submitArticleReviewAction,
   takeoverPublishTaskItemAction,
+  testInternationalGeoPublishingConnectorAction,
+  testInternationalGeoVisibilityProviderAction,
   testAutomationConnectorAction,
   testAutomationProviderAction,
   updateBillingPlanAction,
@@ -279,6 +289,46 @@ function runSingleUserSourceChecks() {
     eventsSource,
     /action === "international-visibility-evidence-reject"/,
     "International GEO evidence rejection should be wired in events"
+  );
+  assert.match(
+    fs.readFileSync("mock-data.mjs", "utf8"),
+    /getInternationalGeoVisibilityProviderState/,
+    "International GEO visibility provider state should be exposed"
+  );
+  assert.match(
+    fs.readFileSync("mock-data.mjs", "utf8"),
+    /testInternationalGeoVisibilityProviderAction/,
+    "International GEO visibility provider dry-run test should exist"
+  );
+  assert.match(
+    fs.readFileSync("mock-data.mjs", "utf8"),
+    /getProductionReadinessState/,
+    "Production readiness state should be exposed"
+  );
+  assert.match(
+    fs.readFileSync("mock-data.mjs", "utf8"),
+    /getInternationalGeoPublishingConnectorState/,
+    "International GEO publishing connector state should be exposed"
+  );
+  assert.match(
+    apiSource,
+    /export function testInternationalGeoVisibilityProvider/,
+    "Browser API should expose visibility provider dry-run tests"
+  );
+  assert.match(
+    eventsSource,
+    /international-visibility-provider-test/,
+    "Visibility provider test action should be wired"
+  );
+  assert.match(
+    eventsSource,
+    /international-publishing-connector-test/,
+    "Publishing connector test action should be wired"
+  );
+  assert.match(
+    eventsSource,
+    /refresh-production-readiness/,
+    "Production readiness refresh action should be wired"
   );
   assert.match(
     apiSource,
@@ -1677,6 +1727,80 @@ async function runMockDataChecks() {
     "Evidence review should reject invalid actions"
   );
 
+  const providerState = getInternationalGeoVisibilityProviderState();
+  assert(providerState.providers.length >= 6, "Visibility provider registry should include supported AI engines");
+  assert(
+    providerState.providers.every((item) => !JSON.stringify(item).includes("provider-secret")),
+    "Visibility provider responses should not expose raw secrets"
+  );
+  const configuredProvider = saveInternationalGeoVisibilityProviderAction("visprov_chatgpt_search", {
+    status: "configured",
+    approval_status: "requested",
+    endpoint: "https://example.com/visibility",
+    api_key: "provider-secret",
+    notes: "Dry-run only"
+  });
+  assert.equal(configuredProvider.credential_status, "masked", "Visibility provider should store masked credential status");
+  assert.doesNotMatch(
+    JSON.stringify(configuredProvider),
+    /provider-secret/,
+    "Visibility provider config should mask raw keys"
+  );
+  const providerTest = testInternationalGeoVisibilityProviderAction("visprov_chatgpt_search");
+  assert.equal(providerTest.external_call_performed, false, "Visibility provider dry-run must not call external endpoints");
+  assert(providerTest.checks.length >= 4, "Visibility provider dry-run should return check rows");
+  const providerDiagnostics = diagnoseInternationalGeoVisibilityProvidersAction();
+  assert(providerDiagnostics.items.length >= 6, "Provider diagnose-all should return every provider");
+  const unavailableRun = runInternationalGeoVisibilityMeasurementAction({ trigger: "v0_19_provider_boundary_test" });
+  assert(
+    unavailableRun.snapshots.every((item) => item.data_status === "unavailable"),
+    "Configured provider foundation must not create measured snapshots without approved provider evidence"
+  );
+  const productionReadiness = getProductionReadinessState();
+  assert(productionReadiness.checks.length >= 8, "Production readiness should include handoff checks");
+  assert(
+    productionReadiness.masked_secret_inventory.length >= 1,
+    "Production readiness should expose masked secret inventory"
+  );
+  assert.doesNotMatch(
+    JSON.stringify(productionReadiness),
+    /provider-secret/,
+    "Production readiness should not expose raw secrets"
+  );
+  const productionCheck = runProductionReadinessCheckAction();
+  assert(
+    productionCheck.checks.length >= productionReadiness.checks.length,
+    "Production readiness check should return checks"
+  );
+  const publishingConnectorState = getInternationalGeoPublishingConnectorState();
+  assert(
+    publishingConnectorState.connectors.length >= 8,
+    "Publishing connector registry should include target platforms"
+  );
+  const savedPublishingConnector = saveInternationalGeoPublishingConnectorAction("geopubconn_medium", {
+    status: "configured",
+    endpoint: "https://example.com/medium",
+    api_key: "publishing-secret"
+  });
+  assert.equal(
+    savedPublishingConnector.credential_status,
+    "masked",
+    "Publishing connector should mask configured credentials"
+  );
+  assert.doesNotMatch(
+    JSON.stringify(savedPublishingConnector),
+    /publishing-secret/,
+    "Publishing connector config should not expose raw key"
+  );
+  const publishingTest = testInternationalGeoPublishingConnectorAction("geopubconn_medium");
+  assert.equal(publishingTest.external_call_performed, false, "Publishing connector dry-run must not publish externally");
+  assert(
+    publishingTest.checks.some((item) => item.id === "external_publish_blocked"),
+    "Publishing dry-run should include external publish boundary"
+  );
+  const publishingDiagnostics = diagnoseInternationalGeoPublishingConnectorsAction();
+  assert(publishingDiagnostics.items.length >= 8, "Publishing connector diagnose-all should return every connector");
+
   assert.throws(
     () =>
       importInternationalGeoVisibilityEvidenceAction({
@@ -2982,7 +3106,54 @@ function runSettingsAuditUiChecks() {
           ]
         },
         scheduler: {},
-        providers: {}
+        providers: {},
+        production_readiness: {
+          status: "review",
+          score: 78,
+          summary: {
+            passed: 6,
+            warnings: 3,
+            failed: 0,
+            blocked: 0
+          },
+          checks: [
+            {
+              id: "visibility_provider_boundary",
+              category: "integrations",
+              label: "可见度 Provider 边界",
+              status: "warning",
+              message: "Provider 为 dry-run foundation。",
+              recommendation: "接真实 provider 前配置 approved evidence contract。"
+            }
+          ],
+          masked_secret_inventory: [
+            {
+              id: "geo_internal_api_key",
+              scope: "runtime",
+              label: "GEO_INTERNAL_API_KEY",
+              status: "configured",
+              masked_value: "********7890",
+              raw_secret_exposed: false
+            },
+            {
+              id: "visprov_chatgpt_search",
+              scope: "visibility_provider",
+              label: "ChatGPT Search Provider",
+              status: "missing",
+              masked_value: "",
+              raw_secret_exposed: false
+            }
+          ],
+          handoff_checklist: [
+            {
+              id: "docs_aligned",
+              label: "交付文档",
+              status: "warning",
+              recommendation: "上线前确认 v0.19 文档已对齐。"
+            }
+          ],
+          generated_at: "2026-07-07T02:00:00.000Z"
+        }
       },
       auditEvents: [
         {
@@ -3036,6 +3207,10 @@ function runSettingsAuditUiChecks() {
   assert.match(html, /data-action="refresh-launch-preflight"/, "Settings runtime panel should expose preflight refresh");
   assert.match(html, /本地持久化/, "Settings runtime panel should render preflight check rows");
   assert.match(html, /GEO 静态入口/, "Settings runtime panel should render GEO static preflight checks");
+  assert.match(html, /生产运行就绪/, "Settings should render production readiness panel");
+  assert.match(html, /密钥与连接边界/, "Settings should render masked secret inventory panel");
+  assert.match(html, /交付检查清单/, "Settings should render handoff checklist panel");
+  assert.match(html, /refresh-production-readiness/, "Settings should wire production readiness refresh action");
 
   const staticHtml = renderSettings({
     tabs: {
@@ -4113,6 +4288,25 @@ function runInternationalGeoUiChecks() {
           evidence_note: "Manual/local tracking only.",
           updated_at: "2026-07-07T00:00:00.000Z"
         }
+      ],
+      connectors: [
+        {
+          id: "geopubconn_medium",
+          platform_key: "medium",
+          platform_name: "Medium",
+          connector_type: "third_party_article",
+          status: "reserved",
+          approval_required: true,
+          credential_status: "missing",
+          endpoint: "",
+          allowed_actions: ["publishing:dry_run"],
+          dangerous_actions: ["publishing:publish"],
+          permission_boundary: "dry_run_only",
+          last_test_status: "not_run",
+          last_diagnostic_status: "warning",
+          diagnostics: ["No external platform API is called in v0.19."],
+          notes: "Manual handoff only."
+        }
       ]
     },
     visibility: {
@@ -4177,6 +4371,28 @@ function runInternationalGeoUiChecks() {
           data_status: "unavailable",
           provider_id: "",
           last_checked_at: "2026-07-07T00:00:00.000Z"
+        }
+      ],
+      providers: [
+        {
+          id: "visprov_chatgpt_search",
+          engine_id: "chatgpt_search",
+          engine_label: "ChatGPT Search",
+          provider_key: "chatgpt_search",
+          provider_label: "ChatGPT Search Provider",
+          provider_type: "ai_search",
+          status: "reserved",
+          approval_status: "not_requested",
+          connector_id: "",
+          endpoint: "",
+          credential_status: "missing",
+          allowed_actions: ["visibility:dry_run"],
+          dangerous_actions: ["visibility:live_query"],
+          permission_boundary: "dry_run_only",
+          last_test_status: "not_run",
+          last_diagnostic_status: "warning",
+          diagnostics: ["No live AI/search provider is called in v0.19."],
+          notes: "Reserved provider foundation."
         }
       ],
       snapshots: [
@@ -4339,6 +4555,14 @@ function runInternationalGeoUiChecks() {
   assert.match(siteAuditHtml, /data-action="international-visibility-evidence-approve"/);
   assert.match(siteAuditHtml, /data-action="international-visibility-evidence-reject"/);
   assert.match(siteAuditHtml, /approved evidence only|仅统计已通过证据/, "Trend UI should state approved-evidence boundary");
+  assert.match(siteAuditHtml, /可见度 Provider 配置/, "International GEO should render visibility provider config panel");
+  assert.match(siteAuditHtml, /Provider 诊断/, "International GEO should render visibility provider diagnostics panel");
+  assert.match(siteAuditHtml, /Provider 运行边界/, "International GEO should render visibility provider boundary panel");
+  assert.match(siteAuditHtml, /发布连接器配置/, "International GEO should render publishing connector config panel");
+  assert.match(siteAuditHtml, /发布连接器诊断/, "International GEO should render publishing connector diagnostics panel");
+  assert.match(siteAuditHtml, /发布运行边界/, "International GEO should render publishing connector boundary panel");
+  assert.match(siteAuditHtml, /international-visibility-provider-test/, "Provider dry-run action should render in UI");
+  assert.match(siteAuditHtml, /international-publishing-connector-test/, "Publishing connector dry-run action should render in UI");
 }
 
 function runPersistenceChecks() {
@@ -5380,6 +5604,129 @@ async function runMultiUserAccessHttpChecks() {
       }
     );
     assert.equal(missingEvidenceReview.status, 404, "Missing measured visibility evidence review should return 404");
+
+    const providerList = await httpRequest(port, "/api/v1/international-geo/visibility/providers", {
+      headers: ownerHeaders
+    });
+    assert.equal(providerList.status, 200, "Owner should read visibility providers");
+
+    const viewerProviderUpdate = await httpRequest(
+      port,
+      "/api/v1/international-geo/visibility/providers/visprov_chatgpt_search",
+      {
+        method: "PUT",
+        headers: viewerHeaders,
+        body: JSON.stringify({ status: "configured" })
+      }
+    );
+    assert.equal(viewerProviderUpdate.status, 403, "Viewer should not update visibility providers");
+
+    const ownerProviderUpdate = await httpRequest(
+      port,
+      "/api/v1/international-geo/visibility/providers/visprov_chatgpt_search",
+      {
+        method: "PUT",
+        headers: ownerHeaders,
+        body: JSON.stringify({
+          status: "configured",
+          endpoint: "https://example.com/provider",
+          api_key: "http-provider-secret"
+        })
+      }
+    );
+    assert.equal(ownerProviderUpdate.status, 200, "Owner should update visibility provider");
+    assert.doesNotMatch(
+      JSON.stringify(ownerProviderUpdate.body),
+      /http-provider-secret/,
+      "Provider HTTP response should mask raw key"
+    );
+
+    const ownerProviderTest = await httpRequest(
+      port,
+      "/api/v1/international-geo/visibility/providers/visprov_chatgpt_search/test",
+      {
+        method: "POST",
+        headers: ownerHeaders,
+        body: JSON.stringify({})
+      }
+    );
+    assert.equal(ownerProviderTest.status, 200, "Owner should run provider dry-run test");
+    assert.equal(
+      ownerProviderTest.body?.data?.external_call_performed,
+      false,
+      "Provider dry-run HTTP should not call external endpoint"
+    );
+
+    const missingProvider = await httpRequest(
+      port,
+      "/api/v1/international-geo/visibility/providers/missing-provider/test",
+      {
+        method: "POST",
+        headers: ownerHeaders,
+        body: JSON.stringify({})
+      }
+    );
+    assert.equal(missingProvider.status, 404, "Missing provider test should return 404");
+
+    const productionReadinessHttp = await httpRequest(port, "/api/v1/system/production-readiness", {
+      headers: viewerHeaders
+    });
+    assert.equal(productionReadinessHttp.status, 200, "Viewer should read production readiness");
+
+    const viewerProductionCheck = await httpRequest(port, "/api/v1/system/production-readiness/check", {
+      method: "POST",
+      headers: viewerHeaders,
+      body: JSON.stringify({})
+    });
+    assert.equal(viewerProductionCheck.status, 403, "Viewer should not run production readiness check");
+
+    const ownerProductionCheck = await httpRequest(port, "/api/v1/system/production-readiness/check", {
+      method: "POST",
+      headers: ownerHeaders,
+      body: JSON.stringify({})
+    });
+    assert.equal(ownerProductionCheck.status, 200, "Owner should run production readiness check");
+
+    const publishingConnectorList = await httpRequest(port, "/api/v1/international-geo/publishing/connectors", {
+      headers: viewerHeaders
+    });
+    assert.equal(publishingConnectorList.status, 200, "Viewer should read publishing connectors");
+
+    const ownerPublishingConnectorUpdate = await httpRequest(
+      port,
+      "/api/v1/international-geo/publishing/connectors/geopubconn_medium",
+      {
+        method: "PUT",
+        headers: ownerHeaders,
+        body: JSON.stringify({
+          status: "configured",
+          endpoint: "https://example.com/medium",
+          api_key: "http-publishing-secret"
+        })
+      }
+    );
+    assert.equal(ownerPublishingConnectorUpdate.status, 200, "Owner should update publishing connector");
+    assert.doesNotMatch(
+      JSON.stringify(ownerPublishingConnectorUpdate.body),
+      /http-publishing-secret/,
+      "Publishing connector HTTP response should mask raw key"
+    );
+
+    const ownerPublishingConnectorTest = await httpRequest(
+      port,
+      "/api/v1/international-geo/publishing/connectors/geopubconn_medium/test",
+      {
+        method: "POST",
+        headers: ownerHeaders,
+        body: JSON.stringify({})
+      }
+    );
+    assert.equal(ownerPublishingConnectorTest.status, 200, "Owner should run publishing connector dry-run test");
+    assert.equal(
+      ownerPublishingConnectorTest.body?.data?.external_call_performed,
+      false,
+      "Publishing connector test should not call external platform"
+    );
 
     const viewerEvidenceAssets = await httpRequest(port, "/api/v1/international-geo/evidence-assets", {
       headers: {
