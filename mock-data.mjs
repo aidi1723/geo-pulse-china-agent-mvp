@@ -6507,10 +6507,13 @@ function makeEvidenceOpportunity(patch = {}) {
   const assetType = patch.asset_type || "definition_brief";
   const sourceType = patch.source_type || "rule_first";
   const sourceId = patch.source_id || assetType;
+  const priority = patch.priority || "low";
   return {
     id: patch.id || opportunityId(sourceType, sourceId, assetType),
+    title: patch.title || evidenceAssetTitle(assetType),
     source_type: sourceType,
     source_id: sourceId,
+    source_label: patch.source_label || sourceId,
     asset_type: assetType,
     market: patch.market || audit.target_market || input.target_market || "Global",
     language: patch.language || audit.target_language || input.target_language || "en",
@@ -6520,7 +6523,8 @@ function makeEvidenceOpportunity(patch = {}) {
     evidence_summary: patch.evidence_summary || "Rule-first recommendation; verify claims before publishing.",
     recommended_action: patch.recommended_action || "Draft, review, and publish the asset on an owned canonical page.",
     confidence: patch.confidence || "low",
-    priority: patch.priority || "low",
+    priority,
+    severity: patch.severity || patch.priority || "medium",
     status: patch.status || "open",
     created_at: patch.created_at || nowIso()
   };
@@ -6831,14 +6835,23 @@ export function generateInternationalGeoEvidenceAssetsAction() {
         asset_type: opportunity.asset_type,
         status: "generated",
         review_status: "pending_review",
+        reviewed_at: null,
         created_at: createdAt
       };
+    queueItem.title = opportunity.title || evidenceAssetTitle(opportunity.asset_type);
     queueItem.asset_type = opportunity.asset_type;
+    queueItem.source_type = opportunity.source_type;
+    queueItem.source_id = opportunity.source_id;
+    queueItem.assigned_to = queueItem.assigned_to || "content_reviewer";
+    queueItem.queued_at = queueItem.queued_at || queueItem.created_at || createdAt;
     if (!["approved", "rejected"].includes(queueItem.status)) {
       queueItem.status = "generated";
     }
     if (!["approved", "rejected"].includes(queueItem.review_status)) {
       queueItem.review_status = "pending_review";
+    }
+    if (!Object.prototype.hasOwnProperty.call(queueItem, "reviewed_at")) {
+      queueItem.reviewed_at = null;
     }
     queueItem.generated_at = queueItem.generated_at || createdAt;
     existingQueueMap.set(opportunity.id, queueItem);
@@ -6849,7 +6862,7 @@ export function generateInternationalGeoEvidenceAssetsAction() {
         opportunity_id: opportunity.id,
         queue_item_id: queueItem.id,
         asset_type: opportunity.asset_type,
-        title: evidenceAssetTitle(opportunity.asset_type),
+        title: opportunity.title || evidenceAssetTitle(opportunity.asset_type),
         content_type: opportunity.asset_type === "json_ld_patch" ? "application/ld+json" : "text/markdown",
         content: evidenceAssetContent(opportunity),
         evidence_source_type: opportunity.source_type,
@@ -6857,8 +6870,21 @@ export function generateInternationalGeoEvidenceAssetsAction() {
         evidence_summary: opportunity.evidence_summary,
         confidence: opportunity.confidence,
         review_status: "pending_review",
+        human_notes: "",
+        reviewed_at: null,
         created_at: createdAt
       });
+    } else {
+      const asset = existingAssetsMap.get(opportunity.id);
+      asset.title = asset.title || opportunity.title || evidenceAssetTitle(opportunity.asset_type);
+      asset.human_notes = asset.human_notes || "";
+      if (!Object.prototype.hasOwnProperty.call(asset, "reviewed_at")) {
+        asset.reviewed_at = null;
+      }
+      asset.evidence_source_type = asset.evidence_source_type || opportunity.source_type;
+      asset.evidence_source_id = asset.evidence_source_id || opportunity.source_id;
+      asset.evidence_summary = asset.evidence_summary || opportunity.evidence_summary;
+      asset.confidence = asset.confidence || opportunity.confidence;
     }
   });
 
