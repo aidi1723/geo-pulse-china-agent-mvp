@@ -56,6 +56,7 @@ import {
   getVisibilityAnalytics,
   getConnectorPermissionMatrix,
   getWorkspaceInput,
+  importInternationalGeoVisibilityEvidenceBatchAction,
   listUsers,
   listAutomationConnectors,
   listAutomationProviders,
@@ -80,6 +81,7 @@ import {
   reconnectChannelAction,
   resetRuntimeState,
   reviewArticleAction,
+  reviewInternationalGeoVisibilityEvidenceAction,
   reviewInternationalGeoGeneratedArticleAction,
   reviewInternationalGeoEvidenceAssetAction,
   reviewInternationalGeoPlatformRewriteAction,
@@ -242,6 +244,41 @@ function runSingleUserSourceChecks() {
     eventsSource,
     /action === "international-visibility-evidence-import"/,
     "International GEO measured evidence import should be wired in the event dispatcher"
+  );
+  assert.match(
+    apiSource,
+    /export function importInternationalGeoVisibilityEvidenceBatch\(payload = \{\}\)/,
+    "International GEO batch measured evidence import should have a client API method"
+  );
+  assert.match(
+    apiSource,
+    /export function reviewInternationalGeoVisibilityEvidence\(snapshotId, payload = \{\}\)/,
+    "International GEO measured evidence review should have a client API method"
+  );
+  assert.match(
+    mainSource,
+    /importInternationalGeoVisibilityEvidenceBatch as importInternationalGeoVisibilityEvidenceBatchApi/,
+    "International GEO batch evidence import should be imported into the browser action layer"
+  );
+  assert.match(
+    mainSource,
+    /reviewInternationalGeoVisibilityEvidence as reviewInternationalGeoVisibilityEvidenceApi/,
+    "International GEO evidence review should be imported into the browser action layer"
+  );
+  assert.match(
+    eventsSource,
+    /action === "international-visibility-evidence-batch-import"/,
+    "International GEO batch evidence import should be wired in events"
+  );
+  assert.match(
+    eventsSource,
+    /action === "international-visibility-evidence-approve"/,
+    "International GEO evidence approval should be wired in events"
+  );
+  assert.match(
+    eventsSource,
+    /action === "international-visibility-evidence-reject"/,
+    "International GEO evidence rejection should be wired in events"
   );
   assert.match(
     apiSource,
@@ -1514,6 +1551,130 @@ async function runMockDataChecks() {
       (item) => item.id === measuredImport.snapshot.id && item.import_mode === "manual_single"
     ),
     "Measured import should persist manual_single snapshot"
+  );
+
+  const batchPromptSet = createInternationalGeoVisibilityPromptSetAction({
+    prompt: "best AI search visibility tool for international B2B",
+    market: "US",
+    language: "en-US",
+    buyer_intent: "decision",
+    product_name: "AgentCore GEO",
+    target_url: "https://example.com/agentcore-geo",
+    target_brand: "AgentCore GEO",
+    competitors: ["Profound", "AthenaHQ"],
+    engines: ["chatgpt_search", "gemini"]
+  });
+
+  const batchImport = importInternationalGeoVisibilityEvidenceBatchAction({
+    source_label: "Manual weekly evidence sheet",
+    import_note: "Two rows copied from manual AI engine checks.",
+    rows: [
+      {
+        prompt_set_id: batchPromptSet.id,
+        engine_id: "chatgpt_search",
+        source_type: "manual_observation",
+        captured_at: "2026-07-07T11:00:00.000Z",
+        brand_mentioned: true,
+        citation_urls: ["https://example.com/agentcore-geo"],
+        recommendation_rank: 2,
+        competitors_mentioned: ["Profound"],
+        confidence: "high",
+        raw_observation: "AgentCore GEO appeared second with one owned citation.",
+        evidence_note: "Manual reviewer checked ChatGPT Search."
+      },
+      {
+        prompt_set_id: batchPromptSet.id,
+        engine_id: "gemini",
+        source_type: "manual_export",
+        captured_at: "2026-07-07T11:10:00.000Z",
+        brand_mentioned: false,
+        citation_urls: [],
+        competitors_mentioned: ["AthenaHQ"],
+        confidence: "medium",
+        raw_observation: "Gemini mentioned AthenaHQ but did not mention AgentCore GEO."
+      }
+    ]
+  });
+  assert.equal(batchImport.import_batch.import_mode, "manual_batch", "Batch import should create a manual_batch ledger row");
+  assert.equal(batchImport.import_batch.row_count, 2, "Batch import should record row count");
+  assert.equal(batchImport.import_batch.pending_review_count, 2, "Batch import snapshots should start pending review");
+  assert.equal(batchImport.run.data_source_type, "measured_import", "Batch import should use measured_import run provenance");
+  assert.equal(batchImport.snapshots.length, 2, "Batch import should create two snapshots");
+  assert.ok(
+    batchImport.snapshots.every((item) => item.review_status === "pending_review"),
+    "Batch snapshots should start pending_review"
+  );
+
+  const beforeInvalidBatchCount = getInternationalGeoVisibilityState().snapshots.length;
+  assert.throws(
+    () =>
+      importInternationalGeoVisibilityEvidenceBatchAction({
+        rows: [
+          {
+            prompt_set_id: batchPromptSet.id,
+            engine_id: "chatgpt_search",
+            source_type: "manual_observation",
+            captured_at: "2026-07-07T11:00:00.000Z",
+            brand_mentioned: true,
+            evidence_note: "Missing evidence detail for true brand mention."
+          },
+          {
+            prompt_set_id: batchPromptSet.id,
+            engine_id: "gemini",
+            source_type: "bad_source",
+            captured_at: "2026-07-07T11:10:00.000Z",
+            brand_mentioned: false,
+            raw_observation: "Invalid source type."
+          }
+        ]
+      }),
+    /VALIDATION_ERROR/,
+    "Batch import should reject invalid rows without partial writes"
+  );
+  assert.equal(
+    getInternationalGeoVisibilityState().snapshots.length,
+    beforeInvalidBatchCount,
+    "Invalid batch import should not write partial snapshots"
+  );
+
+  const approvedEvidence = reviewInternationalGeoVisibilityEvidenceAction(batchImport.snapshots[0].id, {
+    action: "approve",
+    review_note: "Evidence matches manual observation."
+  });
+  assert.equal(approvedEvidence.snapshot.review_status, "approved", "Evidence review should approve imported snapshot");
+  assert.equal(approvedEvidence.import_batch.approved_count, 1, "Ledger should count approved imported evidence");
+
+  const rejectedEvidence = reviewInternationalGeoVisibilityEvidenceAction(batchImport.snapshots[1].id, {
+    action: "reject",
+    review_note: "Evidence did not mention target brand."
+  });
+  assert.equal(rejectedEvidence.snapshot.review_status, "rejected", "Evidence review should reject imported snapshot");
+  assert.equal(rejectedEvidence.import_batch.rejected_count, 1, "Ledger should count rejected imported evidence");
+
+  const visibilityAfterReview = getInternationalGeoVisibilityState();
+  assert.ok(
+    visibilityAfterReview.imports.some((item) => item.id === batchImport.import_batch.id && item.approved_count === 1),
+    "Visibility state should expose import ledger rows"
+  );
+  assert.ok(
+    visibilityAfterReview.trends.some(
+      (item) =>
+        item.prompt_set_id === batchPromptSet.id &&
+        item.engine_id === "chatgpt_search" &&
+        item.approved_snapshot_count === 1 &&
+        item.brand_mentioned_count === 1 &&
+        item.best_recommendation_rank === 2
+    ),
+    "Visibility trends should include approved measured evidence"
+  );
+  assert.ok(
+    !visibilityAfterReview.trends.some((item) => item.prompt_set_id === batchPromptSet.id && item.engine_id === "gemini"),
+    "Visibility trends should exclude rejected measured evidence"
+  );
+  assert.throws(
+    () => reviewInternationalGeoVisibilityEvidenceAction(batchImport.snapshots[0].id, { action: "invalid" }),
+    /VALIDATION_ERROR/,
+    "Evidence review should reject invalid actions"
   );
 
   assert.throws(
@@ -3955,6 +4116,25 @@ function runInternationalGeoUiChecks() {
       ]
     },
     visibility: {
+      summary: {
+        prompt_count: 1,
+        engine_count: 2,
+        measured_snapshots: 1,
+        simulated_snapshots: 0,
+        unavailable_snapshots: 2,
+        import_batch_count: 1,
+        pending_review_count: 1,
+        approved_evidence_count: 0,
+        rejected_evidence_count: 0,
+        trend_row_count: 1
+      },
+      prompt_sets: [
+        {
+          id: "vis-prompt-ui",
+          prompt: "best GEO platform for B2B exporters",
+          engines: ["chatgpt_search", "perplexity"]
+        }
+      ],
       provider_readiness: [
         {
           engine_id: "chatgpt_search",
@@ -4001,6 +4181,26 @@ function runInternationalGeoUiChecks() {
       ],
       snapshots: [
         {
+          id: "vis-snap-measured",
+          prompt_set_id: "vis-prompt-ui",
+          prompt: "best GEO platform for B2B exporters",
+          engine_id: "chatgpt_search",
+          engine_label: "ChatGPT Search",
+          data_status: "measured",
+          provider_id: "manual_import",
+          source_type: "manual_observation",
+          source_url: "https://chatgpt.com/",
+          brand_mentioned: true,
+          owned_citation_count: 1,
+          recommendation_rank: 2,
+          competitors_mentioned: ["Profound"],
+          confidence: "medium",
+          review_status: "pending_review",
+          raw_observation: "Manual measured evidence fixture.",
+          evidence_note: "Pending review UI fixture.",
+          captured_at: "2026-07-07T01:00:00.000Z"
+        },
+        {
           id: "vis-snap-chatgpt",
           prompt_set_id: "vis-prompt-ui",
           prompt: "best GEO platform for B2B exporters",
@@ -4031,6 +4231,40 @@ function runInternationalGeoUiChecks() {
           data_source_type: "unavailable",
           snapshots_created: 2,
           created_at: "2026-07-07T00:00:00.000Z"
+        }
+      ],
+      imports: [
+        {
+          id: "aivimp-ui",
+          run_id: "vis-run-import-ui",
+          import_mode: "manual_batch",
+          provider_id: "manual_import",
+          data_source_type: "measured_import",
+          status: "completed",
+          source_label: "Manual evidence UI fixture",
+          import_note: "Local-only imported evidence.",
+          row_count: 1,
+          snapshots_created: 1,
+          pending_review_count: 1,
+          approved_count: 0,
+          rejected_count: 0,
+          created_at: "2026-07-07T01:05:00.000Z",
+          snapshot_ids: ["vis-snap-measured"]
+        }
+      ],
+      trends: [
+        {
+          prompt_set_id: "vis-prompt-ui",
+          engine_id: "chatgpt_search",
+          engine_label: "ChatGPT Search",
+          latest_captured_at: "2026-07-07T01:00:00.000Z",
+          approved_snapshot_count: 1,
+          brand_mentioned_count: 1,
+          owned_citation_count: 1,
+          best_recommendation_rank: 2,
+          latest_recommendation_rank: 2,
+          competitors_mentioned: ["Profound"],
+          latest_snapshot_id: "vis-snap-measured"
         }
       ]
     }
@@ -4097,6 +4331,14 @@ function runInternationalGeoUiChecks() {
   assert.match(siteAuditHtml, /data-action="international-visibility-evidence-import"/);
   assert.match(siteAuditHtml, /manual_import/, "Measured evidence import UI should expose manual_import boundary");
   assert.match(siteAuditHtml, /measured_import/, "Measured evidence import UI should expose measured_import run boundary");
+  assert.match(siteAuditHtml, /批量导入测量证据/, "International GEO should render batch measured evidence import panel");
+  assert.match(siteAuditHtml, /data-action="international-visibility-evidence-batch-import"/);
+  assert.match(siteAuditHtml, /测量证据台账/, "International GEO should render measured evidence ledger");
+  assert.match(siteAuditHtml, /证据复核/, "International GEO should render measured evidence review queue");
+  assert.match(siteAuditHtml, /可见度趋势/, "International GEO should render approved evidence trends");
+  assert.match(siteAuditHtml, /data-action="international-visibility-evidence-approve"/);
+  assert.match(siteAuditHtml, /data-action="international-visibility-evidence-reject"/);
+  assert.match(siteAuditHtml, /approved evidence only|仅统计已通过证据/, "Trend UI should state approved-evidence boundary");
 }
 
 function runPersistenceChecks() {
@@ -5037,6 +5279,107 @@ async function runMultiUserAccessHttpChecks() {
       }
     );
     assert.equal(invalidMeasuredImport.status, 400, "Invalid measured visibility evidence import should fail");
+
+    const viewerBatchImport = await httpRequest(port, "/api/v1/international-geo/visibility/evidence/imports", {
+      method: "POST",
+      headers: viewerHeaders,
+      body: JSON.stringify({ rows: [] })
+    });
+    assert.equal(viewerBatchImport.status, 403, "Viewer should not batch import measured visibility evidence");
+
+    const ownerBatchPromptSet = await httpRequest(port, "/api/v1/international-geo/visibility/prompt-sets", {
+      method: "POST",
+      headers: ownerHeaders,
+      body: JSON.stringify({
+        prompt: "best measured GEO platform for AI search",
+        market: "US",
+        language: "en-US",
+        product_name: "AgentCore GEO",
+        target_url: "https://example.com/agentcore-geo",
+        target_brand: "AgentCore GEO",
+        engines: ["chatgpt_search", "gemini"]
+      })
+    });
+    assert.equal(ownerBatchPromptSet.status, 201, "Owner should create batch import prompt set");
+
+    const ownerBatchImport = await httpRequest(port, "/api/v1/international-geo/visibility/evidence/imports", {
+      method: "POST",
+      headers: ownerHeaders,
+      body: JSON.stringify({
+        source_label: "HTTP batch evidence",
+        import_note: "HTTP batch import test.",
+        rows: [
+          {
+            prompt_set_id: ownerBatchPromptSet.body.data.id,
+            engine_id: "chatgpt_search",
+            source_type: "manual_observation",
+            captured_at: "2026-07-07T12:00:00.000Z",
+            brand_mentioned: true,
+            citation_urls: ["https://example.com/agentcore-geo"],
+            recommendation_rank: 1,
+            raw_observation: "HTTP batch observation.",
+            evidence_note: "Batch row 1."
+          },
+          {
+            prompt_set_id: ownerBatchPromptSet.body.data.id,
+            engine_id: "gemini",
+            source_type: "manual_export",
+            captured_at: "2026-07-07T12:05:00.000Z",
+            brand_mentioned: false,
+            raw_observation: "Gemini did not mention the brand."
+          }
+        ]
+      })
+    });
+    assert.equal(ownerBatchImport.status, 201, "Owner should batch import measured visibility evidence");
+    assert.equal(ownerBatchImport.body?.data?.import_batch?.row_count, 2);
+    assert.equal(ownerBatchImport.body?.data?.snapshots?.[0]?.review_status, "pending_review");
+
+    const batchSnapshotId = ownerBatchImport.body?.data?.snapshots?.[0]?.id;
+    const viewerEvidenceReview = await httpRequest(
+      port,
+      `/api/v1/international-geo/visibility/evidence/${batchSnapshotId}/review`,
+      {
+        method: "POST",
+        headers: viewerHeaders,
+        body: JSON.stringify({ action: "approve" })
+      }
+    );
+    assert.equal(viewerEvidenceReview.status, 403, "Viewer should not review measured visibility evidence");
+
+    const ownerEvidenceApprove = await httpRequest(
+      port,
+      `/api/v1/international-geo/visibility/evidence/${batchSnapshotId}/review`,
+      {
+        method: "POST",
+        headers: ownerHeaders,
+        body: JSON.stringify({ action: "approve", review_note: "HTTP approved." })
+      }
+    );
+    assert.equal(ownerEvidenceApprove.status, 200, "Owner should approve measured visibility evidence");
+    assert.equal(ownerEvidenceApprove.body?.data?.snapshot?.review_status, "approved");
+
+    const invalidEvidenceReview = await httpRequest(
+      port,
+      `/api/v1/international-geo/visibility/evidence/${batchSnapshotId}/review`,
+      {
+        method: "POST",
+        headers: ownerHeaders,
+        body: JSON.stringify({ action: "bad_action" })
+      }
+    );
+    assert.equal(invalidEvidenceReview.status, 400, "Invalid measured visibility evidence review should fail");
+
+    const missingEvidenceReview = await httpRequest(
+      port,
+      "/api/v1/international-geo/visibility/evidence/missing-snapshot/review",
+      {
+        method: "POST",
+        headers: ownerHeaders,
+        body: JSON.stringify({ action: "approve" })
+      }
+    );
+    assert.equal(missingEvidenceReview.status, 404, "Missing measured visibility evidence review should return 404");
 
     const viewerEvidenceAssets = await httpRequest(port, "/api/v1/international-geo/evidence-assets", {
       headers: {
