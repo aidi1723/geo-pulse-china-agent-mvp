@@ -32,6 +32,7 @@ const {
   generateInternationalGeoPublishingPackagesAction,
   generateInternationalGeoSiteAuditAssetsAction,
   generateTopicOutlineAction,
+  importInternationalGeoVisibilityEvidenceBatchAction,
   importInternationalGeoVisibilityEvidenceAction,
   getArticle,
   getAutomationConnector,
@@ -95,6 +96,7 @@ const {
   listTopicIdeas,
   listUsageRecords,
   reviewArticleAction,
+  reviewInternationalGeoVisibilityEvidenceAction,
   reviewInternationalGeoGeneratedArticleAction,
   reviewInternationalGeoEvidenceAssetAction,
   reviewInternationalGeoPlatformRewriteAction,
@@ -2258,6 +2260,50 @@ async function handleApi(req, res, url) {
     } catch (err) {
       if ((err?.code || err?.message) === "VALIDATION_ERROR") {
         const message = err.field_errors?.[0]?.message || err.message || "Invalid measured visibility evidence";
+        sendJson(res, 400, error("VALIDATION_ERROR", message).body);
+        return;
+      }
+      throw err;
+    }
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/international-geo/visibility/evidence/imports") {
+    const body = await parseBody(req).catch(() => null);
+    if (!body) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    try {
+      sendJson(res, 201, ok(importInternationalGeoVisibilityEvidenceBatchAction(body)));
+    } catch (err) {
+      if ((err?.code || err?.message) === "VALIDATION_ERROR") {
+        const message = err.field_errors?.[0]?.message || err.message || "Invalid measured visibility evidence batch";
+        sendJson(res, 400, error("VALIDATION_ERROR", message).body);
+        return;
+      }
+      throw err;
+    }
+    return;
+  }
+
+  if (req.method === "POST" && pathname.match(/^\/international-geo\/visibility\/evidence\/[^/]+\/review$/)) {
+    const id = pathname.split("/")[4];
+    const body = await parseBody(req).catch(() => null);
+    if (!body) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    try {
+      const result = reviewInternationalGeoVisibilityEvidenceAction(id, body);
+      if (!result) {
+        sendJson(res, 404, error("NOT_FOUND", "Measured visibility evidence not found", 404).body);
+        return;
+      }
+      sendJson(res, 200, ok(result));
+    } catch (err) {
+      if ((err?.code || err?.message) === "VALIDATION_ERROR") {
+        const message = err.field_errors?.[0]?.message || err.message || "Invalid measured visibility evidence review";
         sendJson(res, 400, error("VALIDATION_ERROR", message).body);
         return;
       }
