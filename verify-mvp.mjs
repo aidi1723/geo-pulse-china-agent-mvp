@@ -22,6 +22,7 @@ import {
   createTopicIdeaAction,
   createTopicIdeasFromKeywords,
   evaluateConnectorPermission,
+  generateInternationalGeoEvidenceAssetsAction,
   generateInternationalGeoArtifactsAction,
   generateInternationalGeoSiteAuditAssetsAction,
   generateTopicOutlineAction,
@@ -35,6 +36,7 @@ import {
   getExportJobDownload,
   getCampaignAnalytics,
   getInternationalGeoState,
+  getInternationalGeoEvidenceAssetsState,
   getInternationalGeoVisibilityState,
   getInternationalGeoSiteAudit,
   getKeyword,
@@ -72,6 +74,7 @@ import {
   reconnectChannelAction,
   resetRuntimeState,
   reviewArticleAction,
+  reviewInternationalGeoEvidenceAssetAction,
   approvePublishTaskAction,
   crawlInternationalGeoSiteAuditAction,
   runInternationalGeoAuditAction,
@@ -182,6 +185,9 @@ function runSingleUserSourceChecks() {
     "prototype/src/pages/keywords.js"
   ];
   const combined = sourceFiles.map((file) => fs.readFileSync(file, "utf8")).join("\n");
+  const apiSource = fs.readFileSync("prototype/src/api.js", "utf8");
+  const eventsSource = fs.readFileSync("prototype/src/events.js", "utf8");
+  const mainSource = fs.readFileSync("prototype/src/main.js", "utf8");
   assert.doesNotMatch(
     combined,
     /即将开放|Read-only MVP/,
@@ -206,6 +212,41 @@ function runSingleUserSourceChecks() {
     combined,
     /action === "international-visibility-run"/,
     "International GEO visibility run data-action should be wired in the event dispatcher"
+  );
+  assert.match(
+    apiSource,
+    /export function getInternationalGeoEvidenceAssets\(\)/,
+    "International GEO evidence assets should have a read client API method"
+  );
+  assert.match(
+    apiSource,
+    /export function generateInternationalGeoEvidenceAssets\(\)/,
+    "International GEO evidence assets should have a generate client API method"
+  );
+  assert.match(
+    apiSource,
+    /export function reviewInternationalGeoEvidenceAsset\(assetId, payload = \{\}\)/,
+    "International GEO evidence assets should have a review client API method"
+  );
+  assert.match(
+    mainSource,
+    /generateInternationalGeoEvidenceAssets as generateInternationalGeoEvidenceAssetsApi/,
+    "International GEO evidence asset generation should be imported into the browser action layer"
+  );
+  assert.match(
+    eventsSource,
+    /action === "international-evidence-assets-generate"/,
+    "International GEO evidence asset generation should be wired in the event dispatcher"
+  );
+  assert.match(
+    eventsSource,
+    /action === "international-evidence-asset-approve"/,
+    "International GEO evidence asset approval should be wired in the event dispatcher"
+  );
+  assert.match(
+    eventsSource,
+    /action === "international-evidence-asset-reject"/,
+    "International GEO evidence asset rejection should be wired in the event dispatcher"
   );
 }
 
@@ -1263,6 +1304,59 @@ async function runMockDataChecks() {
   assert.ok(
     visibilityRun.snapshots.every((item) => item.brand_mentioned === null && item.recommendation_rank === null),
     "Unavailable snapshots should not invent brand mentions or ranks"
+  );
+
+  const evidenceAssetsInitial = getInternationalGeoEvidenceAssetsState();
+  assert.ok(evidenceAssetsInitial.summary, "Evidence asset state should expose a summary");
+  assert.ok(Array.isArray(evidenceAssetsInitial.opportunities), "Evidence asset state should expose opportunities");
+  assert.ok(Array.isArray(evidenceAssetsInitial.queue), "Evidence asset state should expose queue items");
+  assert.ok(Array.isArray(evidenceAssetsInitial.assets), "Evidence asset state should expose generated assets");
+
+  const evidenceAssetsGenerated = generateInternationalGeoEvidenceAssetsAction();
+  assert.ok(
+    evidenceAssetsGenerated.opportunities.some((item) => item.source_type === "score_deduction"),
+    "Evidence opportunities should include site audit scoring deductions"
+  );
+  assert.ok(
+    evidenceAssetsGenerated.opportunities.some((item) => item.source_type === "visibility_gap"),
+    "Evidence opportunities should include AI visibility gaps"
+  );
+  const generatedAssetTypes = new Set(evidenceAssetsGenerated.assets.map((item) => item.asset_type));
+  [
+    "llms_txt_update",
+    "json_ld_patch",
+    "faq_block",
+    "comparison_brief",
+    "definition_brief",
+    "product_spec_brief"
+  ].forEach((assetType) => {
+    assert.ok(generatedAssetTypes.has(assetType), `Generated evidence assets should include ${assetType}`);
+  });
+  assert.ok(
+    evidenceAssetsGenerated.assets.every(
+      (item) => item.evidence_source_type && item.evidence_source_id && item.evidence_summary && item.confidence
+    ),
+    "Every generated evidence asset should expose provenance and confidence"
+  );
+
+  const assetToApprove = evidenceAssetsGenerated.assets[0];
+  const approvedAsset = reviewInternationalGeoEvidenceAssetAction(assetToApprove.id, { action: "approve" });
+  assert.equal(approvedAsset.review_status, "approved", "Evidence asset review should approve assets");
+  const assetToReject = evidenceAssetsGenerated.assets.find((item) => item.id !== assetToApprove.id);
+  const rejectedAsset = reviewInternationalGeoEvidenceAssetAction(assetToReject.id, {
+    action: "reject",
+    human_notes: "Needs stronger source proof."
+  });
+  assert.equal(rejectedAsset.review_status, "rejected", "Evidence asset review should reject assets");
+  assert.throws(
+    () => reviewInternationalGeoEvidenceAssetAction(assetToApprove.id, { action: "publish" }),
+    /VALIDATION_ERROR/,
+    "Invalid evidence asset review actions should be rejected"
+  );
+  assert.equal(
+    reviewInternationalGeoEvidenceAssetAction("missing_evidence_asset", { action: "approve" }),
+    null,
+    "Unknown evidence asset ids should return null"
   );
 
   assert.throws(
@@ -3360,6 +3454,11 @@ function runInternationalGeoUiChecks() {
   );
   assert.match(siteAuditHtml, /GEO 资产/, "International GEO page should render GEO assets");
   assert.match(siteAuditHtml, /llms\.txt/, "International GEO page should render llms.txt assets");
+  assert.match(siteAuditHtml, /证据驱动内容机会/, "International GEO page should render evidence opportunities");
+  assert.match(siteAuditHtml, /资产生成队列/, "International GEO page should render the evidence asset queue");
+  assert.match(siteAuditHtml, /证据来源/, "International GEO assets should render provenance metadata");
+  assert.match(siteAuditHtml, /审核通过/, "International GEO evidence assets should expose approve action");
+  assert.match(siteAuditHtml, /驳回/, "International GEO evidence assets should expose reject action");
   assert.match(siteAuditHtml, /AI 可见度测量/, "International GEO should render AI visibility measurement panel");
   assert.match(siteAuditHtml, /引擎数据源状态/, "International GEO should render engine provider readiness");
   assert.match(siteAuditHtml, /Prompt 测量快照/, "International GEO should render prompt measurement snapshots");
@@ -4224,6 +4323,81 @@ async function runMultiUserAccessHttpChecks() {
       "unavailable",
       "HTTP visibility run should not claim measured data without a provider"
     );
+
+    const viewerEvidenceAssets = await httpRequest(port, "/api/v1/international-geo/evidence-assets", {
+      headers: {
+        Cookie: viewerLogin.cookie
+      }
+    });
+    assert.equal(viewerEvidenceAssets.status, 200, "Viewer should read International GEO evidence assets");
+    assert.ok(
+      viewerEvidenceAssets.body?.data?.summary,
+      "Evidence assets HTTP response should include a summary"
+    );
+
+    const viewerGenerateEvidenceAssets = await httpRequest(port, "/api/v1/international-geo/evidence-assets/generate", {
+      method: "POST",
+      headers: {
+        Cookie: viewerLogin.cookie
+      }
+    });
+    assert.equal(viewerGenerateEvidenceAssets.status, 403, "Viewer should not generate evidence assets");
+
+    const ownerGenerateEvidenceAssets = await httpRequest(port, "/api/v1/international-geo/evidence-assets/generate", {
+      method: "POST",
+      headers: {
+        Cookie: ownerLogin.cookie
+      }
+    });
+    assert.equal(ownerGenerateEvidenceAssets.status, 201, "Owner should generate evidence assets");
+    assert.ok(
+      ownerGenerateEvidenceAssets.body?.data?.assets?.length >= 6,
+      "Owner evidence asset generation should return generated assets"
+    );
+
+    const generatedEvidenceAssetId = ownerGenerateEvidenceAssets.body.data.assets[0].id;
+    const viewerReviewEvidenceAsset = await httpRequest(
+      port,
+      `/api/v1/international-geo/evidence-assets/${generatedEvidenceAssetId}/review`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: viewerLogin.cookie
+        },
+        body: JSON.stringify({ action: "approve" })
+      }
+    );
+    assert.equal(viewerReviewEvidenceAsset.status, 403, "Viewer should not review evidence assets");
+
+    const ownerReviewEvidenceAsset = await httpRequest(
+      port,
+      `/api/v1/international-geo/evidence-assets/${generatedEvidenceAssetId}/review`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: ownerLogin.cookie
+        },
+        body: JSON.stringify({ action: "approve" })
+      }
+    );
+    assert.equal(ownerReviewEvidenceAsset.status, 200, "Owner should review evidence assets");
+    assert.equal(ownerReviewEvidenceAsset.body?.data?.review_status, "approved");
+
+    const invalidEvidenceAssetReview = await httpRequest(
+      port,
+      `/api/v1/international-geo/evidence-assets/${generatedEvidenceAssetId}/review`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: ownerLogin.cookie
+        },
+        body: JSON.stringify({ action: "publish" })
+      }
+    );
+    assert.equal(invalidEvidenceAssetReview.status, 400, "Invalid evidence asset review should fail");
 
     const createdEditor = await httpRequest(port, "/api/v1/users", {
       method: "POST",
