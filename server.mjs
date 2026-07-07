@@ -13,6 +13,8 @@ const {
   createChannelAction,
   createContentTemplateAction,
   createExportJobAction,
+  diagnoseInternationalGeoPublishingConnectorsAction,
+  diagnoseInternationalGeoVisibilityProvidersAction,
   createInternationalGeoVisibilityPromptSetAction,
   createInternationalGeoSiteAuditAction,
   createMediaSourceAction,
@@ -50,9 +52,12 @@ const {
   getInternationalGeoState,
   getInternationalGeoContentGenerationState,
   getInternationalGeoEvidenceAssetsState,
+  getInternationalGeoPublishingConnectorState,
   getInternationalGeoPublishingState,
+  getInternationalGeoVisibilityProviderState,
   getInternationalGeoVisibilityState,
   getInternationalGeoSiteAudit,
+  getProductionReadinessState,
   getDashboardSummary,
   getKeyword,
   getKeywordAnalytics,
@@ -103,6 +108,7 @@ const {
   reviewInternationalGeoPublishingPackageAction,
   runInternationalGeoAuditAction,
   runInternationalGeoVisibilityMeasurementAction,
+  runProductionReadinessCheckAction,
   reconnectChannelAction,
   recordAuditEventAction,
   runSourceStrategyAction,
@@ -112,6 +118,8 @@ const {
   retryAutomationRunAction,
   saveBrandProfileAction,
   saveChannelAction,
+  saveInternationalGeoPublishingConnectorAction,
+  saveInternationalGeoVisibilityProviderAction,
   saveInternationalGeoInputAction,
   saveMediaSourceAction,
   saveModelConfigAction,
@@ -121,6 +129,8 @@ const {
   saveWorkspaceInputAction,
   testAutomationProviderAction,
   testAutomationConnectorAction,
+  testInternationalGeoPublishingConnectorAction,
+  testInternationalGeoVisibilityProviderAction,
   retryPublishTaskFailedAction,
   startPublishTaskAction,
   submitArticleReviewAction,
@@ -1481,6 +1491,16 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && pathname === "/system/production-readiness") {
+    sendJson(res, 200, ok(getProductionReadinessState()));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/system/production-readiness/check") {
+    sendJson(res, 200, ok(runProductionReadinessCheckAction()));
+    return;
+  }
+
   if (req.method === "GET" && pathname === "/system/backups") {
     sendJson(res, 200, ok(listRuntimeBackups(query)));
     return;
@@ -2124,6 +2144,11 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && pathname === "/international-geo/visibility/providers") {
+    sendJson(res, 200, ok(getInternationalGeoVisibilityProviderState()));
+    return;
+  }
+
   if (req.method === "GET" && pathname === "/international-geo/evidence-assets") {
     sendJson(res, 200, ok(getInternationalGeoEvidenceAssetsState()));
     return;
@@ -2224,6 +2249,52 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && pathname === "/international-geo/publishing/connectors") {
+    sendJson(res, 200, ok(getInternationalGeoPublishingConnectorState()));
+    return;
+  }
+
+  if (req.method === "PUT" && pathname.match(/^\/international-geo\/publishing\/connectors\/[^/]+$/)) {
+    const id = pathname.split("/")[4];
+    const body = await parseBody(req).catch(() => null);
+    if (!body) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    try {
+      const result = saveInternationalGeoPublishingConnectorAction(id, body);
+      if (!result) {
+        sendJson(res, 404, error("NOT_FOUND", "Publishing connector not found", 404).body);
+        return;
+      }
+      sendJson(res, 200, ok(result));
+    } catch (err) {
+      if ((err?.code || err?.message) === "VALIDATION_ERROR") {
+        const message = err.field_errors?.[0]?.message || err.message || "Invalid publishing connector";
+        sendJson(res, 400, error("VALIDATION_ERROR", message).body);
+        return;
+      }
+      throw err;
+    }
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/international-geo/publishing/connectors/diagnose") {
+    sendJson(res, 200, ok(diagnoseInternationalGeoPublishingConnectorsAction()));
+    return;
+  }
+
+  if (req.method === "POST" && pathname.match(/^\/international-geo\/publishing\/connectors\/[^/]+\/test$/)) {
+    const id = pathname.split("/")[4];
+    const result = testInternationalGeoPublishingConnectorAction(id);
+    if (!result) {
+      sendJson(res, 404, error("NOT_FOUND", "Publishing connector not found", 404).body);
+      return;
+    }
+    sendJson(res, 200, ok(result));
+    return;
+  }
+
   if (req.method === "POST" && pathname === "/international-geo/visibility/prompt-sets") {
     const body = await parseBody(req).catch(() => null);
     if (!body) {
@@ -2240,6 +2311,47 @@ async function handleApi(req, res, url) {
       }
       throw err;
     }
+    return;
+  }
+
+  if (req.method === "PUT" && pathname.match(/^\/international-geo\/visibility\/providers\/[^/]+$/)) {
+    const id = pathname.split("/")[4];
+    const body = await parseBody(req).catch(() => null);
+    if (!body) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    try {
+      const result = saveInternationalGeoVisibilityProviderAction(id, body);
+      if (!result) {
+        sendJson(res, 404, error("NOT_FOUND", "Visibility provider not found", 404).body);
+        return;
+      }
+      sendJson(res, 200, ok(result));
+    } catch (err) {
+      if ((err?.code || err?.message) === "VALIDATION_ERROR") {
+        const message = err.field_errors?.[0]?.message || err.message || "Invalid visibility provider";
+        sendJson(res, 400, error("VALIDATION_ERROR", message).body);
+        return;
+      }
+      throw err;
+    }
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/international-geo/visibility/providers/diagnose") {
+    sendJson(res, 200, ok(diagnoseInternationalGeoVisibilityProvidersAction()));
+    return;
+  }
+
+  if (req.method === "POST" && pathname.match(/^\/international-geo\/visibility\/providers\/[^/]+\/test$/)) {
+    const id = pathname.split("/")[4];
+    const result = testInternationalGeoVisibilityProviderAction(id);
+    if (!result) {
+      sendJson(res, 404, error("NOT_FOUND", "Visibility provider not found", 404).body);
+      return;
+    }
+    sendJson(res, 200, ok(result));
     return;
   }
 
