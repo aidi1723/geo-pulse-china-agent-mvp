@@ -56,7 +56,7 @@ System scripts can still use:
 X-GEO-API-Key: <runtime-key>
 ```
 
-The browser client config endpoint does not expose the mutation API key in v0.19.0. Keep `GEO_INTERNAL_API_KEY` for automation, diagnostics, and controlled scripts.
+The browser client config endpoint does not expose the mutation API key in v0.20.0. Keep `GEO_INTERNAL_API_KEY` for automation, diagnostics, delivery checks, and controlled scripts.
 
 Roles:
 
@@ -355,6 +355,9 @@ Visibility collection and campaign send actions check connector permissions befo
 - `GET /system/preflight`
 - `GET /system/production-readiness`
 - `POST /system/production-readiness/check`
+- `GET /system/delivery-readiness`
+- `POST /system/delivery-readiness/check`
+- `GET /system/delivery-bundle`
 - `GET /system/backups`
 - `POST /system/backups`
 - `POST /system/backups/import/validate`
@@ -376,6 +379,10 @@ Runtime backups are local operator artifacts. Backup list responses expose metad
 Launch preflight is read-only. It returns overall status, score, summary counts, and check rows for persistence, mutation auth, user auth, session security, remote access, backup recovery, connectors, GEO static routes, and scheduler state. It does not expose raw API keys or environment values.
 
 Production readiness is a v0.19 operational read model. `GET /system/production-readiness` is readable by viewer sessions. `POST /system/production-readiness/check` requires editor/admin/owner permission or the system API key. Responses include readiness checks, a masked secret inventory, and handoff checklist rows; raw secrets are never returned.
+
+Delivery readiness is a v0.20 handoff read model. `GET /system/delivery-readiness` is readable by viewer sessions. `POST /system/delivery-readiness/check` requires editor/admin/owner permission or the system API key and records `system.delivery_readiness.check` in the audit log. `GET /system/delivery-bundle` requires an admin/owner session or the system API key because it returns a broad operational handoff summary.
+
+The delivery bundle response has `kind: "geo-pulse-delivery-bundle"` and includes delivery readiness, production readiness, launch preflight-style checks, safe runtime counts, backup metadata, International GEO provider/connector summaries, operating boundaries, and handoff steps. It is a sanitized handoff report, not a runtime backup: it must not include raw secrets, password hashes, sessions, backup snapshots, full local state, raw audit logs, raw connector configs, `api_key` fields, or article bodies.
 
 ## Adding Or Changing APIs
 

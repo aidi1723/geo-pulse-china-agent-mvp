@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.20.0 - 2026-07-07
+
+Delivery hardening for controlled one-organization handoff.
+
+### Added
+
+- Consolidated delivery readiness report.
+- Sanitized delivery bundle export.
+- Settings `交付中心` UI with delivery score, bundle metadata, boundaries, and handoff steps.
+- System API routes for delivery readiness checks and delivery bundle download.
+
+### Boundaries
+
+- Delivery bundle is a sanitized handoff report, not a runtime backup.
+- No raw secrets, password hashes, sessions, backup snapshots, full local state, raw audit logs, or article bodies are exported.
+- No live AI/search/SERP/indexing/provider/CMS/social/community APIs are called.
+- No automatic external publishing is performed.
+
+### Verification
+
+- `npm run check`
+- `git diff --check`
+
 ## 0.19.0 - 2026-07-07
 
 Production integration foundation for International GEO.

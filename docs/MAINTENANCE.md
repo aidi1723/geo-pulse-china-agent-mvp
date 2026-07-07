@@ -71,6 +71,13 @@ Do this only when the repository owner accepts history rewriting. For establishe
 
 ## Maintenance Log
 
+### 2026-07-07 - v0.20 Delivery Hardening Closeout
+
+- Scope: added delivery readiness report, sanitized delivery bundle export, delivery readiness check audit event, Settings `交付中心`, delivery boundaries, handoff steps, and restricted delivery bundle download.
+- Local gate: `npm run check` returned `verify-mvp: OK`.
+- Documentation aligned: README, API reference, architecture guide, development guide, production deployment guide, roadmap, documentation index, phase 2 roadmap, open-source release checklist, changelog, maintenance guide, and v0.20 closeout docs.
+- Boundary: v0.20 is delivery hardening only; no live AI/search/SERP/indexing/provider/CMS/social/community APIs, no automatic external publishing, no external LLM generation, and no raw-secret/session/password-hash/backup-snapshot/full-state/raw-audit/article-body export through the delivery bundle.
+
 ### 2026-07-07 - v0.19 Production Integration Foundation Closeout
 
 - Scope: added International GEO visibility provider configs, approval status, masked credentials, dry-run tests, diagnose-all workflow, publishing connector configs, dry-run publishing boundary, production readiness checks, masked secret inventory, handoff checklist, and UI panels for provider/connector/readiness operations.
@@ -162,9 +169,9 @@ Do this only when the repository owner accepts history rewriting. For establishe
 - No evidence found of real local absolute paths, real personal email addresses, tracked `.env` files, tracked runtime state, or real credential patterns in the current tree or existing Git history.
 - History rewrite: not performed.
 
-## Post-v0.19 Production Hardening
+## Post-v0.20 Production Hardening
 
-v0.19.0 is deployable as a controlled one-organization team-access service behind an external access layer. Before treating it as a real SaaS, real-time AI search monitoring platform, external LLM generation system, external publishing system, or broadly exposed hosted service, production hardening should include:
+v0.20.0 is deployable as a controlled one-organization team-access service behind an external access layer and now includes delivery readiness plus sanitized handoff bundle export. Before treating it as a real SaaS, real-time AI search monitoring platform, external LLM generation system, external publishing system, or broadly exposed hosted service, production hardening should include:
 
 - Database persistence, migrations, and database-grade backup policy.
 - Monitoring and alerting.
@@ -178,6 +185,7 @@ v0.19.0 is deployable as a controlled one-organization team-access service behin
 - Security contact ownership and incident response process.
 - Multi-tenant workspace isolation if multiple organizations use the service.
 - Data retention, deletion, and privacy policy.
+- Continued delivery-bundle sanitization checks whenever new state domains are added.
 
 ## Dependency Policy
 

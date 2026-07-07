@@ -2,14 +2,14 @@
 
 ## Overview
 
-GEO Pulse China Agent v0.19.0 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes built-in one-organization multi-user access, role-based permissions, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production readiness checks, International GEO site audit records, guarded live crawl evidence, evidence-backed scoring, generated GEO asset previews, AI visibility measurement foundation state, manual measured visibility evidence operations, evidence-driven local asset opportunities and review state, local-rule article generation, multi-platform rewrite generation, a local high-authority publishing platform list, review-only publishing package queue, manual tracking records, visibility provider dry-run foundation, publishing connector dry-run foundation, production startup guardrails, health checks, GEO/SEO static files, and minimal GitHub CI for controlled server use.
+GEO Pulse China Agent v0.20.0 is a zero-dependency Node.js application with a browser admin workspace. It remains local-first for third-party integrations, but it now includes built-in one-organization multi-user access, role-based permissions, connector configuration, connector testing, connector diagnostics, local backup import/restore, launch preflight, production readiness checks, delivery readiness checks, sanitized delivery bundle export, International GEO site audit records, guarded live crawl evidence, evidence-backed scoring, generated GEO asset previews, AI visibility measurement foundation state, manual measured visibility evidence operations, evidence-driven local asset opportunities and review state, local-rule article generation, multi-platform rewrite generation, a local high-authority publishing platform list, review-only publishing package queue, manual tracking records, visibility provider dry-run foundation, publishing connector dry-run foundation, production startup guardrails, health checks, GEO/SEO static files, and minimal GitHub CI for controlled server use.
 
 ## Runtime Components
 
 | Area | File or Directory | Responsibility |
 | --- | --- | --- |
 | HTTP server | `server.mjs` | Serves the prototype, exposes `/api/v1/*`, applies security headers, session authentication, role authorization, API-key automation access, CORS, rate limiting, body limits, SSRF checks, scheduler controls, health checks, and static GEO/SEO routes. |
-| Mock domain data | `mock-data.mjs` | Stores seed data, local state mutation actions, API read models, persistence hydration, runtime backups, audit events, provider invocation logs, connector permissions, connector diagnostics, source adapter contracts, and workflow actions. |
+| Mock domain data | `mock-data.mjs` | Stores seed data, local state mutation actions, API read models, delivery readiness and sanitized bundle summaries, persistence hydration, runtime backups, audit events, provider invocation logs, connector permissions, connector diagnostics, source adapter contracts, and workflow actions. |
 | Safe site crawler | `site-crawl.mjs` | Normalizes crawl targets, blocks unsafe protocols/hosts/IP ranges, validates DNS at connection time, limits redirects/time/body size, extracts homepage/robots/sitemap/llms evidence, and returns connector-shaped crawl snapshots. |
 | Provider registry | `automation-providers.mjs` | Defines keyword discovery, topic planning, and article generation provider contracts, local fallback behavior, remote execution validation, masking, and provider config persistence helpers. |
 | Prototype shell | `prototype/` | Browser admin prototype with hash routing, state store, API client, static preview mode, UI pages, and shared utilities. |
@@ -50,7 +50,7 @@ Persistence is local JSON, not a production database.
 
 ## Security Model
 
-v0.19.0 uses built-in team access plus local-first production guardrails:
+v0.20.0 uses built-in team access plus local-first production and delivery guardrails:
 
 - Remote access is disabled unless `GEO_ALLOW_REMOTE_ACCESS=1`.
 - Remote access requires a fixed `GEO_INTERNAL_API_KEY`.
@@ -59,7 +59,7 @@ v0.19.0 uses built-in team access plus local-first production guardrails:
 - Browser access uses username/password login and an HTTP-only `geo_session` cookie.
 - Roles are `owner`, `admin`, `editor`, and `viewer`.
 - System scripts may still use `X-GEO-API-Key`.
-- Sensitive reads such as audit events require admin/owner session or system API key.
+- Sensitive reads such as audit events and delivery bundle export require admin/owner session or system API key.
 - Provider endpoints are restricted to `mock://` and `https://`, with loopback/private/link-local targets blocked.
 - International GEO live crawl targets are restricted to `http://` and `https://`, block localhost/private/link-local/multicast/unspecified ranges, validate redirect targets, apply connection-time DNS/IP checks, enforce short timeouts, body limits, and redirect limits.
 - CSV audit export neutralizes spreadsheet formula prefixes.
@@ -67,6 +67,7 @@ v0.19.0 uses built-in team access plus local-first production guardrails:
 - Connector diagnostics summarize endpoint safety, credential status, health checks, permission decisions, audit context, and recent run steps without exposing raw secrets.
 - Launch preflight summarizes readiness checks, including user auth and session security, without exposing raw API keys, secrets, full env vars, or local file contents.
 - Production readiness summarizes persistence, backup, auth, remote access, integration foundation, GEO static routes, masked secret inventory, and handoff checklist rows without exposing raw secrets.
+- Delivery readiness summarizes launch/production handoff state, International GEO summaries, provider/connector dry-run boundaries, and handoff steps. Delivery bundle export is sanitized and does not include raw secrets, password hashes, sessions, backup snapshots, full local state, raw audit logs, raw connector configs, `api_key` fields, or article bodies.
 
 These safeguards are not a replacement for database controls, multi-tenant isolation, MFA, monitoring, incident response, or an external access layer.
 
@@ -89,6 +90,8 @@ v0.17 adds manual measured visibility evidence import through `POST /api/v1/inte
 v0.18 adds measured evidence operations through `POST /api/v1/international-geo/visibility/evidence/imports`, `POST /api/v1/international-geo/visibility/evidence/:id/review`, local import ledger rows, pending/approved/rejected review state, and approved-only visibility trends. It is still a manual evidence workflow, not automated provider monitoring.
 
 v0.19 adds production integration foundation rows for visibility providers and publishing connectors, plus production readiness checks. The new tests and diagnostics are dry-run only, do not perform live external calls, and keep raw credentials masked.
+
+v0.20 adds delivery readiness and sanitized delivery bundle export for controlled one-organization handoff. The delivery bundle is a handoff report, not a runtime backup, and keeps the v0.19 no-live-provider and no-auto-publish boundary intact.
 
 The audit, visibility, evidence-asset, content-generation, and publishing workflow foundation is an operational preparation layer, not live AI monitoring or publishing automation. It does not recursively crawl sites, render JavaScript-heavy pages, query ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, Bing, SERP APIs, call indexing or external platform APIs, verify indexing, return raw provider or platform credentials, call external LLMs, or publish to external platforms. Future AI visibility, generation-provider, and publishing integrations should enter through explicit connectors/providers and preserve the same audit/evidence/content/package/tracking/snapshot records as the UI contract.
 

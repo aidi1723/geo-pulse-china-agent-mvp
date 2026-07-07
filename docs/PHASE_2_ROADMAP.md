@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Phase 2 turns the current v0.19 evidence-scored GEO audit, visibility foundation, manual measured evidence operations, local evidence-asset review workflow, local content-generation workflow, publishing handoff workflow, visibility provider dry-run foundation, and publishing connector dry-run foundation into a broader measured and integration-ready GEO operating system.
+Phase 2 turns the current v0.20 evidence-scored GEO audit, visibility foundation, manual measured evidence operations, local evidence-asset review workflow, local content-generation workflow, publishing handoff workflow, visibility provider dry-run foundation, publishing connector dry-run foundation, and delivery handoff foundation into a broader measured and integration-ready GEO operating system.
 
-The current product can prepare audits and assets from local inputs, attach guarded public-site crawl evidence, explain a deterministic 100-point scoring breakdown, store prompt sets, provider readiness, visibility runs, prompt snapshots with explicit data-status labels, manually import and batch-import human-verified measured visibility evidence, review imported evidence, produce approved-only visibility trends, generate evidence-driven local asset opportunities with review state, generate local-rule article drafts from approved evidence assets, generate platform rewrites from approved article drafts, generate review-only publishing packages from approved evidence assets, track publication/indexing/AI mention/citation/recommendation fields manually, configure dry-run visibility provider rows, configure dry-run publishing connector rows, and run production readiness checks. Phase 2 should next add automated measured AI visibility data from approved providers, controlled external distribution connectors, automation with explicit approval gates, and stronger production foundations before the project claims automated live engine monitoring, indexing, citation, recommendation, or publication outcomes.
+The current product can prepare audits and assets from local inputs, attach guarded public-site crawl evidence, explain a deterministic 100-point scoring breakdown, store prompt sets, provider readiness, visibility runs, prompt snapshots with explicit data-status labels, manually import and batch-import human-verified measured visibility evidence, review imported evidence, produce approved-only visibility trends, generate evidence-driven local asset opportunities with review state, generate local-rule article drafts from approved evidence assets, generate platform rewrites from approved article drafts, generate review-only publishing packages from approved evidence assets, track publication/indexing/AI mention/citation/recommendation fields manually, configure dry-run visibility provider rows, configure dry-run publishing connector rows, run production readiness checks, run delivery readiness checks, and export a sanitized delivery bundle. Phase 2 should next add automated measured AI visibility data from approved providers, controlled external distribution connectors, automation with explicit approval gates, and stronger production foundations before the project claims automated live engine monitoring, indexing, citation, recommendation, or publication outcomes.
 
 ## Phase 2 Direction
 
@@ -90,7 +90,7 @@ Acceptance:
 
 ## Track 4: Content And Asset Production Upgrade
 
-Status: v0.19 baseline complete for local review assets, local-rule article drafts, platform rewrites, publishing package handoff, manual tracking, manual measured visibility evidence import, batch import, evidence review, import ledger, approved-only trends, provider dry-run configs, publishing connector dry-run configs, and production readiness checks. Automated measured providers, file-upload imports, external LLM generation providers, connector automation, and live publication connectors remain future work.
+Status: v0.20 baseline complete for local review assets, local-rule article drafts, platform rewrites, publishing package handoff, manual tracking, manual measured visibility evidence import, batch import, evidence review, import ledger, approved-only trends, provider dry-run configs, publishing connector dry-run configs, production readiness checks, delivery readiness checks, and sanitized delivery bundle export. Automated measured providers, file-upload imports, external LLM generation providers, connector automation, and live publication connectors remain future work.
 
 Goal: generate better GEO content from crawl evidence, score deductions, and prompt visibility gaps.
 
@@ -118,6 +118,7 @@ Boundary:
 - v0.17 adds manual measured visibility evidence import. Imported snapshots use `manual_import` provenance and `measured_import` runs; they are human-entered evidence only and do not call live AI/search/SERP/indexing services, store provider credentials, or support automated monitoring claims.
 - v0.18 adds manual measured evidence operations. Operators can batch-import JSON rows, track import ledgers, approve or reject imported snapshots, and view approved-only trend rows. The workflow remains human-entered evidence only and does not call live AI/search/SERP/indexing services, store provider credentials, or support automated monitoring claims.
 - v0.19 adds dry-run visibility provider configs, dry-run publishing connector configs, and production readiness checks. These rows store local masked configuration only; they do not call live AI/search/SERP/indexing/provider/CMS/social/community APIs, publish externally, or support automated monitoring claims.
+- v0.20 adds delivery readiness and sanitized delivery bundle export. The bundle is a handoff report, not a runtime backup; it must not export raw secrets, sessions, password hashes, backup snapshots, full local state, raw audit logs, raw connector configs, `api_key` fields, or article bodies.
 
 ## Track 5: External Distribution Connectors
 
@@ -186,7 +187,8 @@ Acceptance:
 - `v0.17`: manual measured visibility evidence import. Complete baseline.
 - `v0.18`: measured evidence operations with JSON batch import, import ledger, evidence review, and approved-only trends. Complete baseline; automated measured providers, file-upload imports, connectors, external LLM generation, external publishing/indexing connectors, and automation remain future work.
 - `v0.19`: production integration foundation with visibility provider configs, publishing connector configs, dry-run diagnostics, masked secrets, and production readiness checks. Complete baseline; live provider adapters, live publishing adapters, durable secrets, database persistence, monitoring, and automation remain future work.
-- `v0.20+`: approved live provider adapters, controlled external publishing connectors, database persistence, and multi-tenant SaaS readiness if the product direction requires it.
+- `v0.20`: delivery hardening with delivery readiness, sanitized delivery bundle, Settings delivery center, delivery boundaries, and handoff steps. Complete baseline; live provider adapters, live publishing adapters, durable secrets, database persistence, monitoring, and automation remain future work.
+- `v0.21+`: approved live provider adapters, controlled external publishing connectors, database persistence, and multi-tenant SaaS readiness if the product direction requires it.
 
 ## Phase 2 Boundaries
 
