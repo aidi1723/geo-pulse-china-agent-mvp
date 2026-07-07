@@ -7098,15 +7098,6 @@ const PUBLISHING_ASSET_PLATFORM_MAP = {
   buyer_guide_brief: ["official_blog", "linkedin_company", "youtube", "g2", "capterra", "saasworthy"]
 };
 
-const PUBLISHING_CORE_PACKAGE_PLATFORM_KEYS = [
-  "official_blog",
-  "docs",
-  "github",
-  "linkedin_company",
-  "reddit",
-  "quora"
-];
-
 const PUBLISHING_PACKAGE_TYPE_BY_PLATFORM = {
   official_blog: "website_article_brief",
   docs: "docs_update_brief",
@@ -7229,9 +7220,7 @@ export function generateInternationalGeoPublishingPackagesAction() {
   const createdAt = nowIso();
 
   approvedAssets.forEach((asset) => {
-    const platformKeys = [
-      ...new Set([...(PUBLISHING_ASSET_PLATFORM_MAP[asset.asset_type] || ["official_blog"]), ...PUBLISHING_CORE_PACKAGE_PLATFORM_KEYS])
-    ];
+    const platformKeys = PUBLISHING_ASSET_PLATFORM_MAP[asset.asset_type] || ["official_blog"];
     platformKeys.forEach((platformKey) => {
       const platform = platformByKey.get(platformKey);
       if (!platform) return;
@@ -7380,6 +7369,11 @@ export function updateInternationalGeoPublishingTrackingAction(trackingId, paylo
     throw validationError("published_url", "Manual publication requires an http published_url.");
   }
 
+  const pkg = internationalGeoState.publishing_packages.find((item) => item.id === record.package_id);
+  if (nextPublicationStatus === "manually_published" && (!pkg || pkg.review_status !== "approved")) {
+    throw validationError("publication_status", "Manual publication requires an approved publishing package.");
+  }
+
   record.publication_status = nextPublicationStatus;
   record.published_url = nextPublishedUrl;
   record.canonical_url = String(payload.canonical_url ?? record.canonical_url ?? "").trim();
@@ -7392,7 +7386,6 @@ export function updateInternationalGeoPublishingTrackingAction(trackingId, paylo
   record.last_checked_at = nowIso();
   record.updated_at = nowIso();
 
-  const pkg = internationalGeoState.publishing_packages.find((item) => item.id === record.package_id);
   if (pkg && record.publication_status === "manually_published") {
     pkg.package_status = "manually_published";
   }
