@@ -108,6 +108,7 @@ import {
   saveAutomationConnectorAction,
   saveBrandProfileAction,
   saveChannelAction,
+  saveInternationalGeoContentGenerationProviderAction,
   saveInternationalGeoPublishingConnectorAction,
   saveInternationalGeoVisibilityProviderAction,
   saveInternationalGeoInputAction,
@@ -118,6 +119,7 @@ import {
   startPublishTaskAction,
   submitArticleReviewAction,
   takeoverPublishTaskItemAction,
+  testInternationalGeoContentGenerationProviderAction,
   testInternationalGeoPublishingConnectorAction,
   testInternationalGeoVisibilityProviderAction,
   testAutomationConnectorAction,
@@ -474,6 +476,26 @@ function runSingleUserSourceChecks() {
     "International GEO platform rewrite review should have a client API method"
   );
   assert.match(
+    fs.readFileSync("mock-data.mjs", "utf8"),
+    /saveInternationalGeoContentGenerationProviderAction/,
+    "Content generation provider config should be saveable"
+  );
+  assert.match(
+    fs.readFileSync("mock-data.mjs", "utf8"),
+    /testInternationalGeoContentGenerationProviderAction/,
+    "Content generation provider config should expose a provider test"
+  );
+  assert.match(
+    apiSource,
+    /export function saveInternationalGeoContentGenerationProvider/,
+    "Browser API should save content generation provider config"
+  );
+  assert.match(
+    apiSource,
+    /export function testInternationalGeoContentGenerationProvider/,
+    "Browser API should test content generation provider config"
+  );
+  assert.match(
     mainSource,
     /generateInternationalGeoArticles as generateInternationalGeoArticlesApi/,
     "International GEO article generation should be imported into the browser action layer"
@@ -512,6 +534,16 @@ function runSingleUserSourceChecks() {
     eventsSource,
     /action === "international-content-rewrite-reject"/,
     "International GEO platform rewrite rejection should be wired in the event dispatcher"
+  );
+  assert.match(
+    eventsSource,
+    /save-international-geo-content-provider/,
+    "Content generation provider save action should be wired"
+  );
+  assert.match(
+    eventsSource,
+    /test-international-geo-content-provider/,
+    "Content generation provider test action should be wired"
   );
 }
 
@@ -2173,7 +2205,7 @@ async function runMockDataChecks() {
       .assets.filter((item) => item.review_status === "approved")
       .map((item) => item.id)
   );
-  const generatedArticles = generateInternationalGeoArticlesAction();
+  const generatedArticles = await generateInternationalGeoArticlesAction();
   assert.ok(generatedArticles.articles.length >= 1, "Article generation should create article drafts");
   assert.ok(
     generatedArticles.articles.every((item) =>
@@ -2215,7 +2247,7 @@ async function runMockDataChecks() {
     "Invalid generated article review actions should fail"
   );
 
-  const generatedRewrites = generateInternationalGeoPlatformRewritesAction();
+  const generatedRewrites = await generateInternationalGeoPlatformRewritesAction();
   assert.ok(generatedRewrites.rewrites.length >= 3, "Rewrite generation should create platform rewrites");
   assert.ok(
     generatedRewrites.rewrites.every(
@@ -2250,6 +2282,72 @@ async function runMockDataChecks() {
     () => reviewInternationalGeoPlatformRewriteAction(rewriteToApprove.id, { action: "publish" }),
     /VALIDATION_ERROR/,
     "Invalid platform rewrite review actions should fail"
+  );
+
+  const savedContentProvider = saveInternationalGeoContentGenerationProviderAction("openai_compatible", {
+    status: "configured",
+    endpoint: "mock://openai-compatible",
+    model: "mock-geo-writer",
+    api_key: "llm-secret-key",
+    temperature: 0.4,
+    max_tokens: 2400,
+    timeout_ms: 12000,
+    retry_count: 1,
+    notes: "Mock-compatible provider"
+  });
+  assert.equal(savedContentProvider.credential_status, "masked", "Content provider should mask credentials");
+  assert.doesNotMatch(
+    JSON.stringify(savedContentProvider),
+    /llm-secret-key|api_key":"[^"]/,
+    "Content provider response should not expose raw key"
+  );
+  assert.equal(
+    savedContentProvider.provider_type,
+    "openai_compatible",
+    "Content provider should expose OpenAI-compatible type"
+  );
+
+  const contentProviderTest = await testInternationalGeoContentGenerationProviderAction("openai_compatible");
+  assert.equal(contentProviderTest.external_call_performed, false, "Mock provider test should stay local");
+  assert.equal(contentProviderTest.status, "ready", "Mock-compatible provider test should be ready");
+
+  const remoteArticles = await generateInternationalGeoArticlesAction();
+  assert(
+    remoteArticles.articles.some((item) => item.generator_provider === "openai_compatible"),
+    "Configured OpenAI-compatible provider should generate article drafts"
+  );
+  assert.doesNotMatch(
+    JSON.stringify(remoteArticles),
+    /llm-secret-key|api_key":"[^"]/,
+    "Remote article generation should not expose raw key"
+  );
+
+  const remoteArticle = remoteArticles.articles.find((item) => item.generator_provider === "openai_compatible");
+  assert(
+    remoteArticle?.content?.includes("Direct Answer"),
+    "Remote article draft should include generated long-form structure"
+  );
+  reviewInternationalGeoGeneratedArticleAction(remoteArticle.id, { action: "approve" });
+
+  const remoteRewrites = await generateInternationalGeoPlatformRewritesAction();
+  assert(
+    remoteRewrites.rewrites.some((item) => item.generator_provider === "openai_compatible"),
+    "Configured OpenAI-compatible provider should generate platform rewrites"
+  );
+
+  saveInternationalGeoContentGenerationProviderAction("openai_compatible", {
+    status: "configured",
+    endpoint: "mock://openai-compatible-fail",
+    model: "mock-geo-writer",
+    api_key: "llm-secret-key"
+  });
+  const fallbackState = await generateInternationalGeoArticlesAction({ force_new: true });
+  assert(
+    fallbackState.runs.some(
+      (item) =>
+        item.generator_provider === "local_rules" && item.fallback_from_provider === "openai_compatible"
+    ),
+    "Provider failure should fall back to local_rules and record fallback metadata"
   );
 
   assert.throws(
@@ -2659,6 +2757,32 @@ async function runSingleUserCompleteChecks() {
   const contentHtml = renderContent(uiStore);
   const internationalHtml = renderInternationalGeo(getInternationalGeoState());
   const billingHtml = renderBilling({ billingSummary: getBillingSummary(), invoices: [] });
+  assert.match(
+    internationalHtml,
+    /OpenAI-compatible/,
+    "International GEO should render OpenAI-compatible provider config"
+  );
+  assert.match(
+    internationalHtml,
+    /data-content-provider-field="endpoint"/,
+    "Provider endpoint field should render"
+  );
+  assert.match(
+    internationalHtml,
+    /data-content-provider-field="model"/,
+    "Provider model field should render"
+  );
+  assert.match(
+    internationalHtml,
+    /save-international-geo-content-provider/,
+    "Provider save action should render"
+  );
+  assert.match(
+    internationalHtml,
+    /test-international-geo-content-provider/,
+    "Provider test action should render"
+  );
+  assert.match(internationalHtml, /生成来源/, "Content generation provenance should render");
   assert.doesNotMatch(
     `${contentHtml}\n${internationalHtml}\n${billingHtml}`,
     /即将开放|Read-only MVP/,
@@ -6099,6 +6223,69 @@ async function runMultiUserAccessHttpChecks() {
     assert.ok(
       viewerContentGeneration.body?.data?.summary,
       "Content generation HTTP response should include summary"
+    );
+
+    const viewerProviderSave = await httpRequest(
+      port,
+      "/api/v1/international-geo/content-generation/providers/openai_compatible",
+      {
+        method: "PUT",
+        headers: viewerHeaders,
+        body: JSON.stringify({ status: "configured" })
+      }
+    );
+    assert.equal(viewerProviderSave.status, 403, "Viewer should not save content generation provider config");
+
+    const ownerProviderSave = await httpRequest(
+      port,
+      "/api/v1/international-geo/content-generation/providers/openai_compatible",
+      {
+        method: "PUT",
+        headers: ownerHeaders,
+        body: JSON.stringify({
+          status: "configured",
+          endpoint: "mock://openai-compatible",
+          model: "mock-geo-writer",
+          api_key: "http-llm-secret-key",
+          temperature: 0.3,
+          max_tokens: 2200,
+          timeout_ms: 12000,
+          retry_count: 1
+        })
+      }
+    );
+    assert.equal(ownerProviderSave.status, 200, "Owner should save content generation provider config");
+    assert.doesNotMatch(
+      JSON.stringify(ownerProviderSave.body),
+      /http-llm-secret-key|api_key":"[^"]/,
+      "Provider save HTTP response should mask raw key"
+    );
+
+    const viewerContentProviderTest = await httpRequest(
+      port,
+      "/api/v1/international-geo/content-generation/providers/openai_compatible/test",
+      {
+        method: "POST",
+        headers: viewerHeaders,
+        body: JSON.stringify({})
+      }
+    );
+    assert.equal(viewerContentProviderTest.status, 403, "Viewer should not test content generation provider");
+
+    const ownerContentProviderTest = await httpRequest(
+      port,
+      "/api/v1/international-geo/content-generation/providers/openai_compatible/test",
+      {
+        method: "POST",
+        headers: ownerHeaders,
+        body: JSON.stringify({})
+      }
+    );
+    assert.equal(ownerContentProviderTest.status, 200, "Owner should test content generation provider");
+    assert.equal(
+      ownerContentProviderTest.body?.data?.external_call_performed,
+      false,
+      "Mock-compatible provider test should stay local"
     );
 
     const viewerGenerateArticles = await httpRequest(
