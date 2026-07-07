@@ -6286,6 +6286,128 @@ function normalizeInternationalGeoVisibilityEngines(engines) {
   return [...new Set(normalized)];
 }
 
+const INTERNATIONAL_GEO_VISIBILITY_IMPORT_SOURCE_TYPES = new Set([
+  "manual_observation",
+  "manual_export",
+  "provider_report"
+]);
+
+const INTERNATIONAL_GEO_VISIBILITY_IMPORT_CONFIDENCE = new Set(["low", "medium", "high"]);
+
+function visibilityValidationError(field, message) {
+  const error = new Error("VALIDATION_ERROR");
+  error.code = "VALIDATION_ERROR";
+  error.field_errors = [{ field, message }];
+  return error;
+}
+
+function normalizeBooleanField(value, field) {
+  if (value === true || value === false) return value;
+  if (String(value).trim() === "true") return true;
+  if (String(value).trim() === "false") return false;
+  throw visibilityValidationError(field, `${field} must be true or false.`);
+}
+
+function normalizeUrlArray(value, field) {
+  const items = normalizeStringArray(value);
+  items.forEach((item) => {
+    try {
+      const url = new URL(item);
+      if (!["http:", "https:"].includes(url.protocol)) {
+        throw new Error("invalid protocol");
+      }
+    } catch {
+      throw visibilityValidationError(field, `${field} must contain valid http(s) URLs.`);
+    }
+  });
+  return items;
+}
+
+function normalizeRecommendationRank(value) {
+  if (value === null || value === undefined || String(value).trim() === "") return null;
+  const rank = Number(value);
+  if (!Number.isInteger(rank) || rank < 1) {
+    throw visibilityValidationError("recommendation_rank", "recommendation_rank must be a positive integer.");
+  }
+  return rank;
+}
+
+function normalizeCapturedAt(value) {
+  const text = String(value || "").trim();
+  if (!text) throw visibilityValidationError("captured_at", "captured_at is required.");
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) {
+    throw visibilityValidationError("captured_at", "captured_at must be a valid date.");
+  }
+  return date.toISOString();
+}
+
+function normalizeVisibilityImportPayload(payload = {}) {
+  const promptSetId = String(payload.prompt_set_id || "").trim();
+  if (!promptSetId) throw visibilityValidationError("prompt_set_id", "prompt_set_id is required.");
+  const promptSet = internationalGeoState.visibility_prompt_sets.find((item) => item.id === promptSetId);
+  if (!promptSet) throw visibilityValidationError("prompt_set_id", "Unknown prompt_set_id.");
+
+  const engineId = String(payload.engine_id || "").trim();
+  if (!engineId) throw visibilityValidationError("engine_id", "engine_id is required.");
+  normalizeInternationalGeoVisibilityEngines([engineId]);
+  if (!(promptSet.engines || []).includes(engineId)) {
+    throw visibilityValidationError("engine_id", "engine_id must be included in the selected prompt set.");
+  }
+
+  const sourceType = String(payload.source_type || "").trim();
+  if (!sourceType) throw visibilityValidationError("source_type", "source_type is required.");
+  if (!INTERNATIONAL_GEO_VISIBILITY_IMPORT_SOURCE_TYPES.has(sourceType)) {
+    throw visibilityValidationError("source_type", "Unsupported source_type.");
+  }
+
+  const brandMentioned = normalizeBooleanField(payload.brand_mentioned, "brand_mentioned");
+  const capturedAt = normalizeCapturedAt(payload.captured_at);
+  const citationUrls = normalizeUrlArray(payload.citation_urls || [], "citation_urls");
+  const recommendationRank = normalizeRecommendationRank(payload.recommendation_rank);
+  const competitorsMentioned = normalizeStringArray(payload.competitors_mentioned || []);
+  const rawObservation = String(payload.raw_observation || "").trim();
+  const evidenceNote = String(payload.evidence_note || "").trim();
+  const confidence = String(payload.confidence || "medium").trim();
+  if (!INTERNATIONAL_GEO_VISIBILITY_IMPORT_CONFIDENCE.has(confidence)) {
+    throw visibilityValidationError("confidence", "Unsupported confidence.");
+  }
+  if (brandMentioned && !citationUrls.length && !recommendationRank && !rawObservation) {
+    throw visibilityValidationError(
+      "brand_mentioned",
+      "Brand-mentioned imports require citation_urls, recommendation_rank, or raw_observation."
+    );
+  }
+  if (sourceType === "manual_observation" && !evidenceNote && !rawObservation) {
+    throw visibilityValidationError(
+      "evidence_note",
+      "manual_observation imports require evidence_note or raw_observation."
+    );
+  }
+
+  return {
+    promptSet,
+    prompt_set_id: promptSetId,
+    engine_id: engineId,
+    provider_id: "manual_import",
+    source_type: sourceType,
+    source_label: String(payload.source_label || "Manual measured evidence").trim(),
+    source_url: String(payload.source_url || "").trim(),
+    captured_at: capturedAt,
+    brand_mentioned: brandMentioned,
+    owned_citation_count:
+      payload.owned_citation_count === null || payload.owned_citation_count === undefined || payload.owned_citation_count === ""
+        ? citationUrls.length
+        : Number(payload.owned_citation_count),
+    citation_urls: citationUrls,
+    recommendation_rank: recommendationRank,
+    competitors_mentioned: competitorsMentioned,
+    confidence,
+    raw_observation: rawObservation,
+    evidence_note: evidenceNote
+  };
+}
+
 export function createInternationalGeoVisibilityPromptSetAction(payload = {}) {
   ensureInternationalGeoStateShape();
   const prompt = String(payload.prompt || "").trim();
@@ -6360,6 +6482,24 @@ function buildUnavailableVisibilitySnapshot(promptSet, engineId, run) {
   return snapshot;
 }
 
+function updateVisibilityProviderReadinessForImport(snapshot) {
+  let row = internationalGeoState.visibility_provider_readiness.find((item) => item.engine_id === snapshot.engine_id);
+  if (!row) {
+    row = {
+      engine_id: snapshot.engine_id,
+      engine_label: snapshot.engine_label
+    };
+    internationalGeoState.visibility_provider_readiness.push(row);
+  }
+  row.data_status = "measured";
+  row.provider_id = snapshot.provider_id;
+  row.connector_id = "manual_import";
+  row.permission_status = "manual_review";
+  row.last_measured_at = snapshot.captured_at;
+  row.diagnostic = "Latest measured evidence was imported manually. No provider API was called.";
+  row.diagnostics = [row.diagnostic];
+}
+
 export function runInternationalGeoVisibilityMeasurementAction(payload = {}) {
   ensureInternationalGeoStateShape();
   const startedAt = nowIso();
@@ -6418,6 +6558,92 @@ export function runInternationalGeoVisibilityMeasurementAction(payload = {}) {
   });
   persistState();
   return deepClone({ run, snapshots_created: snapshots.length, snapshots });
+}
+
+export function importInternationalGeoVisibilityEvidenceAction(payload = {}) {
+  ensureInternationalGeoStateShape();
+  const startedAt = nowIso();
+  const normalized = normalizeVisibilityImportPayload(payload);
+  const run = {
+    id: uniqueId("aivrun"),
+    trigger: "manual_import",
+    status: "completed",
+    data_source_type: "measured_import",
+    provider_id: normalized.provider_id,
+    prompt_count: 1,
+    engine_count: 1,
+    snapshots_created: 1,
+    started_at: startedAt,
+    finished_at: nowIso(),
+    steps: []
+  };
+  run.steps = [
+    {
+      id: uniqueId("aivstep"),
+      run_id: run.id,
+      sequence: 1,
+      step_type: "validate_import",
+      status: "succeeded",
+      status_label: "Measured evidence validated",
+      output_preview: {
+        prompt_set_id: normalized.prompt_set_id,
+        engine_id: normalized.engine_id
+      }
+    },
+    {
+      id: uniqueId("aivstep"),
+      run_id: run.id,
+      sequence: 2,
+      step_type: "write_measured_snapshot",
+      status: "succeeded",
+      status_label: "Measured snapshot recorded",
+      output_preview: {
+        snapshots_created: 1
+      }
+    }
+  ];
+
+  const snapshot = {
+    id: uniqueId("aivs"),
+    prompt_set_id: normalized.prompt_set_id,
+    run_id: run.id,
+    engine_id: normalized.engine_id,
+    engine_label: internationalGeoEngineLabel(normalized.engine_id),
+    data_status: "measured",
+    provider_id: normalized.provider_id,
+    source_type: normalized.source_type,
+    source_label: normalized.source_label,
+    source_url: normalized.source_url,
+    captured_at: normalized.captured_at,
+    brand_mentioned: normalized.brand_mentioned,
+    owned_citation_count: normalized.owned_citation_count,
+    citation_urls: normalized.citation_urls,
+    recommendation_rank: normalized.recommendation_rank,
+    competitors_mentioned: normalized.competitors_mentioned,
+    confidence: normalized.confidence,
+    diagnostics: ["Measured evidence imported manually. No live provider API was called."],
+    raw_observation: normalized.raw_observation,
+    evidence_note: normalized.evidence_note,
+    imported_at: run.finished_at,
+    import_mode: "manual_single"
+  };
+  validateInternationalGeoVisibilitySnapshot(snapshot);
+  internationalGeoState.visibility_snapshots.unshift(snapshot);
+  internationalGeoState.visibility_runs.unshift(run);
+  updateVisibilityProviderReadinessForImport(snapshot);
+  internationalGeoState.updated_at = nowIso();
+  recordAuditEvent("international_geo.visibility.evidence.import", "international_geo_visibility_snapshot", snapshot.id, {
+    prompt_set_id: snapshot.prompt_set_id,
+    engine_id: snapshot.engine_id,
+    provider_id: snapshot.provider_id,
+    data_status: snapshot.data_status
+  });
+  persistState();
+  return deepClone({
+    snapshot,
+    run,
+    summary: internationalGeoVisibilitySummary()
+  });
 }
 
 function internationalGeoVisibilitySummary() {
