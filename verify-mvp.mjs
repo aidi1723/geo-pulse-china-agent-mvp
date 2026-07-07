@@ -49,6 +49,8 @@ import {
   getInternationalGeoVisibilityProviderState,
   getInternationalGeoVisibilityState,
   getInternationalGeoSiteAudit,
+  getDeliveryBundleState,
+  getDeliveryReadinessState,
   getProductionReadinessState,
   getKeyword,
   getPromptTemplate,
@@ -85,6 +87,7 @@ import {
   logoutSessionAction,
   reconnectChannelAction,
   resetRuntimeState,
+  runDeliveryReadinessCheckAction,
   runProductionReadinessCheckAction,
   reviewArticleAction,
   reviewInternationalGeoVisibilityEvidenceAction,
@@ -307,6 +310,16 @@ function runSingleUserSourceChecks() {
   );
   assert.match(
     fs.readFileSync("mock-data.mjs", "utf8"),
+    /getDeliveryReadinessState/,
+    "Delivery readiness state should be exposed"
+  );
+  assert.match(
+    fs.readFileSync("mock-data.mjs", "utf8"),
+    /getDeliveryBundleState/,
+    "Sanitized delivery bundle state should be exposed"
+  );
+  assert.match(
+    fs.readFileSync("mock-data.mjs", "utf8"),
     /getInternationalGeoPublishingConnectorState/,
     "International GEO publishing connector state should be exposed"
   );
@@ -329,6 +342,26 @@ function runSingleUserSourceChecks() {
     eventsSource,
     /refresh-production-readiness/,
     "Production readiness refresh action should be wired"
+  );
+  assert.match(
+    apiSource,
+    /export function getDeliveryReadiness/,
+    "Browser API should expose delivery readiness"
+  );
+  assert.match(
+    apiSource,
+    /export function getDeliveryBundle/,
+    "Browser API should expose delivery bundle download"
+  );
+  assert.match(
+    eventsSource,
+    /refresh-delivery-readiness/,
+    "Delivery readiness refresh action should be wired"
+  );
+  assert.match(
+    eventsSource,
+    /download-delivery-bundle/,
+    "Delivery bundle download action should be wired"
   );
   assert.match(
     apiSource,
@@ -1772,6 +1805,25 @@ async function runMockDataChecks() {
     productionCheck.checks.length >= productionReadiness.checks.length,
     "Production readiness check should return checks"
   );
+  const deliveryReadiness = getDeliveryReadinessState();
+  assert(["ready", "review", "blocked"].includes(deliveryReadiness.status), "Delivery readiness should expose a stable status");
+  assert(Number.isFinite(deliveryReadiness.score), "Delivery readiness should expose a numeric score");
+  assert(deliveryReadiness.checks.length >= 8, "Delivery readiness should include handoff checks");
+  assert(deliveryReadiness.handoff_steps.length >= 4, "Delivery readiness should include ordered handoff steps");
+  assert(deliveryReadiness.boundaries.length >= 3, "Delivery readiness should include operating boundaries");
+  assert.doesNotMatch(
+    JSON.stringify(deliveryReadiness),
+    /provider-secret|publishing-secret|connector-secret-key|geo-owner-change-me/,
+    "Delivery readiness should not expose raw secrets"
+  );
+
+  const deliveryCheck = runDeliveryReadinessCheckAction();
+  assert(deliveryCheck.checks.length >= deliveryReadiness.checks.length, "Delivery readiness check should return checks");
+  assert(
+    listAuditEvents({ action: "system.delivery_readiness.check" }).items.length >= 1,
+    "Delivery readiness check should write an audit event"
+  );
+
   const publishingConnectorState = getInternationalGeoPublishingConnectorState();
   assert(
     publishingConnectorState.connectors.length >= 8,
@@ -1791,6 +1843,30 @@ async function runMockDataChecks() {
     JSON.stringify(savedPublishingConnector),
     /publishing-secret/,
     "Publishing connector config should not expose raw key"
+  );
+  const deliveryBundle = getDeliveryBundleState();
+  assert.equal(deliveryBundle.kind, "geo-pulse-delivery-bundle", "Delivery bundle should expose a stable kind");
+  assert.equal(deliveryBundle.version, "0.20.0", "Delivery bundle should expose the current package version");
+  assert(deliveryBundle.delivery_readiness?.checks?.length >= 8, "Delivery bundle should include delivery readiness");
+  assert(deliveryBundle.production_readiness?.checks?.length >= 8, "Delivery bundle should include production readiness");
+  assert(deliveryBundle.launch_preflight?.checks?.length >= 8, "Delivery bundle should include launch preflight");
+  assert(
+    deliveryBundle.international_geo?.visibility_provider_summary,
+    "Delivery bundle should include visibility provider summary"
+  );
+  assert(
+    deliveryBundle.international_geo?.publishing_connector_summary,
+    "Delivery bundle should include publishing connector summary"
+  );
+  assert(!Object.prototype.hasOwnProperty.call(deliveryBundle, "snapshot"), "Delivery bundle must not include raw runtime snapshots");
+  assert(
+    !Object.prototype.hasOwnProperty.call(deliveryBundle, "runtimeBackups"),
+    "Delivery bundle must not include backup internals"
+  );
+  assert.doesNotMatch(
+    JSON.stringify(deliveryBundle),
+    /password_hash|provider-secret|publishing-secret|connector-secret-key|geo-owner-change-me|api_key":"/,
+    "Delivery bundle should be sanitized"
   );
   const publishingTest = testInternationalGeoPublishingConnectorAction("geopubconn_medium");
   assert.equal(publishingTest.external_call_performed, false, "Publishing connector dry-run must not publish externally");
@@ -3153,6 +3229,44 @@ function runSettingsAuditUiChecks() {
             }
           ],
           generated_at: "2026-07-07T02:00:00.000Z"
+        },
+        delivery_readiness: {
+          status: "review",
+          score: 80,
+          summary: {
+            passed: 6,
+            warnings: 2,
+            failed: 0,
+            blocked: 0,
+            manual: 1
+          },
+          checks: [
+            {
+              id: "delivery_bundle_sanitized",
+              category: "handoff",
+              label: "交付包",
+              status: "passed",
+              message: "交付包仅包含脱敏摘要。",
+              recommendation: "交付前重新刷新。"
+            }
+          ],
+          handoff_steps: [
+            {
+              id: "confirm_delivery_bundle",
+              label: "确认交付包",
+              status: "manual",
+              recommendation: "下载交付包并归档。"
+            }
+          ],
+          boundaries: [
+            {
+              id: "no_raw_secret_export",
+              label: "交付边界",
+              status: "passed",
+              statement: "交付包不得包含原始密钥。"
+            }
+          ],
+          generated_at: "2026-07-07T03:00:00.000Z"
         }
       },
       auditEvents: [
@@ -3211,6 +3325,11 @@ function runSettingsAuditUiChecks() {
   assert.match(html, /密钥与连接边界/, "Settings should render masked secret inventory panel");
   assert.match(html, /交付检查清单/, "Settings should render handoff checklist panel");
   assert.match(html, /refresh-production-readiness/, "Settings should wire production readiness refresh action");
+  assert.match(html, /交付中心/, "Settings should render delivery center panel");
+  assert.match(html, /交付包/, "Settings should render delivery bundle section");
+  assert.match(html, /交付边界/, "Settings should render delivery boundary section");
+  assert.match(html, /refresh-delivery-readiness/, "Settings should wire delivery readiness refresh action");
+  assert.match(html, /download-delivery-bundle/, "Settings should wire delivery bundle download action");
 
   const staticHtml = renderSettings({
     tabs: {
@@ -5687,6 +5806,31 @@ async function runMultiUserAccessHttpChecks() {
     });
     assert.equal(ownerProductionCheck.status, 200, "Owner should run production readiness check");
 
+    const deliveryReadinessHttp = await httpRequest(port, "/api/v1/system/delivery-readiness", {
+      headers: viewerHeaders
+    });
+    assert.equal(deliveryReadinessHttp.status, 200, "Viewer should read delivery readiness");
+    assert(deliveryReadinessHttp.body?.data?.checks?.length >= 8, "Delivery readiness HTTP should return checks");
+
+    const viewerDeliveryCheck = await httpRequest(port, "/api/v1/system/delivery-readiness/check", {
+      method: "POST",
+      headers: viewerHeaders,
+      body: JSON.stringify({})
+    });
+    assert.equal(viewerDeliveryCheck.status, 403, "Viewer should not run delivery readiness check");
+
+    const ownerDeliveryCheck = await httpRequest(port, "/api/v1/system/delivery-readiness/check", {
+      method: "POST",
+      headers: ownerHeaders,
+      body: JSON.stringify({})
+    });
+    assert.equal(ownerDeliveryCheck.status, 200, "Owner should run delivery readiness check");
+
+    const viewerDeliveryBundle = await httpRequest(port, "/api/v1/system/delivery-bundle", {
+      headers: viewerHeaders
+    });
+    assert.equal(viewerDeliveryBundle.status, 403, "Viewer should not download delivery bundle");
+
     const publishingConnectorList = await httpRequest(port, "/api/v1/international-geo/publishing/connectors", {
       headers: viewerHeaders
     });
@@ -5710,6 +5854,20 @@ async function runMultiUserAccessHttpChecks() {
       JSON.stringify(ownerPublishingConnectorUpdate.body),
       /http-publishing-secret/,
       "Publishing connector HTTP response should mask raw key"
+    );
+    const ownerDeliveryBundle = await httpRequest(port, "/api/v1/system/delivery-bundle", {
+      headers: ownerHeaders
+    });
+    assert.equal(ownerDeliveryBundle.status, 200, "Owner should download delivery bundle");
+    assert.equal(
+      ownerDeliveryBundle.body?.data?.kind,
+      "geo-pulse-delivery-bundle",
+      "Delivery bundle HTTP should return stable kind"
+    );
+    assert.doesNotMatch(
+      JSON.stringify(ownerDeliveryBundle.body),
+      /password_hash|provider-secret|publishing-secret|connector-secret-key|geo-owner-change-me|api_key":"/,
+      "Delivery bundle HTTP should not leak secrets"
     );
 
     const ownerPublishingConnectorTest = await httpRequest(
