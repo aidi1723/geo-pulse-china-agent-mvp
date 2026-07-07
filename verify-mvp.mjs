@@ -5027,6 +5027,90 @@ async function runMultiUserAccessHttpChecks() {
     );
     assert.equal(invalidTrackingUpdate.status, 400, "Invalid publishing tracking update should fail");
 
+    const viewerContentGeneration = await httpRequest(port, "/api/v1/international-geo/content-generation", {
+      headers: viewerHeaders
+    });
+    assert.equal(viewerContentGeneration.status, 200, "Viewer should read International GEO content generation");
+    assert.ok(
+      viewerContentGeneration.body?.data?.summary,
+      "Content generation HTTP response should include summary"
+    );
+
+    const viewerGenerateArticles = await httpRequest(
+      port,
+      "/api/v1/international-geo/content-generation/articles/generate",
+      {
+        method: "POST",
+        headers: viewerHeaders
+      }
+    );
+    assert.equal(viewerGenerateArticles.status, 403, "Viewer should not generate International GEO articles");
+
+    const ownerGenerateArticles = await httpRequest(
+      port,
+      "/api/v1/international-geo/content-generation/articles/generate",
+      {
+        method: "POST",
+        headers: ownerHeaders
+      }
+    );
+    assert.equal(ownerGenerateArticles.status, 201, "Owner should generate International GEO articles");
+    assert.ok(
+      ownerGenerateArticles.body?.data?.articles?.length >= 1,
+      "Owner article generation should return article rows"
+    );
+
+    const generatedArticleId = ownerGenerateArticles.body.data.articles[0].id;
+    const ownerReviewArticle = await httpRequest(
+      port,
+      `/api/v1/international-geo/content-generation/articles/${generatedArticleId}/review`,
+      {
+        method: "POST",
+        headers: ownerHeaders,
+        body: JSON.stringify({ action: "approve", human_notes: "HTTP approval." })
+      }
+    );
+    assert.equal(ownerReviewArticle.status, 200, "Owner should review generated articles");
+    assert.equal(ownerReviewArticle.body?.data?.review_status, "approved");
+
+    const ownerGenerateRewrites = await httpRequest(
+      port,
+      "/api/v1/international-geo/content-generation/rewrites/generate",
+      {
+        method: "POST",
+        headers: ownerHeaders
+      }
+    );
+    assert.equal(ownerGenerateRewrites.status, 201, "Owner should generate International GEO platform rewrites");
+    assert.ok(
+      ownerGenerateRewrites.body?.data?.rewrites?.length >= 3,
+      "Owner rewrite generation should return rewrite rows"
+    );
+
+    const generatedRewriteId = ownerGenerateRewrites.body.data.rewrites[0].id;
+    const ownerReviewRewrite = await httpRequest(
+      port,
+      `/api/v1/international-geo/content-generation/rewrites/${generatedRewriteId}/review`,
+      {
+        method: "POST",
+        headers: ownerHeaders,
+        body: JSON.stringify({ action: "approve", human_notes: "HTTP rewrite approval." })
+      }
+    );
+    assert.equal(ownerReviewRewrite.status, 200, "Owner should review platform rewrites");
+    assert.equal(ownerReviewRewrite.body?.data?.review_status, "approved");
+
+    const invalidRewriteReview = await httpRequest(
+      port,
+      `/api/v1/international-geo/content-generation/rewrites/${generatedRewriteId}/review`,
+      {
+        method: "POST",
+        headers: ownerHeaders,
+        body: JSON.stringify({ action: "publish" })
+      }
+    );
+    assert.equal(invalidRewriteReview.status, 400, "Invalid platform rewrite review should fail");
+
     const createdEditor = await httpRequest(port, "/api/v1/users", {
       method: "POST",
       headers: {

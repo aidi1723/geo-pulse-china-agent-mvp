@@ -25,7 +25,9 @@ const {
   createTopicIdeaAction,
   createArticleFromTopicAction,
   createTopicIdeasFromKeywords,
+  generateInternationalGeoArticlesAction,
   generateInternationalGeoArtifactsAction,
+  generateInternationalGeoPlatformRewritesAction,
   generateInternationalGeoEvidenceAssetsAction,
   generateInternationalGeoPublishingPackagesAction,
   generateInternationalGeoSiteAuditAssetsAction,
@@ -44,6 +46,7 @@ const {
   getCurrentWorkspace,
   getExportJobDownload,
   getInternationalGeoState,
+  getInternationalGeoContentGenerationState,
   getInternationalGeoEvidenceAssetsState,
   getInternationalGeoPublishingState,
   getInternationalGeoVisibilityState,
@@ -91,7 +94,9 @@ const {
   listTopicIdeas,
   listUsageRecords,
   reviewArticleAction,
+  reviewInternationalGeoGeneratedArticleAction,
   reviewInternationalGeoEvidenceAssetAction,
+  reviewInternationalGeoPlatformRewriteAction,
   reviewInternationalGeoPublishingPackageAction,
   runInternationalGeoAuditAction,
   runInternationalGeoVisibilityMeasurementAction,
@@ -2128,6 +2133,71 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && pathname === "/international-geo/evidence-assets/queue") {
     sendJson(res, 200, ok({ items: getInternationalGeoEvidenceAssetsState().queue }));
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/international-geo/content-generation") {
+    sendJson(res, 200, ok(getInternationalGeoContentGenerationState()));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/international-geo/content-generation/articles/generate") {
+    sendJson(res, 201, ok(generateInternationalGeoArticlesAction()));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/international-geo/content-generation/rewrites/generate") {
+    sendJson(res, 201, ok(generateInternationalGeoPlatformRewritesAction()));
+    return;
+  }
+
+  if (req.method === "POST" && pathname.match(/^\/international-geo\/content-generation\/articles\/[^/]+\/review$/)) {
+    const id = pathname.split("/")[4];
+    const body = await parseBody(req).catch(() => null);
+    if (!body) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    try {
+      const result = reviewInternationalGeoGeneratedArticleAction(id, body);
+      if (!result) {
+        sendJson(res, 404, error("NOT_FOUND", "Generated article not found", 404).body);
+        return;
+      }
+      sendJson(res, 200, ok(result));
+    } catch (err) {
+      if ((err?.code || err?.message) === "VALIDATION_ERROR") {
+        const message = err.field_errors?.[0]?.message || "Review action must be approve or reject";
+        sendJson(res, 400, error("VALIDATION_ERROR", message).body);
+        return;
+      }
+      throw err;
+    }
+    return;
+  }
+
+  if (req.method === "POST" && pathname.match(/^\/international-geo\/content-generation\/rewrites\/[^/]+\/review$/)) {
+    const id = pathname.split("/")[4];
+    const body = await parseBody(req).catch(() => null);
+    if (!body) {
+      sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
+      return;
+    }
+    try {
+      const result = reviewInternationalGeoPlatformRewriteAction(id, body);
+      if (!result) {
+        sendJson(res, 404, error("NOT_FOUND", "Platform rewrite not found", 404).body);
+        return;
+      }
+      sendJson(res, 200, ok(result));
+    } catch (err) {
+      if ((err?.code || err?.message) === "VALIDATION_ERROR") {
+        const message = err.field_errors?.[0]?.message || "Review action must be approve or reject";
+        sendJson(res, 400, error("VALIDATION_ERROR", message).body);
+        return;
+      }
+      throw err;
+    }
     return;
   }
 
