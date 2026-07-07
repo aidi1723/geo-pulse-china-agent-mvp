@@ -21,6 +21,7 @@ import {
   exportDownloadUrl,
   generateInternationalGeoArtifacts as generateInternationalGeoArtifactsApi,
   generateInternationalGeoEvidenceAssets as generateInternationalGeoEvidenceAssetsApi,
+  generateInternationalGeoPublishingPackages as generateInternationalGeoPublishingPackagesApi,
   generateInternationalGeoSiteAuditAssets as generateInternationalGeoSiteAuditAssetsApi,
   generateTopicOutline as generateTopicOutlineApi,
   getArticleDetail,
@@ -33,6 +34,7 @@ import {
   resetRuntimeState as resetRuntimeStateApi,
   reconnectChannel as reconnectChannelApi,
   reviewInternationalGeoEvidenceAsset as reviewInternationalGeoEvidenceAssetApi,
+  reviewInternationalGeoPublishingPackage as reviewInternationalGeoPublishingPackageApi,
   reviewArticle,
   retryAutomationRun as retryAutomationRunApi,
   runSourceStrategy as runSourceStrategyApi,
@@ -56,6 +58,7 @@ import {
   testAutomationProvider as testAutomationProviderApi,
   testAutomationConnector as testAutomationConnectorApi,
   updateBillingPlan as updateBillingPlanApi,
+  updateInternationalGeoPublishingTracking as updateInternationalGeoPublishingTrackingApi,
   updateTopic as updateTopicApi,
   validateRuntimeBackupImport as validateRuntimeBackupImportApi,
   validateRuntimeBackup as validateRuntimeBackupApi,
@@ -1395,6 +1398,53 @@ const actions = {
       showNotice(action === "approve" ? "证据资产已审核通过。" : "证据资产已驳回。");
     } catch (error) {
       setError(error instanceof Error ? error.message : "审核国际 GEO 证据资产失败");
+      rerender();
+    }
+  },
+  async generateInternationalGeoPublishingPackages() {
+    try {
+      const result = await generateInternationalGeoPublishingPackagesApi();
+      await refreshData();
+      store.page = "international";
+      showNotice(`国际 GEO 发布包已生成 ${result.packages?.length || 0} 项。`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "生成国际 GEO 发布包失败");
+      rerender();
+    }
+  },
+  async reviewInternationalGeoPublishingPackage(packageId, action) {
+    if (!packageId) return;
+    try {
+      await reviewInternationalGeoPublishingPackageApi(packageId, { action });
+      await refreshData();
+      store.page = "international";
+      showNotice(action === "approve" ? "发布包已审核通过。" : "发布包已驳回。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "审核国际 GEO 发布包失败");
+      rerender();
+    }
+  },
+  async updateInternationalGeoPublishingTrackingDemo(trackingId) {
+    if (!trackingId) return;
+    try {
+      await updateInternationalGeoPublishingTrackingApi(trackingId, {
+        publication_status: "manually_published",
+        published_url: "https://example.com/manual-published-package",
+        canonical_url:
+          store.data.internationalGeo?.input?.website_url ||
+          store.data.workspaceInput?.website_url ||
+          "https://example.com",
+        indexing_status: "not_checked",
+        ai_mention_status: "not_checked",
+        citation_status: "not_checked",
+        recommendation_status: "not_checked",
+        evidence_note: "Manual/local demo update. No live provider measurement was performed."
+      });
+      await refreshData();
+      store.page = "international";
+      showNotice("发布追踪已记录为人工发布，收录与推荐状态仍需人工核验。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "更新发布追踪失败");
       rerender();
     }
   },

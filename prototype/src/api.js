@@ -400,6 +400,30 @@ export function reviewInternationalGeoEvidenceAsset(assetId, payload = {}) {
   return requestJson(`/api/v1/international-geo/evidence-assets/${encodeURIComponent(assetId)}/review`, "POST", payload);
 }
 
+export function getInternationalGeoPublishing() {
+  return request("/api/v1/international-geo/publishing");
+}
+
+export function generateInternationalGeoPublishingPackages() {
+  return requestJson("/api/v1/international-geo/publishing/packages/generate", "POST", {});
+}
+
+export function reviewInternationalGeoPublishingPackage(packageId, payload = {}) {
+  return requestJson(
+    `/api/v1/international-geo/publishing/packages/${encodeURIComponent(packageId)}/review`,
+    "POST",
+    payload
+  );
+}
+
+export function updateInternationalGeoPublishingTracking(trackingId, payload = {}) {
+  return requestJson(
+    `/api/v1/international-geo/publishing/tracking/${encodeURIComponent(trackingId)}`,
+    "PUT",
+    payload
+  );
+}
+
 export function updateBillingPlan(payload) {
   return requestJson("/api/v1/billing/plan", "POST", payload);
 }
