@@ -2,7 +2,7 @@
 
 ## Current State
 
-The project is a v0.12.0 one-organization team-access workspace with built-in login, RBAC, connector diagnostics, local backup import/restore, launch preflight, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, generated GEO assets, and minimal GitHub CI.
+The project is a v0.13.0 one-organization team-access workspace with built-in login, RBAC, connector diagnostics, local backup import/restore, launch preflight, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, generated GEO assets, AI visibility measurement foundation, and minimal GitHub CI.
 
 Completed mock-first product areas:
 
@@ -13,7 +13,7 @@ Completed mock-first product areas:
 - Automation provider registry, connector registry, connector-scoped permissions, automation runs, scheduler, retry, and runtime status.
 - Visibility analytics, mock SERP collection, competitor share-of-voice, audience segments, marketing campaigns, and campaign runs.
 - Audit events, audit CSV export, local persistence, reset, security headers, body limits, rate limits, and remote access guard.
-- International GEO workspace for overseas AI search readiness, rule-first and crawl-evidenced site audits, generated GEO assets, content generation planning, distribution execution, and AI engine visibility models.
+- International GEO workspace for overseas AI search readiness, rule-first and crawl-evidenced site audits, generated GEO assets, content generation planning, distribution execution, visibility prompt sets, provider readiness, runs, snapshots, and AI engine visibility models.
 - Production guardrails, `/healthz`, `robots.txt`, `sitemap.xml`, `llms.txt`, `favicon.ico`, Docker, Docker Compose, and deployment documentation.
 - Single-user complete workflows: workspace input, manual topics, topic editing, outline generation, manual articles, templates, exports, International GEO audit/artifacts, local billing plan switch, and logout action.
 - Integration-readiness workflows: connector config editing, connector connection tests, connector health checks, masked secrets, runtime connector health summaries, and connector audit events.
@@ -25,11 +25,12 @@ Completed mock-first product areas:
 - Site GEO audit and assets: website/product input, deterministic check-level recommendations, durable audit records, and copyable `llms.txt`, JSON-LD, FAQ, article brief, and distribution brief assets.
 - Live site crawl evidence: guarded homepage, `robots.txt`, `sitemap.xml`, and `/llms.txt` fetches with evidence snapshots and evidence-aware check rows.
 - Evidence-backed GEO scoring: deterministic 100-point rubric, check-level awarded/deducted points, confidence, priority, deduction reasons, next actions, audit-level `score_breakdown`, and International GEO `评分拆解` UI.
+- AI visibility measurement foundation baseline: prompt sets, provider readiness for ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude, and Copilot / Bing, visibility runs, prompt snapshots, UI panels, browser button wiring, and explicit `measured`, `simulated`, and `unavailable` data-status labels.
 - Open-source release docs and GPLv3 licensing.
 
 ## Near-Term Maintenance
 
-These items keep v0.12.0 healthy without changing its architecture:
+These items keep v0.13.0 healthy without changing its architecture:
 
 - Keep `npm run check` passing.
 - Expand `verify-mvp.mjs` when new behavior is added.
@@ -41,23 +42,27 @@ These items keep v0.12.0 healthy without changing its architecture:
 
 These are the immediate product slices. The full second-stage direction is tracked in [Phase 2 Roadmap](PHASE_2_ROADMAP.md).
 
-1. AI visibility monitoring connector.
-   - Add explicit connectors for approved SERP or AI visibility providers before claiming real engine inclusion.
-   - Track ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, and Copilot prompts as measured snapshots.
+1. Evidence-driven content and asset production from prompt gaps.
+   - Generate briefs, FAQs, schema updates, and `llms.txt` improvements from crawl evidence, score deductions, and unavailable/simulated visibility gaps.
+   - Keep generated assets tied to the evidence or prompt gap that produced them.
 
-2. Source adapter implementation stubs per contract.
+2. Future approved providers for measured visibility.
+   - Add explicit connectors for approved SERP or AI visibility providers before claiming real engine inclusion.
+   - Convert ChatGPT Search, Gemini, Claude, Perplexity, Google AI Overviews, and Copilot / Bing prompts to `measured` snapshots only when provider evidence exists.
+
+3. Source adapter implementation stubs per contract.
    - Add explicit adapter runners behind `sourceAdapterContracts`.
    - Keep evidence and error taxonomy visible in crawl jobs.
 
-3. Connector run detail drawer.
+4. Connector run detail drawer.
    - Expand from connector-level diagnostics into per-run drilldown when a workflow has multiple connectors.
 
-4. Prompt regression dataset.
+5. Prompt regression dataset.
    - Store sample inputs, expected criteria, generated outputs, and quality score history.
 
 ## Phase 2 Direction
 
-Phase 2 should move the product from v0.12 evidence-scored audit preparation to broader measured GEO operations:
+Phase 2 should move the product from v0.13 evidence-scored audit and visibility foundation to broader measured GEO operations:
 
 - AI visibility monitoring through approved data sources.
 - Content and GEO asset generation from crawl evidence and prompt gaps.
@@ -67,7 +72,7 @@ Phase 2 should move the product from v0.12 evidence-scored audit preparation to 
 
 Phase 2 must preserve a clear distinction between rule-first recommendations, crawl-evidenced findings, and measured external visibility data.
 
-## Post-v0.12 Production Hardening
+## Post-v0.13 Production Hardening
 
 These are required before using the project as a real SaaS or broadly exposed hosted service:
 
@@ -82,14 +87,15 @@ These are required before using the project as a real SaaS or broadly exposed ho
 - Incident response owner and security contact.
 - Data retention, deletion, and privacy policy.
 
-## Non-Goals For v0.12
+## Non-Goals For v0.13
 
 - Production multi-tenant hosting.
 - Real third-party credential management.
 - Real OAuth authorization flows.
 - MFA.
 - Real external CMS, social, email, SERP, or analytics publishing/collection.
-- Real ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, or Copilot querying.
+- Real ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, Bing, SERP, or AI visibility provider querying.
+- Measured engine inclusion, citation presence, recommendation rank, or competitor rank without approved provider evidence.
 - Automatic third-party community or CMS publishing.
 - Full workflow graph editor.
 - Paid billing integration.
@@ -98,7 +104,7 @@ These are required before using the project as a real SaaS or broadly exposed ho
 
 ## Release Versioning
 
-Current public snapshot: `0.12.0`.
+Current public snapshot: `0.13.0`.
 
 Suggested version policy:
 

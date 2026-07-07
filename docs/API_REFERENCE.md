@@ -56,7 +56,7 @@ System scripts can still use:
 X-GEO-API-Key: <runtime-key>
 ```
 
-The browser client config endpoint does not expose the mutation API key in v0.12.0. Keep `GEO_INTERNAL_API_KEY` for automation, diagnostics, and controlled scripts.
+The browser client config endpoint does not expose the mutation API key in v0.13.0. Keep `GEO_INTERNAL_API_KEY` for automation, diagnostics, and controlled scripts.
 
 Roles:
 
@@ -197,6 +197,11 @@ Workspace input stores the one-user operating context. Export jobs generate loca
 - `POST /international-geo/site-audits`
 - `POST /international-geo/site-audits/:id/assets`
 - `POST /international-geo/site-audits/:id/crawl`
+- `GET /international-geo/visibility`
+- `GET /international-geo/visibility/runs`
+- `GET /international-geo/visibility/snapshots`
+- `POST /international-geo/visibility/prompt-sets`
+- `POST /international-geo/visibility/run`
 
 These routes power local International GEO readiness audits, guarded crawl evidence, and artifact generation for `llms.txt`, JSON-LD, FAQ, article briefs, and distribution briefs.
 
@@ -206,7 +211,27 @@ The crawl route safely fetches only the submitted homepage plus origin `robots.t
 
 Mutation routes require an editor/admin/owner browser session or `X-GEO-API-Key`. Viewer sessions can read audits but cannot create audits, generate assets, or run crawls.
 
-Boundary: v0.12 includes guarded public site crawling and deterministic evidence-backed scoring for audit evidence. It does not perform recursive crawling, browser rendering, real AI search engine querying, real SERP collection, measured engine inclusion/rank tracking, or automatic third-party publishing.
+Visibility routes add the v0.13 measurement foundation:
+
+- `GET /international-geo/visibility` returns prompt sets, provider readiness, recent runs, snapshot summaries, and status counts.
+- `GET /international-geo/visibility/runs` lists visibility measurement runs and their provider/prompt-set metadata.
+- `GET /international-geo/visibility/snapshots` lists prompt snapshots by prompt set, run, engine, capture time, and data status.
+- `POST /international-geo/visibility/prompt-sets` creates a prompt set for one non-empty prompt, optional market, language, buyer intent, product name, target URL, target brand, competitor list, and supported engine ids.
+- `POST /international-geo/visibility/run` creates a local run across active prompt sets and their configured engines.
+
+Prompt-set creation requires a non-empty `prompt`. `engines` defaults to all supported visibility engines when omitted, and unsupported engine ids return `400 VALIDATION_ERROR`. Market, language, buyer intent, product name, target URL, target brand, and competitors are optional operating context fields; defaults come from the International GEO input when available. Prompt sets do not store raw provider credentials.
+
+Visibility snapshot `data_status` labels are contract boundaries:
+
+- `measured`: captured from a future approved external visibility provider with stored provider evidence.
+- `simulated`: demo or seed data that must not be presented as real engine output.
+- `unavailable`: no compliant provider data is available for that prompt/provider pair.
+
+Default local visibility runs create `unavailable` snapshots only. They do not call ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude, Copilot, Bing, SERP APIs, or other external AI visibility providers. Snapshot responses may include provider labels, readiness state, prompt text, target brand, competitors, and unavailable reasons, but they must not expose raw provider credentials.
+
+Visibility mutations require an editor/admin/owner browser session or `X-GEO-API-Key`. Viewer sessions can read visibility overview, runs, and snapshots but cannot create prompt sets or runs.
+
+Boundary: v0.13 includes guarded public site crawling, deterministic evidence-backed scoring, and an AI visibility measurement foundation. It does not perform recursive crawling, browser rendering, real AI search engine querying, real SERP collection, measured engine inclusion/rank tracking, recommendation-rank tracking, or automatic third-party publishing.
 
 ### Publishing
 
