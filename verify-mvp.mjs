@@ -4712,6 +4712,30 @@ async function runMultiUserAccessHttpChecks() {
     );
     assert.equal(invalidEvidenceAssetReview.status, 400, "Invalid evidence asset review should fail");
 
+    const httpPublishingAssetTypes = new Set(["comparison_brief", "definition_brief"]);
+    for (const asset of ownerGenerateEvidenceAssets.body.data.assets.filter(
+      (item) => httpPublishingAssetTypes.has(item.asset_type) && item.id !== generatedEvidenceAssetId
+    )) {
+      const ownerReviewPublishingSourceAsset = await httpRequest(
+        port,
+        `/api/v1/international-geo/evidence-assets/${asset.id}/review`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Cookie: ownerLogin.cookie
+          },
+          body: JSON.stringify({ action: "approve" })
+        }
+      );
+      assert.equal(
+        ownerReviewPublishingSourceAsset.status,
+        200,
+        `Owner should approve ${asset.asset_type} evidence assets for publishing package generation`
+      );
+      assert.equal(ownerReviewPublishingSourceAsset.body?.data?.review_status, "approved");
+    }
+
     const viewerPublishing = await httpRequest(port, "/api/v1/international-geo/publishing", {
       headers: viewerHeaders
     });

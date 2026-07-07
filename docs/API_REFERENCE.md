@@ -85,6 +85,8 @@ List endpoints generally return:
 - `GET /session/current`
 - `POST /session/login`
 - `POST /session/logout`
+- `GET /workspaces/current`
+- `GET /members`
 - `GET /users`
 - `POST /users`
 - `POST /users/:id/disable`
@@ -166,12 +168,11 @@ Runs include structured steps, provider/connector metadata, input/output preview
 - `GET /articles`
 - `POST /articles`
 - `GET /articles/:id`
-- `PUT /articles/:id`
+- `PATCH /articles/:id`
 - `POST /articles/from-topic`
 - `POST /articles/:id/review`
 - `POST /articles/:id/submit-review`
 - `GET /prompt-templates`
-- `GET /prompt-templates/:id`
 - `GET /content-quality-traces`
 - `POST /content-templates`
 
@@ -179,6 +180,7 @@ These routes power topic planning, article drafting, review flow, prompt lineage
 
 ### Single-User Workspace And Exports
 
+- `GET /workspaces/current`
 - `GET /workspace-input`
 - `PUT /workspace-input`
 - `POST /exports`
@@ -270,7 +272,7 @@ Visibility foundation boundary: guarded public site crawling, deterministic evid
 - `POST /publish-tasks/:id/start`
 - `POST /publish-tasks/:id/cancel`
 - `POST /publish-tasks/:id/retry-failed`
-- `POST /publish-tasks/:id/takeover`
+- `POST /publish-tasks/:id/items/:itemId/takeover`
 - `POST /publish-tasks/:id/approval`
 - `GET /publish-records`
 - `GET /channels`
