@@ -273,7 +273,10 @@ function productionReadinessStatusLabel(value) {
       warning: "告警",
       failed: "失败",
       configured: "已配置",
-      missing: "未配置"
+      missing: "未配置",
+      manual: "人工确认",
+      enforced: "已约束",
+      operator: "维护方"
     }[value] || value || "-"
   );
 }
@@ -321,6 +324,127 @@ function renderProductionReadinessPanel(productionReadiness = {}) {
         <div class="info-row"><span>生成时间</span><strong>${escapeHtml(formatDateTime(productionReadiness.generated_at))}</strong></div>
       </div>
       ${tableMarkup(["检查项", "状态", "说明 / 建议"], rows)}
+    </div>
+  `;
+}
+
+function renderDeliveryBoundaryTable(deliveryReadiness = {}) {
+  const items = deliveryReadiness.boundaries || [];
+  const rows = items.length
+    ? items.map((item) => `
+        <tr>
+          <td>
+            <div class="cell-title">${escapeHtml(item.label || item.id)}</div>
+            <div class="cell-sub">${escapeHtml(item.id || "-")}</div>
+          </td>
+          <td>${statusMarkup(productionReadinessStatusLabel(item.status))}</td>
+          <td>${escapeHtml(item.description || item.statement || "-")}</td>
+        </tr>
+      `)
+    : [`
+        <tr>
+          <td colspan="3">
+            <div class="empty-state">暂无交付边界。</div>
+          </td>
+        </tr>
+      `];
+
+  return `
+    <div class="section-block" style="margin-top:18px">
+      <div class="panel-head">
+        <div>
+          <h4 class="panel-title" style="font-size:15px">交付边界</h4>
+          <div class="panel-note">明确本阶段不进行真实 AI 搜索调用、不自动外发、不导出原始密钥。</div>
+        </div>
+      </div>
+      ${tableMarkup(["边界", "状态", "说明"], rows)}
+    </div>
+  `;
+}
+
+function renderDeliveryHandoffSteps(deliveryReadiness = {}) {
+  const items = deliveryReadiness.handoff_steps || [];
+  const rows = items.length
+    ? items.map((item) => `
+        <tr>
+          <td>
+            <div class="cell-title">${escapeHtml(item.label || item.id)}</div>
+            <div class="cell-sub">#${escapeHtml(item.order ?? "-")} / ${escapeHtml(item.id || "-")}</div>
+          </td>
+          <td>${statusMarkup(productionReadinessStatusLabel(item.status || item.owner || "-"))}</td>
+          <td>${escapeHtml(item.instruction || item.expected_artifact || "-")}</td>
+        </tr>
+      `)
+    : [`
+        <tr>
+          <td colspan="3">
+            <div class="empty-state">暂无交付步骤。</div>
+          </td>
+        </tr>
+      `];
+
+  return `
+    <div class="section-block" style="margin-top:18px">
+      <div class="panel-head">
+        <div>
+          <h4 class="panel-title" style="font-size:15px">交付步骤</h4>
+          <div class="panel-note">用于单用户交付前的操作顺序确认和交付包归档。</div>
+        </div>
+      </div>
+      ${tableMarkup(["步骤", "负责人 / 状态", "交付物 / 指令"], rows)}
+    </div>
+  `;
+}
+
+function renderDeliveryReadinessPanel(deliveryReadiness = {}) {
+  const summary = deliveryReadiness.summary || {};
+  const checks = deliveryReadiness.checks || [];
+  const version = deliveryReadiness.package?.version || "0.20.0";
+  const rows = checks.length
+    ? checks.map((item) => `
+        <tr>
+          <td>
+            <div class="cell-title">${escapeHtml(item.label || item.id)}</div>
+            <div class="cell-sub">${escapeHtml(item.category || "-")} / ${escapeHtml(item.id || "-")}</div>
+          </td>
+          <td>${statusMarkup(productionReadinessStatusLabel(item.status))}</td>
+          <td>
+            <div class="cell-title">${escapeHtml(item.message || "-")}</div>
+            <div class="cell-sub">${escapeHtml(item.recommendation || "-")}</div>
+          </td>
+        </tr>
+      `)
+    : [`
+        <tr>
+          <td colspan="3">
+            <div class="empty-state">暂无交付就绪检查。</div>
+          </td>
+        </tr>
+      `];
+
+  return `
+    <div class="section-block" style="margin-top:18px">
+      <div class="panel-head">
+        <div>
+          <h4 class="panel-title" style="font-size:15px">交付中心</h4>
+          <div class="panel-note">汇总上线前交付检查、脱敏交付包、交付边界和移交流程。</div>
+        </div>
+        <div class="actions-row">
+          <button class="secondary-btn" data-action="refresh-delivery-readiness">刷新交付检查</button>
+          <button class="secondary-btn" data-action="download-delivery-bundle">下载交付包</button>
+        </div>
+      </div>
+      <div class="info-list">
+        <div class="info-row"><span>总体状态</span><strong>${escapeHtml(productionReadinessStatusLabel(deliveryReadiness.status))}</strong></div>
+        <div class="info-row"><span>交付得分</span><strong>${escapeHtml(deliveryReadiness.score ?? "-")}</strong></div>
+        <div class="info-row"><span>交付包</span><strong>${escapeHtml(`geo-pulse-delivery-bundle-${version}.json`)}</strong></div>
+        <div class="info-row"><span>通过项</span><strong>${escapeHtml(summary.passed ?? "-")}</strong></div>
+        <div class="info-row"><span>告警项</span><strong>${escapeHtml(summary.warnings ?? "-")}</strong></div>
+        <div class="info-row"><span>生成时间</span><strong>${escapeHtml(formatDateTime(deliveryReadiness.generated_at))}</strong></div>
+      </div>
+      ${tableMarkup(["检查项", "状态", "说明 / 建议"], rows)}
+      ${renderDeliveryBoundaryTable(deliveryReadiness)}
+      ${renderDeliveryHandoffSteps(deliveryReadiness)}
     </div>
   `;
 }
@@ -523,6 +647,7 @@ function renderBrand(profile, runtimeStatus, auditEvents = [], isStaticPreview =
   const backups = runtimeStatus?.backups || {};
   const preflight = runtimeStatus?.preflight || {};
   const productionReadiness = runtimeStatus?.production_readiness || {};
+  const deliveryReadiness = runtimeStatus?.delivery_readiness || {};
   return `
     <div class="stack-blocks">
       <section class="surface panel" data-settings-panel="brand">
@@ -580,6 +705,7 @@ function renderBrand(profile, runtimeStatus, auditEvents = [], isStaticPreview =
         </div>
         ${renderLaunchPreflight(preflight)}
         ${renderProductionReadinessPanel(productionReadiness)}
+        ${renderDeliveryReadinessPanel(deliveryReadiness)}
         ${renderMaskedSecretInventoryPanel(productionReadiness)}
         ${renderHandoffChecklistPanel(productionReadiness)}
         ${renderRuntimeBackups(backups, runtimeBackupImport)}
