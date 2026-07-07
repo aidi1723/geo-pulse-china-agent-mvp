@@ -224,6 +224,26 @@ function runSingleUserSourceChecks() {
   );
   assert.match(
     apiSource,
+    /export function importInternationalGeoVisibilityEvidence\(payload = \{\}\)/,
+    "International GEO measured evidence import should have a client API method"
+  );
+  assert.match(
+    mainSource,
+    /importInternationalGeoVisibilityEvidence as importInternationalGeoVisibilityEvidenceApi/,
+    "International GEO measured evidence import should be imported into the browser action layer"
+  );
+  assert.match(
+    mainSource,
+    /importInternationalGeoVisibilityEvidence\(\)/,
+    "International GEO measured evidence import should have a browser action handler"
+  );
+  assert.match(
+    eventsSource,
+    /action === "international-visibility-evidence-import"/,
+    "International GEO measured evidence import should be wired in the event dispatcher"
+  );
+  assert.match(
+    apiSource,
     /export function getInternationalGeoEvidenceAssets\(\)/,
     "International GEO evidence assets should have a read client API method"
   );
@@ -3953,6 +3973,10 @@ function runInternationalGeoUiChecks() {
   assert.match(siteAuditHtml, /Prompt 测量快照/, "International GEO should render prompt measurement snapshots");
   assert.match(siteAuditHtml, /测量运行记录/, "International GEO should render visibility run history");
   assert.match(siteAuditHtml, /unavailable|simulated|measured/, "International GEO should expose data source labels");
+  assert.match(siteAuditHtml, /导入测量证据/, "International GEO should render measured evidence import panel");
+  assert.match(siteAuditHtml, /data-action="international-visibility-evidence-import"/);
+  assert.match(siteAuditHtml, /manual_import/, "Measured evidence import UI should expose manual_import boundary");
+  assert.match(siteAuditHtml, /measured_import/, "Measured evidence import UI should expose measured_import run boundary");
 }
 
 function runPersistenceChecks() {
