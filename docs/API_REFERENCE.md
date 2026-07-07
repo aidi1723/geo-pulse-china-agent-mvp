@@ -56,7 +56,7 @@ System scripts can still use:
 X-GEO-API-Key: <runtime-key>
 ```
 
-The browser client config endpoint does not expose the mutation API key in v0.18.0. Keep `GEO_INTERNAL_API_KEY` for automation, diagnostics, and controlled scripts.
+The browser client config endpoint does not expose the mutation API key in v0.19.0. Keep `GEO_INTERNAL_API_KEY` for automation, diagnostics, and controlled scripts.
 
 Roles:
 
@@ -207,10 +207,18 @@ Workspace input stores the one-user operating context. Export jobs generate loca
 - `POST /international-geo/visibility/evidence/import`
 - `POST /international-geo/visibility/evidence/imports`
 - `POST /international-geo/visibility/evidence/:id/review`
+- `GET /international-geo/visibility/providers`
+- `PUT /international-geo/visibility/providers/:id`
+- `POST /international-geo/visibility/providers/:id/test`
+- `POST /international-geo/visibility/providers/diagnose`
 - `GET /international-geo/publishing`
 - `GET /international-geo/publishing/platforms`
 - `GET /international-geo/publishing/packages`
 - `GET /international-geo/publishing/tracking`
+- `GET /international-geo/publishing/connectors`
+- `PUT /international-geo/publishing/connectors/:id`
+- `POST /international-geo/publishing/connectors/:id/test`
+- `POST /international-geo/publishing/connectors/diagnose`
 - `GET /international-geo/content-generation`
 - `POST /international-geo/content-generation/articles/generate`
 - `POST /international-geo/content-generation/articles/:id/review`
@@ -246,7 +254,7 @@ Evidence assets are local review artifacts. They are not automatically published
 - `POST /international-geo/content-generation/rewrites/generate`: editor route that creates deterministic platform rewrites from approved generated articles.
 - `POST /international-geo/content-generation/rewrites/:id/review`: editor route that approves or rejects a platform rewrite with `{ "action": "approve" }` or `{ "action": "reject", "human_notes": "..." }`.
 
-The active generator is `local_rules`. OpenAI, Claude, and Gemini provider rows are reserved extension seams and are not executed in v0.18. Generated article drafts preserve source asset ids, source asset types, evidence summary, target prompt, canonical URL, review status, and `local_rules` provider provenance. Platform rewrites preserve source article id, platform mapping, rewrite type, AI visibility goal, moderation notes, canonical URL, review status, and provider provenance.
+The active generator is `local_rules`. OpenAI, Claude, and Gemini provider rows are reserved extension seams and are not executed in v0.19. Generated article drafts preserve source asset ids, source asset types, evidence summary, target prompt, canonical URL, review status, and `local_rules` provider provenance. Platform rewrites preserve source article id, platform mapping, rewrite type, AI visibility goal, moderation notes, canonical URL, review status, and provider provenance.
 
 Content generation boundary: local deterministic generation and human review only. These routes do not call external LLMs, publish externally, store external platform credentials, verify indexing, query live AI/search/SERP providers, or prove AI inclusion, citation, recommendation, or external distribution.
 
@@ -259,10 +267,16 @@ Content generation boundary: local deterministic generation and human review onl
 - `POST /international-geo/publishing/packages/generate`: editor route that generates deterministic publishing packages from approved International GEO evidence assets.
 - `POST /international-geo/publishing/packages/:id/review`: editor route that approves or rejects a review-only publishing package.
 - `PUT /international-geo/publishing/tracking/:id`: editor route that updates manual/local publication URL, canonical URL, indexing status, AI mention status, citation status, and recommendation status.
+- `GET /international-geo/publishing/connectors`: viewer route for connector-ready publishing platform configs.
+- `PUT /international-geo/publishing/connectors/:id`: editor route that saves local status, endpoint, masked credential input, and notes.
+- `POST /international-geo/publishing/connectors/:id/test`: editor route that runs a local dry-run check and returns `external_call_performed: false`.
+- `POST /international-geo/publishing/connectors/diagnose`: editor route that dry-run diagnoses every publishing connector.
 
 Publishing platform notes are planning guidance only. They explain why public, higher-visibility platforms may improve retrieval, citation, and recommendation probability, but they are not measured AI engine evidence.
 
 Publishing workflow boundary: local planning/handoff only. These publishing routes do not publish externally, store external platform credentials, generate article drafts, call live ChatGPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, Bing, SERP, indexing, or external platform services, or verify real inclusion/recommendation. Tracking values are manual/local unless future connector evidence exists.
+
+Publishing connector configs are a v0.19 foundation only. They mask credentials, validate endpoint shape, and expose `external_publish_blocked` in dry-run checks. They do not call owned-site CMS, docs, Medium, LinkedIn, YouTube, GitHub, Reddit, Quora, directory, review-site, or community APIs.
 
 Visibility routes add the v0.13 measurement foundation:
 
@@ -274,10 +288,14 @@ Visibility routes add the v0.13 measurement foundation:
 - `POST /international-geo/visibility/evidence/import` imports one human-verified measured observation into a `measured` prompt snapshot.
 - `POST /international-geo/visibility/evidence/imports` imports a JSON batch of human-verified measured observations into `measured` prompt snapshots.
 - `POST /international-geo/visibility/evidence/:id/review` approves or rejects one manually imported measured snapshot.
+- `GET /international-geo/visibility/providers` reads the v0.19 visibility provider config registry.
+- `PUT /international-geo/visibility/providers/:id` saves local provider status, approval status, endpoint, masked credential input, and notes.
+- `POST /international-geo/visibility/providers/:id/test` runs a local provider dry-run test and returns `external_call_performed: false`.
+- `POST /international-geo/visibility/providers/diagnose` dry-run diagnoses every visibility provider.
 
 Prompt-set creation requires a non-empty `prompt`. `engines` defaults to all supported visibility engines when omitted, and unsupported engine ids return `400 VALIDATION_ERROR`. Market, language, buyer intent, product name, target URL, target brand, and competitors are optional operating context fields; defaults come from the International GEO input when available. Prompt sets do not store raw provider credentials.
 
-Measured evidence import creates snapshots with `data_status: "measured"`, `provider_id: "manual_import"`, and runs with `data_source_type: "measured_import"`. Provider readiness for imported engines is updated with `permission_status: "manual_review"`. v0.18 also records local import ledger rows, review counts, and approved-evidence trend rows. The International GEO UI exposes these workflows through `导入测量证据`, `批量导入测量证据`, `测量证据台账`, `证据复核`, and `可见度趋势`.
+Measured evidence import creates snapshots with `data_status: "measured"`, `provider_id: "manual_import"`, and runs with `data_source_type: "measured_import"`. Provider readiness for imported engines is updated with `permission_status: "manual_review"`. v0.18 also records local import ledger rows, review counts, and approved-evidence trend rows. v0.19 adds dry-run visibility provider configs and diagnostics without changing manual evidence semantics. The International GEO UI exposes these workflows through `导入测量证据`, `批量导入测量证据`, `测量证据台账`, `证据复核`, `可见度趋势`, `可见度 Provider 配置`, `Provider 诊断`, and `Provider 运行边界`.
 
 Visibility snapshot `data_status` labels are contract boundaries:
 
@@ -291,7 +309,9 @@ Imported `measured` snapshots are user-supplied, human-entered evidence and are 
 
 Visibility mutations require an editor/admin/owner browser session or `X-GEO-API-Key`. Viewer sessions can read visibility overview, runs, snapshots, imports, and trends but cannot create prompt sets, local runs, evidence imports, or evidence reviews.
 
-Visibility foundation boundary: guarded public site crawling, deterministic evidence-backed scoring, the AI visibility measurement foundation, and v0.18 measured-evidence operations do not perform recursive crawling, browser rendering, real AI search engine querying, real SERP collection, indexing checks, automatic provider integrations, file uploads, external LLM generation, external publishing/indexing connector calls, or automatic third-party publishing. External provider credentials are not stored.
+Visibility provider configs are a v0.19 foundation only. They do not query ChatGPT Search, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, Bing, SERP, indexing, or AI visibility provider APIs. Saved credentials are masked and are never returned.
+
+Visibility foundation boundary: guarded public site crawling, deterministic evidence-backed scoring, the AI visibility measurement foundation, v0.18 measured-evidence operations, and v0.19 provider dry-run diagnostics do not perform recursive crawling, browser rendering, real AI search engine querying, real SERP collection, indexing checks, automatic provider integrations, file uploads, external LLM generation, external publishing/indexing connector calls, or automatic third-party publishing.
 
 ### Publishing
 
@@ -333,6 +353,8 @@ Visibility collection and campaign send actions check connector permissions befo
 - `GET /audit-events/export.csv`
 - `GET /system/runtime`
 - `GET /system/preflight`
+- `GET /system/production-readiness`
+- `POST /system/production-readiness/check`
 - `GET /system/backups`
 - `POST /system/backups`
 - `POST /system/backups/import/validate`
@@ -352,6 +374,8 @@ Audit CSV export neutralizes spreadsheet formula prefixes. Runtime reset restore
 Runtime backups are local operator artifacts. Backup list responses expose metadata only. Download responses return a JSON artifact with `kind`, `schema_version`, `backup`, and `snapshot`; the snapshot intentionally excludes `runtimeBackups` so backups do not recursively contain backup history. Import routes accept that downloaded artifact shape, validate checksum and schema, and store the artifact under a new local backup id. Create, import, validate, and restore operations write audit events.
 
 Launch preflight is read-only. It returns overall status, score, summary counts, and check rows for persistence, mutation auth, user auth, session security, remote access, backup recovery, connectors, GEO static routes, and scheduler state. It does not expose raw API keys or environment values.
+
+Production readiness is a v0.19 operational read model. `GET /system/production-readiness` is readable by viewer sessions. `POST /system/production-readiness/check` requires editor/admin/owner permission or the system API key. Responses include readiness checks, a masked secret inventory, and handoff checklist rows; raw secrets are never returned.
 
 ## Adding Or Changing APIs
 

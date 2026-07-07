@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.19.0 - 2026-07-07
+
+Production integration foundation for International GEO.
+
+### Added
+
+- Visibility provider configuration registry for ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude, and Copilot/Bing.
+- Dry-run visibility provider tests and diagnose-all workflow with masked credentials and explicit no-live-query boundary.
+- Production readiness read model and Settings UI panels for `生产运行就绪`, `密钥与连接边界`, and `交付检查清单`.
+- Publishing connector configuration registry for owned site, docs, Medium, LinkedIn, YouTube, GitHub, Reddit, Quora, and directory/review workflows.
+- Dry-run publishing connector tests and diagnose-all workflow with `external_publish_blocked` boundary.
+- API and UI wiring for provider config, connector config, diagnostics, and production readiness refresh.
+
+### Boundaries
+
+- v0.19 stores connector-ready local configuration only,
+- all provider and publishing tests are dry-run and return `external_call_performed: false`,
+- no GPT/Gemini/Claude/Perplexity/Google AIO/Copilot/Bing/SERP/indexing/provider APIs are called,
+- no external CMS, community, social, docs, video, directory, or review platform APIs are called,
+- no automatic external publishing is performed,
+- raw credentials are never returned by model, HTTP, production readiness, or UI responses,
+- automated measured visibility, external LLM generation, production secret vaults, durable database storage, monitoring, OAuth/SSO, MFA, and multi-tenant SaaS controls remain future work.
+
+### Verification
+
+- `npm run check`
+- `git diff --check`
+
 ## 0.18.0 - 2026-07-07
 
 Measured evidence operations for International GEO.

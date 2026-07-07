@@ -2,7 +2,7 @@
 
 ## Project Shape
 
-GEO Pulse China Agent v0.18.0 is intentionally small:
+GEO Pulse China Agent v0.19.0 is intentionally small:
 
 - Runtime: Node.js ESM.
 - Dependencies: none.
@@ -71,8 +71,8 @@ This checks:
 - Node syntax for key files.
 - Mock data behavior.
 - API and security behavior through local HTTP tests.
-- UI rendering for the prototype pages, including International GEO site audit, crawl evidence, score breakdown, visibility panels, prompt snapshots, `导入测量证据`, `批量导入测量证据`, `测量证据台账`, `证据复核`, `可见度趋势`, evidence asset opportunities, queue state, review state, asset previews, article generation queue, platform rewrite queue, generation runs, high-authority publishing platform list, package queue, and manual tracking panels.
-- Persistence, scheduler, audit, connector, source adapter, campaign, publishing, visibility, and International GEO site audit/crawl evidence/visibility/evidence-import/evidence-operations/evidence-asset/content-generation/publishing flows.
+- UI rendering for the prototype pages, including International GEO site audit, crawl evidence, score breakdown, visibility panels, prompt snapshots, `导入测量证据`, `批量导入测量证据`, `测量证据台账`, `证据复核`, `可见度趋势`, `可见度 Provider 配置`, `Provider 诊断`, `Provider 运行边界`, evidence asset opportunities, queue state, review state, asset previews, article generation queue, platform rewrite queue, generation runs, high-authority publishing platform list, `发布连接器配置`, `发布连接器诊断`, `发布运行边界`, package queue, manual tracking panels, and Settings `生产运行就绪` panels.
+- Persistence, scheduler, audit, connector, source adapter, campaign, publishing, visibility, production readiness, and International GEO site audit/crawl evidence/visibility/evidence-import/evidence-operations/evidence-asset/content-generation/publishing/integration-foundation flows.
 
 For behavior changes, add focused assertions to `verify-mvp.mjs` before changing implementation.
 
@@ -120,6 +120,7 @@ When behavior changes, update docs in the same change:
 - Evidence asset changes: document that generated opportunities, queue items, local previews, and approve/reject state create reviewable local assets only, with no external publishing, no full long-form articles, and no live AI search inclusion/ranking measurement.
 - Content generation changes: document that `local_rules` can create reviewable article drafts from approved evidence assets and platform rewrites from approved generated articles, while external LLM providers remain reserved unless explicitly implemented.
 - Publishing workflow changes: document that high-authority platform list rows, package queue items, and tracking records are local planning/handoff only; platform notes only describe channels that may increase AI retrieval, citation, and recommendation probability, with no external publishing, no external credentials, no full long-form article generation, no live AI/search/SERP/indexing verification, and manual/local tracking unless future connector evidence exists.
+- Production integration foundation changes: document that visibility provider configs, publishing connector configs, dry-run tests, diagnose-all actions, production readiness, masked secret inventory, and handoff checklist rows are local preparation only, with no live AI/search/SERP/indexing/provider/CMS/social/community calls, no automatic publishing, and no raw credential exposure.
 - Operational routes or deployment behavior: `README.md`, `PRODUCTION_DEPLOYMENT.md`, and `STAGE_V0_2_CLOSEOUT.md`.
 - Extension seams: `ARCHITECTURE.md` and `EXTENDING.md`.
 - Security behavior: `SECURITY.md`, `MAINTENANCE.md`, and `reports/security-hardening-log.md`.

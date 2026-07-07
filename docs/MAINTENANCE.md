@@ -71,6 +71,13 @@ Do this only when the repository owner accepts history rewriting. For establishe
 
 ## Maintenance Log
 
+### 2026-07-07 - v0.19 Production Integration Foundation Closeout
+
+- Scope: added International GEO visibility provider configs, approval status, masked credentials, dry-run tests, diagnose-all workflow, publishing connector configs, dry-run publishing boundary, production readiness checks, masked secret inventory, handoff checklist, and UI panels for provider/connector/readiness operations.
+- Local gate: `npm run check` returned `verify-mvp: OK`.
+- Documentation aligned: README, API reference, architecture guide, development guide, production deployment guide, roadmap, documentation index, phase 2 roadmap, open-source release checklist, changelog, maintenance guide, and v0.19 closeout docs.
+- Boundary: v0.19 is a dry-run production integration foundation only; no live AI/search/SERP/indexing/provider/CMS/social/community APIs, no automatic external publishing, no raw credential exposure, and no automated monitoring claims without future approved provider evidence.
+
 ### 2026-07-07 - v0.18 Measured Evidence Operations Closeout
 
 - Scope: added International GEO JSON batch measured-evidence import, local import ledger rows, pending/approved/rejected review state, approved-only visibility trend rows, and the `批量导入测量证据`, `测量证据台账`, `证据复核`, and `可见度趋势` UI panels.
@@ -155,9 +162,9 @@ Do this only when the repository owner accepts history rewriting. For establishe
 - No evidence found of real local absolute paths, real personal email addresses, tracked `.env` files, tracked runtime state, or real credential patterns in the current tree or existing Git history.
 - History rewrite: not performed.
 
-## Post-v0.18 Production Hardening
+## Post-v0.19 Production Hardening
 
-v0.18.0 is deployable as a controlled one-organization team-access service behind an external access layer. Before treating it as a real SaaS, real-time AI search monitoring platform, external LLM generation system, external publishing system, or broadly exposed hosted service, production hardening should include:
+v0.19.0 is deployable as a controlled one-organization team-access service behind an external access layer. Before treating it as a real SaaS, real-time AI search monitoring platform, external LLM generation system, external publishing system, or broadly exposed hosted service, production hardening should include:
 
 - Database persistence, migrations, and database-grade backup policy.
 - Monitoring and alerting.
@@ -165,6 +172,7 @@ v0.18.0 is deployable as a controlled one-organization team-access service behin
 - OAuth/SSO and MFA if external identity integration is required.
 - Real provider, connector, and source adapter implementations.
 - Measured AI visibility data sources and external publishing/indexing connectors before claiming automated real engine inclusion, recommendation tracking, indexing, citation, or automatic distribution.
+- Live adapters behind the v0.19 provider and publishing connector registries, with explicit approval gates and diagnostics.
 - Approved external generation providers before claiming external LLM-backed article or rewrite generation.
 - Connector evidence and approval gates before moving reviewed evidence assets or publishing packages outside the local workflow.
 - Security contact ownership and incident response process.

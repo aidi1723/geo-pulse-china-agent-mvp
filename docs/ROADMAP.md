@@ -2,7 +2,7 @@
 
 ## Current State
 
-The project is a v0.18.0 one-organization team-access workspace with built-in login, RBAC, connector diagnostics, local backup import/restore, launch preflight, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, generated GEO assets, AI visibility measurement foundation, manual measured visibility evidence operations, evidence-driven local asset opportunities, review queue state, local-rule article generation, multi-platform rewrite generation, high-authority publishing platform list, review-only package queue, manual tracking records, and minimal GitHub CI.
+The project is a v0.19.0 one-organization team-access workspace with built-in login, RBAC, connector diagnostics, local backup import/restore, launch preflight, production readiness checks, International GEO site audit, guarded live crawl evidence, evidence-backed scoring, generated GEO assets, AI visibility measurement foundation, manual measured visibility evidence operations, evidence-driven local asset opportunities, review queue state, local-rule article generation, multi-platform rewrite generation, high-authority publishing platform list, review-only package queue, manual tracking records, visibility provider dry-run foundation, publishing connector dry-run foundation, and minimal GitHub CI.
 
 Completed mock-first product areas:
 
@@ -28,6 +28,7 @@ Completed mock-first product areas:
 - AI visibility measurement foundation baseline: prompt sets, provider readiness for ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude, and Copilot / Bing, visibility runs, prompt snapshots, UI panels, browser button wiring, and explicit `measured`, `simulated`, and `unavailable` data-status labels.
 - Manual measured visibility evidence import: `POST /api/v1/international-geo/visibility/evidence/import`, `manual_import` snapshot provenance, `measured_import` run records, readiness `manual_review` status, and International GEO `导入测量证据` UI panel.
 - Measured evidence operations: `POST /api/v1/international-geo/visibility/evidence/imports`, `POST /api/v1/international-geo/visibility/evidence/:id/review`, local import ledger rows, pending/approved/rejected review status, approved-only visibility trends, and International GEO `批量导入测量证据`, `测量证据台账`, `证据复核`, and `可见度趋势` UI panels.
+- Production integration foundation: visibility provider config registry, approval status, masked credentials, dry-run tests, diagnose-all workflow, publishing connector config registry, dry-run publishing boundary, production readiness checks, masked secret inventory, handoff checklist, and International GEO/Settings UI panels for these surfaces.
 - Evidence-driven asset opportunities: opportunity rows derived from audit scoring, crawl evidence, visibility gaps, and rule-first input; local generation queue rows; generated local previews with provenance metadata; and approve/reject review state.
 - International GEO publishing workflow: local high-authority platform list across owned, developer, professional social, community, Q&A, video, directory, review-site, and knowledge-base destinations, with authority signals and AI recommendation-probability notes; deterministic package generation from approved evidence assets; review-only package queue; and manual/local tracking for publication URL, canonical URL, indexing status, AI mention status, citation status, and recommendation status.
 - International GEO content generation workflow: `local_rules` provider seam, deterministic article drafts from approved evidence assets, article approve/reject review, deterministic multi-platform rewrites from approved generated articles, rewrite approve/reject review, and generation run records.
@@ -35,7 +36,7 @@ Completed mock-first product areas:
 
 ## Near-Term Maintenance
 
-These items keep v0.18.0 healthy without changing its architecture:
+These items keep v0.19.0 healthy without changing its architecture:
 
 - Keep `npm run check` passing.
 - Expand `verify-mvp.mjs` when new behavior is added.
@@ -49,11 +50,12 @@ These are the immediate product slices. The full second-stage direction is track
 
 1. Future approved providers for automated measured visibility.
    - Add explicit connectors for approved SERP or AI visibility providers before claiming real engine inclusion.
-   - Keep v0.17/v0.18 manual `manual_import` evidence separate from future automated provider evidence.
+   - Keep v0.17/v0.18 manual `manual_import` evidence and v0.19 dry-run provider configs separate from future automated provider evidence.
    - Only future provider evidence supports automated monitoring claims.
 
 2. Controlled external publishing connectors.
-   - Keep publication behind explicit human approval and future connector permissions.
+   - Implement actual connector adapters behind the v0.19 publishing connector registry.
+   - Keep publication behind explicit human approval and connector permissions.
    - Preserve provenance metadata from the evidence or prompt gap that produced each reviewed package.
 
 3. Source adapter implementation stubs per contract.
@@ -68,9 +70,9 @@ These are the immediate product slices. The full second-stage direction is track
 
 ## Phase 2 Direction
 
-Phase 2 should move the product from v0.18 evidence-scored audit, visibility foundation, manual measured evidence operations, local evidence-asset review workflow, local content-generation workflow, and publishing handoff workflow to broader measured GEO operations:
+Phase 2 should move the product from v0.19 evidence-scored audit, visibility foundation, manual measured evidence operations, local evidence-asset review workflow, local content-generation workflow, publishing handoff workflow, provider dry-run foundation, and connector dry-run foundation to broader measured GEO operations:
 
-- AI visibility monitoring through approved data sources, beyond v0.18 manual import and review.
+- AI visibility monitoring through approved data sources, beyond v0.18 manual import/review and v0.19 dry-run provider configs.
 - External distribution connectors with manual approval gates.
 - Measured indexing, citation, recommendation, and external publication evidence through approved connectors.
 - Multi-user production hardening with database persistence, durable secrets, monitoring, and audit retention.
@@ -78,7 +80,7 @@ Phase 2 should move the product from v0.18 evidence-scored audit, visibility fou
 
 Phase 2 must preserve a clear distinction between rule-first recommendations, crawl-evidenced findings, manually imported measured evidence, and measured external provider visibility data.
 
-## Post-v0.18 Production Hardening
+## Post-v0.19 Production Hardening
 
 These are required before using the project as a real SaaS or broadly exposed hosted service:
 
@@ -87,13 +89,13 @@ These are required before using the project as a real SaaS or broadly exposed ho
 - Production logging, metrics, and alerting.
 - Secret management outside source code and local JSON.
 - Real source adapters, providers, and connectors.
-- Real AI visibility data sources and external publishing connectors before presenting engine inclusion or recommendation tracking as automated monitored facts.
+- Real AI visibility data sources and external publishing connectors before presenting engine inclusion, recommendation tracking, indexing, citation, or publication as automated monitored facts.
 - Tenant/workspace isolation if multiple organizations use the service.
 - OAuth/SSO and MFA if the deployment requires external identity integration.
 - Incident response owner and security contact.
 - Data retention, deletion, and privacy policy.
 
-## Non-Goals For v0.18
+## Non-Goals For v0.19
 
 - Production multi-tenant hosting.
 - Real third-party credential management.
@@ -106,6 +108,8 @@ These are required before using the project as a real SaaS or broadly exposed ho
 - CSV/file-upload measured evidence import.
 - Automated measured evidence collection from AI/search providers.
 - Automatic third-party community or CMS publishing.
+- Live provider or publishing connector calls from v0.19 dry-run config rows.
+- Returning raw visibility provider or publishing connector credentials in API/UI responses.
 - External LLM article generation or automatic article publication without explicit provider/connector implementation and approval gates.
 - Full workflow graph editor.
 - Paid billing integration.
@@ -114,7 +118,7 @@ These are required before using the project as a real SaaS or broadly exposed ho
 
 ## Release Versioning
 
-Current public snapshot: `0.18.0`.
+Current public snapshot: `0.19.0`.
 
 Suggested version policy:
 
