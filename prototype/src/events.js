@@ -438,6 +438,21 @@ export function bindEvents(root, store, rerender, actions) {
       return;
     }
 
+    if (action === "international-evidence-assets-generate") {
+      await actions.generateInternationalGeoEvidenceAssets();
+      return;
+    }
+
+    if (action === "international-evidence-asset-approve") {
+      await actions.reviewInternationalGeoEvidenceAsset(actionButton.dataset.assetId, "approve");
+      return;
+    }
+
+    if (action === "international-evidence-asset-reject") {
+      await actions.reviewInternationalGeoEvidenceAsset(actionButton.dataset.assetId, "reject");
+      return;
+    }
+
     if (action === "international-artifacts") {
       await actions.generateInternationalArtifacts();
       return;

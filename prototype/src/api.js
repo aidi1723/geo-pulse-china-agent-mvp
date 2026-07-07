@@ -388,6 +388,18 @@ export function runInternationalGeoVisibilityMeasurement(payload = {}) {
   return requestJson("/api/v1/international-geo/visibility/run", "POST", payload);
 }
 
+export function getInternationalGeoEvidenceAssets() {
+  return request("/api/v1/international-geo/evidence-assets");
+}
+
+export function generateInternationalGeoEvidenceAssets() {
+  return requestJson("/api/v1/international-geo/evidence-assets/generate", "POST", {});
+}
+
+export function reviewInternationalGeoEvidenceAsset(assetId, payload = {}) {
+  return requestJson(`/api/v1/international-geo/evidence-assets/${encodeURIComponent(assetId)}/review`, "POST", payload);
+}
+
 export function updateBillingPlan(payload) {
   return requestJson("/api/v1/billing/plan", "POST", payload);
 }

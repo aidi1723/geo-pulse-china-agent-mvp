@@ -20,6 +20,7 @@ import {
   createTopicsFromKeywords,
   exportDownloadUrl,
   generateInternationalGeoArtifacts as generateInternationalGeoArtifactsApi,
+  generateInternationalGeoEvidenceAssets as generateInternationalGeoEvidenceAssetsApi,
   generateInternationalGeoSiteAuditAssets as generateInternationalGeoSiteAuditAssetsApi,
   generateTopicOutline as generateTopicOutlineApi,
   getArticleDetail,
@@ -31,6 +32,7 @@ import {
   logoutSession as logoutSessionApi,
   resetRuntimeState as resetRuntimeStateApi,
   reconnectChannel as reconnectChannelApi,
+  reviewInternationalGeoEvidenceAsset as reviewInternationalGeoEvidenceAssetApi,
   reviewArticle,
   retryAutomationRun as retryAutomationRunApi,
   runSourceStrategy as runSourceStrategyApi,
@@ -1370,6 +1372,29 @@ const actions = {
       showNotice(`AI 可见度测量已完成，新增 ${result.snapshots_created || 0} 条快照。`);
     } catch (error) {
       setError(error instanceof Error ? error.message : "AI 可见度测量失败");
+      rerender();
+    }
+  },
+  async generateInternationalGeoEvidenceAssets() {
+    try {
+      await generateInternationalGeoEvidenceAssetsApi();
+      await refreshData();
+      store.page = "international";
+      showNotice("国际 GEO 证据资产已生成。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "生成国际 GEO 证据资产失败");
+      rerender();
+    }
+  },
+  async reviewInternationalGeoEvidenceAsset(assetId, action) {
+    if (!assetId) return;
+    try {
+      await reviewInternationalGeoEvidenceAssetApi(assetId, { action });
+      await refreshData();
+      store.page = "international";
+      showNotice(action === "approve" ? "证据资产已审核通过。" : "证据资产已驳回。");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "审核国际 GEO 证据资产失败");
       rerender();
     }
   },
