@@ -2284,6 +2284,18 @@ async function runMockDataChecks() {
     "Invalid platform rewrite review actions should fail"
   );
 
+  assert.throws(
+    () =>
+      saveInternationalGeoContentGenerationProviderAction("claude", {
+        status: "configured",
+        endpoint: "mock://openai-compatible",
+        model: "mock-geo-writer",
+        api_key: "unsupported-content-provider-secret"
+      }),
+    /VALIDATION_ERROR/,
+    "Reserved content generation providers should not accept executable OpenAI-compatible config"
+  );
+
   const savedContentProvider = saveInternationalGeoContentGenerationProviderAction("openai_compatible", {
     status: "configured",
     endpoint: "mock://openai-compatible",
@@ -5403,7 +5415,7 @@ async function runMultiUserAccessHttpChecks() {
       ...process.env,
       PORT: String(port),
       GEO_ENABLE_PERSISTENCE: "0",
-      GEO_MUTATION_RATE_LIMIT_PER_MINUTE: "80"
+      GEO_MUTATION_RATE_LIMIT_PER_MINUTE: "100"
     },
     stdio: ["ignore", "pipe", "pipe"]
   });
@@ -6259,6 +6271,26 @@ async function runMultiUserAccessHttpChecks() {
       JSON.stringify(ownerProviderSave.body),
       /http-llm-secret-key|api_key":"[^"]/,
       "Provider save HTTP response should mask raw key"
+    );
+
+    const ownerUnsupportedProviderSave = await httpRequest(
+      port,
+      "/api/v1/international-geo/content-generation/providers/claude",
+      {
+        method: "PUT",
+        headers: ownerHeaders,
+        body: JSON.stringify({
+          status: "configured",
+          endpoint: "mock://openai-compatible",
+          model: "mock-geo-writer",
+          api_key: "http-unsupported-content-provider-secret"
+        })
+      }
+    );
+    assert.equal(
+      ownerUnsupportedProviderSave.status,
+      400,
+      "Owner should not configure reserved content generation providers as executable"
     );
 
     const viewerContentProviderTest = await httpRequest(

@@ -28,6 +28,8 @@ The International GEO page now includes an OpenAI-compatible content-generation 
 
 v0.21 may call only the operator-configured OpenAI-compatible content-generation endpoint.
 
+`Claude` and `Gemini` content-generation rows remain future reserved placeholders in this stage. They are visible as roadmap seams only and cannot be saved as executable providers in v0.21.
+
 It still does not:
 
 - automatically publish to external platforms,

@@ -9267,6 +9267,9 @@ export function saveInternationalGeoContentGenerationProviderAction(providerId, 
   ensureInternationalGeoStateShape();
   const provider = internationalGeoState.content_generation.providers.find((item) => item.id === providerId);
   if (!provider) return null;
+  if (provider.id !== "openai_compatible") {
+    throw validationError("provider_id", "Only the OpenAI-compatible content generation provider is configurable in v0.21.");
+  }
   if (patch.status !== undefined && !["reserved", "configured", "disabled", "blocked"].includes(String(patch.status))) {
     throw validationError("status", "Unsupported content generation provider status.");
   }

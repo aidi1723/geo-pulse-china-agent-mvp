@@ -262,6 +262,8 @@ The active generator is `local_rules`. OpenAI, Claude, and Gemini provider rows 
 
 Content generation boundary: v0.21 may call only the operator-configured OpenAI-compatible endpoint for article and rewrite generation. It does not publish externally, store external platform credentials, verify indexing, query ChatGPT Search/Gemini/Claude/Perplexity/Google AIO/Copilot/Bing/SERP providers, or prove AI inclusion, citation, recommendation, or external distribution.
 
+Claude and Gemini content-generation provider rows are reserved placeholders in v0.21. They are readable for roadmap visibility, but save attempts are rejected and they are not executable providers.
+
 ### International GEO Publishing Workflow
 
 - `GET /international-geo/publishing`: viewer route for publishing workflow summary.

@@ -77,6 +77,7 @@ Do this only when the repository owner accepts history rewriting. For establishe
 - Local gate: `npm run check` returned `verify-mvp: OK`.
 - Documentation aligned: README, API reference, architecture guide, development guide, production deployment guide, roadmap, documentation index, phase 2 roadmap, open-source release checklist, changelog, maintenance guide, and v0.21 closeout docs.
 - Boundary: v0.21 may call only the operator-configured OpenAI-compatible content-generation endpoint; no external publishing, account registration, AI visibility measurement, SERP/indexing checks, recommendation verification, or raw-secret export is added.
+- Follow-up audit: reserved Claude/Gemini content-generation provider rows remain read-only roadmap seams and are rejected if an operator attempts to save them as executable providers.
 
 ### 2026-07-07 - v0.20 Delivery Hardening Closeout
 
