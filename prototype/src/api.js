@@ -107,130 +107,88 @@ function extractItems(result) {
   return result.items || [];
 }
 
-export async function bootstrapData() {
-  const [
-    workspace,
-    workspaceInput,
-    dashboardSummary,
-    keywordTrend,
-    contentFunnel,
-    topKeywords,
-    recentPublishes,
-    keywordsResult,
-    keywordJobsResult,
-    topicsResult,
-    articlesResult,
-    templatesResult,
-    publishTasksResult,
-    publishRecordsResult,
-    channelsResult,
-    mediaSourcesResult,
-    automationProvidersResult,
-    automationConnectorsResult,
-    providerInvocationsResult,
-    auditEventsResult,
-    sourceStrategiesResult,
-    automationRunsResult,
-    analyticsKeywords,
-    analyticsContent,
-    analyticsChannels,
-    analyticsCampaigns,
-    analyticsVisibility,
-    audienceSegmentsResult,
-    marketingCampaignsResult,
-    billingSummary,
-    invoicesResult,
-    internationalGeo,
-    runtimeStatus,
-    brandProfile,
-    modelConfigsResult,
-    promptTemplatesResult,
-    contentQualityTracesResult,
-    membersResult,
-    usersResult
-  ] = await Promise.all([
-    request("/api/v1/workspaces/current"),
-    request("/api/v1/workspace-input"),
-    request("/api/v1/dashboard/summary"),
-    request("/api/v1/dashboard/keyword-trend"),
-    request("/api/v1/dashboard/content-funnel"),
-    request("/api/v1/dashboard/top-keywords"),
-    request("/api/v1/dashboard/recent-publishes"),
-    request("/api/v1/keywords"),
-    request("/api/v1/keyword-crawl-jobs"),
-    request("/api/v1/topic-ideas"),
-    request("/api/v1/articles"),
-    request("/api/v1/content-templates"),
-    request("/api/v1/publish-tasks"),
-    request("/api/v1/publish-records"),
-    request("/api/v1/channels"),
-    request("/api/v1/media-sources"),
-    request("/api/v1/automation-providers"),
-    request("/api/v1/automation-connectors"),
-    request("/api/v1/provider-invocations"),
-    request("/api/v1/audit-events?page_size=20"),
-    request("/api/v1/source-strategies"),
-    request("/api/v1/automation-runs"),
-    request("/api/v1/analytics/keywords"),
-    request("/api/v1/analytics/content"),
-    request("/api/v1/analytics/channels"),
-    request("/api/v1/analytics/campaigns"),
-    request("/api/v1/analytics/visibility"),
-    request("/api/v1/audience-segments"),
-    request("/api/v1/marketing-campaigns"),
-    request("/api/v1/billing/summary"),
-    request("/api/v1/billing/invoices"),
-    request("/api/v1/international-geo"),
-    request("/api/v1/system/runtime"),
-    request("/api/v1/brand-profile"),
-    request("/api/v1/model-configs"),
-    request("/api/v1/prompt-templates"),
-    request("/api/v1/content-quality-traces?page_size=20"),
-    request("/api/v1/members"),
-    request("/api/v1/users")
-  ]);
+const sharedDataPlan = [
+  { key: "workspace", path: "/api/v1/workspaces/current" },
+  { key: "workspaceInput", path: "/api/v1/workspace-input" },
+  { key: "runtimeStatus", path: "/api/v1/system/runtime" }
+];
 
-  return {
-    workspace,
-    workspaceInput,
-    dashboardSummary,
-    keywordTrend,
-    contentFunnel,
-    topKeywords,
-    recentPublishes,
-    keywords: extractItems(keywordsResult),
-    keywordJobs: extractItems(keywordJobsResult),
-    topics: extractItems(topicsResult),
-    articles: extractItems(articlesResult),
-    templates: extractItems(templatesResult),
-    publishTasks: extractItems(publishTasksResult),
-    publishRecords: extractItems(publishRecordsResult),
-    channels: extractItems(channelsResult),
-    mediaSources: extractItems(mediaSourcesResult),
-    automationProviders: extractItems(automationProvidersResult),
-    automationConnectors: extractItems(automationConnectorsResult),
-    providerInvocations: extractItems(providerInvocationsResult),
-    auditEvents: extractItems(auditEventsResult),
-    sourceStrategies: extractItems(sourceStrategiesResult),
-    automationRuns: extractItems(automationRunsResult),
-    analyticsKeywords,
-    analyticsContent,
-    analyticsChannels,
-    analyticsCampaigns,
-    analyticsVisibility,
-    audienceSegments: extractItems(audienceSegmentsResult),
-    marketingCampaigns: extractItems(marketingCampaignsResult),
-    billingSummary,
-    invoices: extractItems(invoicesResult),
-    internationalGeo,
-    runtimeStatus,
-    brandProfile,
-    modelConfigs: extractItems(modelConfigsResult),
-    promptTemplates: extractItems(promptTemplatesResult),
-    contentQualityTraces: extractItems(contentQualityTracesResult),
-    members: extractItems(membersResult),
-    users: extractItems(usersResult)
-  };
+const pageDataPlans = {
+  dashboard: [
+    { key: "dashboardSummary", path: "/api/v1/dashboard/summary" },
+    { key: "keywordTrend", path: "/api/v1/dashboard/keyword-trend" },
+    { key: "contentFunnel", path: "/api/v1/dashboard/content-funnel" },
+    { key: "topKeywords", path: "/api/v1/dashboard/top-keywords" },
+    { key: "recentPublishes", path: "/api/v1/dashboard/recent-publishes" }
+  ],
+  keywords: [
+    { key: "keywords", path: "/api/v1/keywords", list: true },
+    { key: "keywordJobs", path: "/api/v1/keyword-crawl-jobs", list: true },
+    { key: "mediaSources", path: "/api/v1/media-sources", list: true },
+    { key: "sourceStrategies", path: "/api/v1/source-strategies", list: true },
+    { key: "automationRuns", path: "/api/v1/automation-runs", list: true }
+  ],
+  content: [
+    { key: "keywords", path: "/api/v1/keywords", list: true },
+    { key: "topics", path: "/api/v1/topic-ideas", list: true },
+    { key: "articles", path: "/api/v1/articles", list: true },
+    { key: "templates", path: "/api/v1/content-templates", list: true },
+    { key: "brandProfile", path: "/api/v1/brand-profile" },
+    { key: "channels", path: "/api/v1/channels", list: true }
+  ],
+  distribution: [
+    { key: "publishTasks", path: "/api/v1/publish-tasks", list: true },
+    { key: "publishRecords", path: "/api/v1/publish-records", list: true },
+    { key: "channels", path: "/api/v1/channels", list: true },
+    { key: "articles", path: "/api/v1/articles", list: true }
+  ],
+  analytics: [
+    { key: "analyticsKeywords", path: "/api/v1/analytics/keywords" },
+    { key: "analyticsContent", path: "/api/v1/analytics/content" },
+    { key: "analyticsChannels", path: "/api/v1/analytics/channels" },
+    { key: "analyticsCampaigns", path: "/api/v1/analytics/campaigns" },
+    { key: "analyticsVisibility", path: "/api/v1/analytics/visibility" },
+    { key: "audienceSegments", path: "/api/v1/audience-segments", list: true },
+    { key: "marketingCampaigns", path: "/api/v1/marketing-campaigns", list: true }
+  ],
+  international: [
+    { key: "internationalGeo", path: "/api/v1/international-geo" }
+  ],
+  billing: [
+    { key: "billingSummary", path: "/api/v1/billing/summary" },
+    { key: "invoices", path: "/api/v1/billing/invoices", list: true }
+  ],
+  settings: [
+    { key: "brandProfile", path: "/api/v1/brand-profile" },
+    { key: "modelConfigs", path: "/api/v1/model-configs", list: true },
+    { key: "promptTemplates", path: "/api/v1/prompt-templates", list: true },
+    { key: "contentQualityTraces", path: "/api/v1/content-quality-traces?page_size=20", list: true },
+    { key: "users", path: "/api/v1/users", list: true },
+    { key: "automationProviders", path: "/api/v1/automation-providers", list: true },
+    { key: "automationConnectors", path: "/api/v1/automation-connectors", list: true },
+    { key: "providerInvocations", path: "/api/v1/provider-invocations", list: true },
+    { key: "auditEvents", path: "/api/v1/audit-events?page_size=20", list: true },
+    { key: "sourceStrategies", path: "/api/v1/source-strategies", list: true },
+    { key: "automationRuns", path: "/api/v1/automation-runs", list: true },
+    { key: "channels", path: "/api/v1/channels", list: true }
+  ]
+};
+
+function getDataPlan(page, includeShared) {
+  const pagePlan = pageDataPlans[page] || pageDataPlans.dashboard;
+  return includeShared ? [...sharedDataPlan, ...pagePlan] : [...pagePlan];
+}
+
+export function getPageDataPaths(page = "dashboard", options = {}) {
+  return getDataPlan(page, options.includeShared === true).map((entry) => entry.path);
+}
+
+export async function loadPageData(page = "dashboard", options = {}) {
+  const plan = getDataPlan(page, options.includeShared === true);
+  const values = await Promise.all(plan.map((entry) => request(entry.path)));
+  return Object.fromEntries(
+    plan.map((entry, index) => [entry.key, entry.list ? extractItems(values[index]) : values[index]])
+  );
 }
 
 export function getCurrentSession() {

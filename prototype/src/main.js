@@ -1,6 +1,6 @@
 import {
   approvePublishTask as approvePublishTaskApi,
-  bootstrapData,
+  loadPageData,
   cancelPublishTask,
   createContentTemplate as createContentTemplateApi,
   createExportJob as createExportJobApi,
@@ -448,14 +448,14 @@ function normalizeDateTimeLocal(value) {
 }
 
 async function refreshData(options = {}) {
-  const { loading = false } = options;
+  const { loading = false, includeShared = true } = options;
   try {
     if (loading) {
       setLoading(true);
       setError("");
       rerender();
     }
-    const data = await bootstrapData();
+    const data = await loadPageData(store.page, { includeShared });
     const existingDetails = store.data.articleDetails || {};
     hydrateData(data);
     store.data.articleDetails = existingDetails;
@@ -474,13 +474,16 @@ async function loadCurrentSession() {
 }
 
 const actions = {
+  async refreshCurrentPage(options = {}) {
+    await refreshData({ loading: true, includeShared: false, ...options });
+  },
   async loginSession() {
     try {
       setError("");
       const session = await loginSessionApi(store.session.loginForm);
       setSession(session);
       store.session.loginForm.password = "";
-      await refreshData({ loading: true });
+      await refreshData({ loading: true, includeShared: true });
       showNotice("已登录。");
     } catch (error) {
       setError("用户名或密码不正确");
@@ -817,7 +820,7 @@ const actions = {
       if (nextState.selectedReviewId) {
         store.selectedIds.review = nextState.selectedReviewId;
       }
-      rerender();
+      await refreshData({ loading: true, includeShared: false });
       showNotice(nextState.reason);
       return;
     }
@@ -826,7 +829,7 @@ const actions = {
     store.page = "distribution";
     store.tabs.distribution = "tasks";
     store.ui.panel = "publish";
-    rerender();
+    await refreshData({ loading: true, includeShared: false });
   },
   togglePublishArticle(articleId) {
     if (!articleId) return;
@@ -1821,8 +1824,13 @@ const actions = {
 async function startApp() {
   applyHashState();
   bindEvents(root, store, rerender, actions);
-  window.addEventListener("hashchange", () => {
+  window.addEventListener("hashchange", async () => {
+    const previousPage = store.page;
     applyHashState();
+    if (store.session.current?.authenticated && previousPage !== store.page) {
+      await actions.refreshCurrentPage({ includeShared: false });
+      return;
+    }
     rerender();
   });
 
@@ -1831,7 +1839,7 @@ async function startApp() {
     rerender();
     const session = await loadCurrentSession();
     if (session.authenticated) {
-      await refreshData({ loading: true });
+      await refreshData({ loading: true, includeShared: true });
       return;
     }
     setLoading(false);

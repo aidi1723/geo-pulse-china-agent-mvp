@@ -152,6 +152,7 @@ import {
   resolvePublishPanelState
 } from "./prototype/src/experience-utils.js";
 import { applyRouteState, serializeRouteState } from "./prototype/src/route-state.js";
+import { getPageDataPaths } from "./prototype/src/api.js";
 import { navigation } from "./prototype/src/config.js";
 import { renderAnalytics } from "./prototype/src/pages/analytics.js";
 import { renderBilling } from "./prototype/src/pages/billing.js";
@@ -3011,6 +3012,47 @@ function runRouteStateChecks() {
   );
   assert.equal(restoredDistributionStore.selectedIds.task, "task-4", "Selected task should restore");
   assert.equal(restoredDistributionStore.ui.panel, "publish", "Publish panel should restore");
+}
+
+function runPageDataPlanChecks() {
+  const dashboard = getPageDataPaths("dashboard", { includeShared: true });
+  assert.deepEqual(dashboard, [
+    "/api/v1/workspaces/current",
+    "/api/v1/workspace-input",
+    "/api/v1/system/runtime",
+    "/api/v1/dashboard/summary",
+    "/api/v1/dashboard/keyword-trend",
+    "/api/v1/dashboard/content-funnel",
+    "/api/v1/dashboard/top-keywords",
+    "/api/v1/dashboard/recent-publishes"
+  ]);
+  assert.equal(dashboard.length, 8, "Dashboard data plan should stay within the request budget");
+  assert.equal(
+    dashboard.some((requestPath) => requestPath.includes("/users")),
+    false,
+    "Dashboard should not request Settings user data"
+  );
+  assert.equal(
+    dashboard.some((requestPath) => requestPath.includes("/international-geo")),
+    false,
+    "Dashboard should not request International GEO data"
+  );
+
+  const settings = getPageDataPaths("settings");
+  assert.ok(settings.includes("/api/v1/users"), "Settings should request user data");
+  assert.ok(
+    settings.includes("/api/v1/audit-events?page_size=20"),
+    "Settings should request recent audit data"
+  );
+
+  const mainSource = fs.readFileSync("prototype/src/main.js", "utf8");
+  const eventSource = fs.readFileSync("prototype/src/events.js", "utf8");
+  assert.match(mainSource, /loadPageData\(store\.page/, "Main controller should load the current page");
+  assert.match(
+    eventSource,
+    /await actions\.refreshCurrentPage/,
+    "Navigation should await destination page loading"
+  );
 }
 
 function runExperienceChecks() {
@@ -7205,6 +7247,7 @@ try {
   await runMockDataChecks();
   await runSingleUserCompleteChecks();
   runRouteStateChecks();
+  runPageDataPlanChecks();
   runExperienceChecks();
   runAuthUiChecks();
   runSettingsAuditUiChecks();

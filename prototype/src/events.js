@@ -51,7 +51,7 @@ export function bindEvents(root, store, rerender, actions) {
       if (navButton.dataset.runId) {
         store.selectedIds.automationRun = navButton.dataset.runId;
       }
-      rerender();
+      await actions.refreshCurrentPage({ includeShared: false });
       return;
     }
 
@@ -174,7 +174,7 @@ export function bindEvents(root, store, rerender, actions) {
       if (trigger?.dataset.openKeyword) {
         store.selectedIds.keyword = trigger.dataset.openKeyword;
       }
-      rerender();
+      await actions.refreshCurrentPage({ includeShared: false });
       return;
     }
 
@@ -182,7 +182,7 @@ export function bindEvents(root, store, rerender, actions) {
       closePanelForPageChange(store, "content");
       store.page = "content";
       store.tabs.content = "topics";
-      rerender();
+      await actions.refreshCurrentPage({ includeShared: false });
       return;
     }
 
@@ -193,7 +193,7 @@ export function bindEvents(root, store, rerender, actions) {
       if (!store.selectedIds.article) {
         store.selectedIds.article = store.data.articles[0]?.id || null;
       }
-      rerender();
+      await actions.refreshCurrentPage({ includeShared: false });
       return;
     }
 
@@ -256,7 +256,7 @@ export function bindEvents(root, store, rerender, actions) {
       closePanelForPageChange(store, "keywords");
       store.page = "keywords";
       store.tabs.keywords = actionButton.dataset.keywordTab || "keywords";
-      rerender();
+      await actions.refreshCurrentPage({ includeShared: false });
       return;
     }
 
@@ -278,7 +278,7 @@ export function bindEvents(root, store, rerender, actions) {
       store.page = "content";
       store.tabs.content = actionButton.dataset.contentTab || "articles";
       store.filters.content.status = actionButton.dataset.contentStatus || "all";
-      rerender();
+      await actions.refreshCurrentPage({ includeShared: false });
       return;
     }
 
@@ -765,7 +765,7 @@ export function bindEvents(root, store, rerender, actions) {
       store.page = "distribution";
       store.tabs.distribution = actionButton.dataset.distributionTab || "tasks";
       store.filters.distribution.status = actionButton.dataset.distributionStatus || "all";
-      rerender();
+      await actions.refreshCurrentPage({ includeShared: false });
       return;
     }
   });
