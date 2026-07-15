@@ -215,6 +215,23 @@ function runSingleUserSourceChecks() {
   const apiSource = fs.readFileSync("prototype/src/api.js", "utf8");
   const eventsSource = fs.readFileSync("prototype/src/events.js", "utf8");
   const mainSource = fs.readFileSync("prototype/src/main.js", "utf8");
+  const serverSource = fs.readFileSync("server.mjs", "utf8");
+  const composeSource = fs.readFileSync("docker-compose.yml", "utf8");
+  assert.match(
+    serverSource,
+    /const host = process\.env\.GEO_HOST \|\| "127\.0\.0\.1"/,
+    "Default server binding should be loopback"
+  );
+  assert.doesNotMatch(
+    serverSource,
+    /parseBody\(req\)\.catch/,
+    "API routes should preserve shared body parsing errors"
+  );
+  assert.match(
+    composeSource,
+    /GEO_BOOTSTRAP_OWNER_PASSWORD:\s*\$\{GEO_BOOTSTRAP_OWNER_PASSWORD:\?GEO_BOOTSTRAP_OWNER_PASSWORD is required\}/,
+    "Docker Compose should pass the required production owner password"
+  );
   assert.doesNotMatch(
     combined,
     /即将开放|Read-only MVP/,
@@ -5002,7 +5019,7 @@ function waitForServerReady(child, port) {
 
     child.stdout.on("data", (chunk) => {
       output += chunk.toString();
-      if (output.includes(`http://localhost:${port}`)) {
+      if (output.includes("GEO Pulse MVP running at http://") && output.includes(`:${port}`)) {
         clearTimeout(timeout);
         resolve();
       }
@@ -5401,6 +5418,87 @@ async function runHttpSecurityChecks() {
       String(html.body),
       new RegExp(`<script nonce="${nonceMatch[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}">`),
       "Static HTML inline script should carry the CSP nonce from the response"
+    );
+  } finally {
+    child.kill("SIGTERM");
+  }
+}
+
+async function runBodyParsingHttpChecks() {
+  const port = 4800 + Math.floor(Math.random() * 300);
+  const child = spawn(process.execPath, ["server.mjs"], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      PORT: String(port),
+      GEO_ENABLE_PERSISTENCE: "0",
+      GEO_MAX_BODY_BYTES: "1024",
+      GEO_MUTATION_RATE_LIMIT_PER_MINUTE: "20",
+      GEO_INTERNAL_API_KEY: "body-test-key-1234567890123456"
+    },
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  try {
+    await waitForServerReady(child, port);
+    const ownerLogin = await loginHttp(port);
+    assert.equal(ownerLogin.response.status, 200, "Body parsing test should log in owner");
+    const headers = {
+      "Content-Type": "application/json",
+      Cookie: ownerLogin.cookie
+    };
+    const before = await httpRequest(port, "/api/v1/brand-profile", {
+      headers: {
+        Cookie: ownerLogin.cookie
+      }
+    });
+
+    const malformed = await httpRequest(port, "/api/v1/brand-profile", {
+      method: "PUT",
+      headers,
+      body: '{"brand_name":'
+    });
+    assert.equal(malformed.status, 400, "Malformed JSON should return 400");
+    assert.equal(
+      malformed.body?.error?.code,
+      "VALIDATION_ERROR",
+      "Malformed JSON should use the shared validation error"
+    );
+
+    const afterMalformed = await httpRequest(port, "/api/v1/brand-profile", {
+      headers: {
+        Cookie: ownerLogin.cookie
+      }
+    });
+    assert.deepEqual(
+      afterMalformed.body?.data,
+      before.body?.data,
+      "Malformed JSON should not mutate the brand profile"
+    );
+
+    const oversized = await httpRequest(port, "/api/v1/brand-profile", {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({
+        brand_name: "A".repeat(2048)
+      })
+    });
+    assert.equal(oversized.status, 413, "Chunked oversized JSON should return 413");
+    assert.equal(
+      oversized.body?.error?.code,
+      "PAYLOAD_TOO_LARGE",
+      "Chunked oversized JSON should preserve the shared payload error"
+    );
+
+    const afterOversized = await httpRequest(port, "/api/v1/brand-profile", {
+      headers: {
+        Cookie: ownerLogin.cookie
+      }
+    });
+    assert.deepEqual(
+      afterOversized.body?.data,
+      before.body?.data,
+      "Oversized JSON should not mutate the brand profile"
     );
   } finally {
     child.kill("SIGTERM");
@@ -7121,6 +7219,7 @@ try {
   runPersistenceChecks();
   runProductionStartupChecks();
   await runHttpSecurityChecks();
+  await runBodyParsingHttpChecks();
   await runMultiUserAccessHttpChecks();
   await runSingleUserHttpChecks();
   await runSchedulerAuditChecks();

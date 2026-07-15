@@ -164,7 +164,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageInfo = JSON.parse(await fs.readFile(path.join(__dirname, "package.json"), "utf8"));
 const staticDir = path.join(__dirname, "prototype");
 const port = Number(process.env.PORT || 3000);
-const host = process.env.GEO_HOST || "";
+const host = process.env.GEO_HOST || "127.0.0.1";
 const isProduction = process.env.NODE_ENV === "production";
 const schedulerEnabled = process.env.GEO_ENABLE_AUTOMATION_SCHEDULER === "1";
 const schedulerTickMs = Math.max(5000, Number(process.env.GEO_AUTOMATION_TICK_MS || 15000));
@@ -439,16 +439,25 @@ async function sendFile(res, filePath) {
 function parseBody(req) {
   return new Promise((resolve, reject) => {
     let raw = "";
+    let receivedBytes = 0;
+    let bodyError = null;
     req.on("data", (chunk) => {
-      raw += chunk;
-      if (Buffer.byteLength(raw) > maxBodyBytes) {
-        const bodyError = new Error("Request body too large");
+      receivedBytes += chunk.length;
+      if (bodyError) {
+        return;
+      }
+      if (receivedBytes > maxBodyBytes) {
+        bodyError = new Error("Request body too large");
         bodyError.status = 413;
         reject(bodyError);
-        req.destroy();
+        return;
       }
+      raw += chunk;
     });
     req.on("end", () => {
+      if (bodyError) {
+        return;
+      }
       if (!raw) {
         resolve({});
         return;
@@ -1102,7 +1111,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/session/login") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     const user = authenticateUserAction(body || {}, {
       remote_address: req.socket.remoteAddress || ""
     });
@@ -1164,7 +1173,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "PUT" && pathname === "/workspace-input") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -1184,7 +1193,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/users") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     const targetRole = body?.role || "viewer";
     if (!apiKeyAuthorized && !canCreateTargetRole(session.user, targetRole)) {
       recordAuthFailure(req, pathname, "insufficient_role");
@@ -1256,14 +1265,14 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/media-sources") {
-    const body = await parseBody(req).catch(() => ({}));
+    const body = await parseBody(req);
     sendJson(res, 201, ok(createMediaSourceAction(body || {})));
     return;
   }
 
   if (req.method === "PUT" && pathname.match(/^\/media-sources\/[^/]+$/)) {
     const id = pathname.split("/")[2];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -1305,7 +1314,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "PUT" && pathname.match(/^\/automation-connectors\/[^/]+$/)) {
     const id = pathname.split("/")[2];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -1401,7 +1410,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "PUT" && pathname.match(/^\/automation-providers\/[^/]+$/)) {
     const id = pathname.split("/")[2];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -1433,7 +1442,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "PUT" && pathname.match(/^\/source-strategies\/[^/]+$/)) {
     const id = pathname.split("/")[2];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -1476,7 +1485,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && pathname.match(/^\/source-strategies\/[^/]+\/run$/)) {
     const id = pathname.split("/")[2];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     const result = await runSourceStrategyAction(id, body || {});
     if (!result) {
       sendJson(res, 404, error("NOT_FOUND", "Source strategy not found", 404).body);
@@ -1527,7 +1536,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/system/backups") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (body === null) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -1537,7 +1546,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/system/backups/import/validate") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (body === null) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -1547,7 +1556,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/system/backups/import") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (body === null) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -1618,7 +1627,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/system/runtime/scheduler/tick") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (body === null) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -1642,7 +1651,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "PUT" && pathname === "/brand-profile") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -1667,14 +1676,14 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/model-configs") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     sendJson(res, 201, ok(createModelConfigAction(body || {})));
     return;
   }
 
   if (req.method === "PUT" && pathname.match(/^\/model-configs\/[^/]+$/)) {
     const id = pathname.split("/")[2];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -1694,14 +1703,14 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/channels") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     sendJson(res, 201, ok(createChannelAction(body || {})));
     return;
   }
 
   if (req.method === "PUT" && pathname.match(/^\/channels\/[^/]+$/)) {
     const id = pathname.split("/")[2];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -1732,7 +1741,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/keyword-crawl-jobs") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body?.name || !body?.source_type) {
       sendJson(res, 400, error("VALIDATION_ERROR", "name and source_type are required").body);
       return;
@@ -1747,7 +1756,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/keywords/batch") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body?.ids?.length || !body?.action) {
       sendJson(res, 400, error("VALIDATION_ERROR", "ids and action are required").body);
       return;
@@ -1769,7 +1778,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && pathname.match(/^\/keywords\/[^/]+\/actions$/)) {
     const id = pathname.split("/")[2];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body?.action) {
       sendJson(res, 400, error("VALIDATION_ERROR", "action is required").body);
       return;
@@ -1789,7 +1798,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/topic-ideas") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body?.title) {
       sendJson(res, 400, error("VALIDATION_ERROR", "title is required").body);
       return;
@@ -1799,7 +1808,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/topic-ideas/from-keywords") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body?.keyword_ids?.length) {
       sendJson(res, 400, error("VALIDATION_ERROR", "keyword_ids are required").body);
       return;
@@ -1810,7 +1819,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "PUT" && pathname.match(/^\/topic-ideas\/[^/]+$/)) {
     const id = pathname.split("/")[2];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -1852,7 +1861,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/content-templates") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body?.name) {
       sendJson(res, 400, error("VALIDATION_ERROR", "name is required").body);
       return;
@@ -1867,7 +1876,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/articles") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body?.title) {
       sendJson(res, 400, error("VALIDATION_ERROR", "title is required").body);
       return;
@@ -1877,7 +1886,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/articles/from-topic") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body?.topic_id) {
       sendJson(res, 400, error("VALIDATION_ERROR", "topic_id is required").body);
       return;
@@ -1914,7 +1923,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "PATCH" && pathname.match(/^\/articles\/[^/]+$/)) {
     const id = pathname.split("/")[2];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -1941,7 +1950,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && pathname.match(/^\/articles\/[^/]+\/review$/)) {
     const id = pathname.split("/")[2];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body?.action) {
       sendJson(res, 400, error("VALIDATION_ERROR", "action is required").body);
       return;
@@ -1961,7 +1970,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/publish-tasks") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body?.name || !body?.channel_id || !body?.article_ids?.length) {
       sendJson(res, 400, error("VALIDATION_ERROR", "name, channel_id and article_ids are required").body);
       return;
@@ -2010,7 +2019,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && pathname.match(/^\/publish-tasks\/[^/]+\/approval$/)) {
     const id = pathname.split("/")[2];
-    const body = await parseBody(req).catch(() => ({}));
+    const body = await parseBody(req);
     const task = approvePublishTaskAction(id, body || {});
     if (!task) {
       sendJson(res, 404, error("NOT_FOUND", "Publish task not found", 404).body);
@@ -2022,7 +2031,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && pathname.match(/^\/publish-tasks\/[^/]+\/items\/[^/]+\/takeover$/)) {
     const [, , taskId, , itemId] = pathname.split("/");
-    const body = await parseBody(req).catch(() => ({}));
+    const body = await parseBody(req);
     const task = takeoverPublishTaskItemAction(taskId, itemId, body || {});
     if (!task) {
       sendJson(res, 404, error("NOT_FOUND", "Publish task item not found", 404).body);
@@ -2099,7 +2108,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/analytics/visibility/collect") {
-    const body = await parseBody(req).catch(() => ({}));
+    const body = await parseBody(req);
     sendJson(res, 200, ok(runVisibilityCollectionAction(body || {})));
     return;
   }
@@ -2116,7 +2125,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && pathname.match(/^\/marketing-campaigns\/[^/]+\/run$/)) {
     const id = pathname.split("/")[2];
-    const body = await parseBody(req).catch(() => ({}));
+    const body = await parseBody(req);
     const result = runMarketingCampaignAction(id, body || {});
     if (!result) {
       sendJson(res, 404, error("NOT_FOUND", "Marketing campaign not found", 404).body);
@@ -2127,7 +2136,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/exports") {
-    const body = await parseBody(req).catch(() => ({}));
+    const body = await parseBody(req);
     sendJson(res, 201, ok(createExportJobAction(body || {})));
     return;
   }
@@ -2191,7 +2200,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "PUT" && pathname.match(/^\/international-geo\/content-generation\/providers\/[^/]+$/)) {
     const id = pathname.split("/")[4];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -2237,7 +2246,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && pathname.match(/^\/international-geo\/content-generation\/articles\/[^/]+\/review$/)) {
     const id = pathname.split("/")[4];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -2262,7 +2271,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && pathname.match(/^\/international-geo\/content-generation\/rewrites\/[^/]+\/review$/)) {
     const id = pathname.split("/")[4];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -2312,7 +2321,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "PUT" && pathname.match(/^\/international-geo\/publishing\/connectors\/[^/]+$/)) {
     const id = pathname.split("/")[4];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -2352,7 +2361,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/international-geo/visibility/prompt-sets") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -2372,7 +2381,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "PUT" && pathname.match(/^\/international-geo\/visibility\/providers\/[^/]+$/)) {
     const id = pathname.split("/")[4];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -2412,13 +2421,13 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/international-geo/visibility/run") {
-    const body = await parseBody(req).catch(() => ({}));
+    const body = await parseBody(req);
     sendJson(res, 200, ok(runInternationalGeoVisibilityMeasurementAction(body || {})));
     return;
   }
 
   if (req.method === "POST" && pathname === "/international-geo/visibility/evidence/import") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -2437,7 +2446,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/international-geo/visibility/evidence/imports") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -2457,7 +2466,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && pathname.match(/^\/international-geo\/visibility\/evidence\/[^/]+\/review$/)) {
     const id = pathname.split("/")[4];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -2492,7 +2501,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && pathname.match(/^\/international-geo\/publishing\/packages\/[^/]+\/review$/)) {
     const id = pathname.split("/")[4];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -2517,7 +2526,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "PUT" && pathname.match(/^\/international-geo\/publishing\/tracking\/[^/]+$/)) {
     const id = pathname.split("/")[4];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -2542,7 +2551,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && pathname.match(/^\/international-geo\/evidence-assets\/[^/]+\/review$/)) {
     const id = pathname.split("/")[3];
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -2581,7 +2590,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "PUT" && pathname === "/international-geo/input") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -2591,7 +2600,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/international-geo/site-audits") {
-    const body = await parseBody(req).catch(() => null);
+    const body = await parseBody(req);
     if (!body) {
       sendJson(res, 400, error("INVALID_JSON", "Request body must be valid JSON").body);
       return;
@@ -2660,7 +2669,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && pathname === "/billing/plan") {
-    const body = await parseBody(req).catch(() => ({}));
+    const body = await parseBody(req);
     sendJson(res, 200, ok(updateBillingPlanAction(body || {})));
     return;
   }
@@ -2758,11 +2767,7 @@ const onListening = () => {
   );
 };
 
-if (host) {
-  server.listen(port, host, onListening);
-} else {
-  server.listen(port, onListening);
-}
+server.listen(port, host, onListening);
 
 ["SIGINT", "SIGTERM"].forEach((signal) => {
   process.on(signal, () => {
