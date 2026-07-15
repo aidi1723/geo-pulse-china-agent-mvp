@@ -3730,6 +3730,18 @@ function runAuthUiChecks() {
   );
 }
 
+function runDesignSystemSourceChecks() {
+  const css = fs.readFileSync("prototype/styles.css", "utf8");
+  assert.match(css, /--bg:\s*#0b0f14/, "Design system should use the dark operational background");
+  assert.match(css, /--radius-lg:\s*8px/, "Shared panel radius should not exceed 8px");
+  assert.match(css, /\.mobile-nav/, "Responsive shell should style mobile navigation");
+  assert.match(css, /:focus-visible/, "Interactive controls should expose visible keyboard focus");
+  assert.match(css, /prefers-reduced-motion/, "Shared motion should respect reduced-motion preferences");
+  assert.match(css, /\.table-wrap\s*\{[^}]*max-width:\s*100%/s, "Tables should contain their own overflow");
+  assert.match(css, /@media \(max-width:\s*520px\)/, "Narrow phones should have a stable layout breakpoint");
+  assert.doesNotMatch(css, /radial-gradient|backdrop-filter/, "Operational UI should avoid decorative glass effects");
+}
+
 function runSettingsAutomationStepUiChecks() {
   const html = renderSettings({
     tabs: {
@@ -7291,6 +7303,7 @@ try {
   runPageDataPlanChecks();
   runExperienceChecks();
   runAuthUiChecks();
+  runDesignSystemSourceChecks();
   runSettingsAuditUiChecks();
   runSettingsAutomationStepUiChecks();
   runSettingsConnectorUiChecks();
