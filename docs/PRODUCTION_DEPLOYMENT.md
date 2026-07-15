@@ -81,6 +81,8 @@ Required production values:
 
 Production startup fails when `GEO_INTERNAL_API_KEY` is missing or shorter than 24 characters. Production startup also requires `GEO_BOOTSTRAP_OWNER_PASSWORD` for first owner bootstrap.
 
+`docker-compose.yml` passes both values into the container and fails interpolation when either is missing. Local `npm start` binds to `127.0.0.1`; Compose explicitly binds the container process to `0.0.0.0` and must remain behind the documented external access layer.
+
 First login:
 
 - Username: `owner`
@@ -116,6 +118,7 @@ NODE_ENV=production \
 GEO_HOST=127.0.0.1 \
 GEO_ALLOW_REMOTE_ACCESS=1 \
 GEO_INTERNAL_API_KEY=replace-with-at-least-24-random-characters \
+GEO_BOOTSTRAP_OWNER_PASSWORD=replace-with-at-least-12-random-characters \
 GEO_ENABLE_PERSISTENCE=1 \
 node server.mjs
 ```
@@ -129,6 +132,8 @@ curl -f http://localhost:3000/sitemap.xml
 curl -f http://localhost:3000/llms.txt
 curl -f http://localhost:3000/favicon.ico
 ```
+
+The admin HTML response is intentionally `noindex, nofollow`. The sitemap route is valid but contains no admin URL entries. Host public product or acquisition content separately when search indexing is required.
 
 ## Backup And Restore
 

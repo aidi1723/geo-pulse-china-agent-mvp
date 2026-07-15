@@ -58,6 +58,8 @@ npm start
 
 - `http://localhost:3000/`
 
+服务默认绑定 `127.0.0.1`。只有同时显式配置 `GEO_HOST=0.0.0.0` 和 `GEO_ALLOW_REMOTE_ACCESS=1` 时，才接受非本机请求。
+
 默认会把运行时变更写入 `data/geo-pulse-state.json`。如果需要自定义位置，可在启动时传入：
 
 ```bash
@@ -90,6 +92,7 @@ GEO_ENABLE_AUTOMATION_SCHEDULER=0 node server.mjs
 GEO_ALLOW_REMOTE_ACCESS=1 \
 GEO_HOST=0.0.0.0 \
 GEO_INTERNAL_API_KEY=change-me-long-random-token \
+GEO_BOOTSTRAP_OWNER_PASSWORD=change-me-owner-password \
 node server.mjs
 ```
 
@@ -108,8 +111,10 @@ GEO_INTERNAL_API_KEY=local-dev-key node server.mjs
 服务端响应默认带基础安全头：
 
 - API JSON：`X-Content-Type-Options: nosniff`、`Cache-Control: no-store`
-- HTML 静态页：`X-Content-Type-Options: nosniff`、`Cache-Control: no-store`、`Content-Security-Policy`
+- HTML 静态页：`X-Content-Type-Options: nosniff`、`Cache-Control: no-store`、`Content-Security-Policy`、`X-Robots-Tag: noindex, nofollow`
 - 其他静态资源：`X-Content-Type-Options: nosniff`
+
+浏览器工作台按当前页面加载数据：Dashboard 登录流程最多使用 8 个共享/页面数据请求，不再预加载设置、分析、国际 GEO 和账单等无关域；写入成功后只刷新当前页面与共享运行态。界面使用 `DESIGN.md` 定义的深色紧凑运维风格，并提供移动端模块导航、键盘焦点、表单标签和对话框语义。
 
 ## 生产部署
 
@@ -362,6 +367,8 @@ GitHub Actions 会在 push 和 pull request 进入 `main` 时运行同一个 `np
 - `/sitemap.xml`
 - `/llms.txt`
 - `/favicon.ico`
+
+工作台是需要登录的后台，不是公开营销站。HTML shell 明确禁止索引，`sitemap.xml` 保留为合法空 sitemap；如需承接公开搜索流量，应单独部署可索引的产品或内容站。
 
 ## 旧审计工具
 

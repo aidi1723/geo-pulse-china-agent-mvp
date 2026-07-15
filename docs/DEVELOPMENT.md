@@ -43,7 +43,7 @@ Runtime state is written to `data/geo-pulse-state.json` by default. The `data/` 
 ## Useful Environment Variables
 
 - `PORT`: local server port, default `3000`.
-- `GEO_HOST`: bind host. Leave empty for local demo.
+- `GEO_HOST`: bind host, default `127.0.0.1`; use `0.0.0.0` only for intentional remote/container binding.
 - `NODE_ENV=production`: enables production startup validation.
 - `GEO_PUBLIC_SITE_URL`: public canonical site URL for generated `robots.txt`, `sitemap.xml`, and `llms.txt`.
 - `GEO_DATA_FILE`: custom persistence file path.
@@ -75,6 +75,10 @@ This checks:
 - Persistence, scheduler, audit, connector, source adapter, campaign, publishing, visibility, production readiness, delivery readiness, sanitized delivery bundle, and International GEO site audit/crawl evidence/visibility/evidence-import/evidence-operations/evidence-asset/content-generation/publishing/integration-foundation flows.
 
 For behavior changes, add focused assertions to `verify-mvp.mjs` before changing implementation.
+
+Frontend data changes must update the relevant page plan in `prototype/src/api.js` instead of restoring an all-domain bootstrap. A navigation action must await `refreshCurrentPage()`, and a mutation should refresh only the active page plus shared runtime data.
+
+UI changes must preserve `DESIGN.md`, mobile module navigation, zero document-level horizontal overflow, visible `:focus-visible` states, reduced-motion behavior, and an associated label or explicit accessible name for every rendered form control. Shared tokens and primitives should be changed before page-local CSS.
 
 ## GitHub CI
 

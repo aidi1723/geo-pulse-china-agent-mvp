@@ -219,6 +219,7 @@ function runSingleUserSourceChecks() {
   const mainSource = fs.readFileSync("prototype/src/main.js", "utf8");
   const serverSource = fs.readFileSync("server.mjs", "utf8");
   const composeSource = fs.readFileSync("docker-compose.yml", "utf8");
+  const staticSitemapSource = fs.readFileSync("prototype/sitemap.xml", "utf8");
   assert.match(
     serverSource,
     /const host = process\.env\.GEO_HOST \|\| "127\.0\.0\.1"/,
@@ -234,6 +235,8 @@ function runSingleUserSourceChecks() {
     /GEO_BOOTSTRAP_OWNER_PASSWORD:\s*\$\{GEO_BOOTSTRAP_OWNER_PASSWORD:\?GEO_BOOTSTRAP_OWNER_PASSWORD is required\}/,
     "Docker Compose should pass the required production owner password"
   );
+  assert.match(staticSitemapSource, /<urlset/, "Static sitemap should remain valid XML");
+  assert.doesNotMatch(staticSitemapSource, /<url>/, "Static sitemap should exclude the noindex admin shell");
   assert.doesNotMatch(
     combined,
     /即将开放|Read-only MVP/,
@@ -5252,6 +5255,7 @@ async function runHttpSecurityChecks() {
     const sitemap = await httpRequest(port, "/sitemap.xml");
     assert.equal(sitemap.status, 200, "sitemap.xml should be served");
     assert.match(String(sitemap.body), /<urlset/, "sitemap should be XML urlset");
+    assert.doesNotMatch(String(sitemap.body), /<url>/, "sitemap should exclude the noindex admin shell");
 
     const llms = await httpRequest(port, "/llms.txt");
     assert.equal(llms.status, 200, "llms.txt should be served");
@@ -5490,6 +5494,11 @@ async function runHttpSecurityChecks() {
       html.headers["cache-control"],
       "no-store",
       "Static HTML should not be cached"
+    );
+    assert.equal(
+      html.headers["x-robots-tag"],
+      "noindex, nofollow",
+      "Authenticated workspace HTML should not be indexed"
     );
     const contentSecurityPolicy = html.headers["content-security-policy"] || "";
     assert.match(

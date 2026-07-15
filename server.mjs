@@ -313,18 +313,8 @@ function robotsTxt() {
 }
 
 function sitemapXml() {
-  const now = new Date().toISOString();
-  const routes = ["/"];
-  const urls = routes.map(
-    (route) => `
-  <url>
-    <loc>${publicSiteUrl}${route}</loc>
-    <lastmod>${now}</lastmod>
-  </url>`
-  );
   return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join("")}
-</urlset>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>
 `;
 }
 
@@ -428,6 +418,7 @@ async function sendFile(res, filePath) {
       content = content.toString("utf8").replaceAll("__GEO_CSP_NONCE__", nonce);
       headers["Cache-Control"] = "no-store";
       headers["Content-Security-Policy"] = buildHtmlContentSecurityPolicy(nonce);
+      headers["X-Robots-Tag"] = "noindex, nofollow";
     }
     res.writeHead(200, headers);
     res.end(content);

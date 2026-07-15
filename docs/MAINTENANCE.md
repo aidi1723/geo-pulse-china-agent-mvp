@@ -71,6 +71,13 @@ Do this only when the repository owner accepts history rewriting. For establishe
 
 ## Maintenance Log
 
+### 2026-07-16 - Balanced Project Audit And Optimization
+
+- Scope: hardened default binding and body parsing, corrected Compose owner-password propagation, replaced all-domain browser refreshes with page plans, restored mobile navigation and semantic forms, aligned shared CSS with `DESIGN.md`, and corrected the admin indexing boundary.
+- Regression gate: `npm run check` returned `verify-mvp: OK` after each TDD cycle.
+- Browser release gate: desktop/mobile screenshots, request count, overflow, labels, focus, dialog, console, and reduced-motion checks are recorded in `PROJECT_AUDIT_OPTIMIZATION_CLOSEOUT_2026-07-16.md`.
+- Boundary: no domain schema, permission model, external publishing, AI visibility provider, database, multi-tenant, OAuth/SSO, MFA, or secret-vault capability was added.
+
 ### 2026-07-07 - v0.21 OpenAI-Compatible LLM Generation Closeout
 
 - Scope: added International GEO OpenAI-compatible provider config, masked credential read model, provider test route, LLM-first article/rewrite generation, provider provenance, local fallback, and delivery-bundle provider summary.

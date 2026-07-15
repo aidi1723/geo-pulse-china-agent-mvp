@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased - 2026-07-16
+
+### Fixed
+
+- Default local binding now uses `127.0.0.1`, and Docker Compose passes the required production owner password.
+- Malformed and chunked oversized JSON now fail at the shared API boundary before domain mutations.
+- Narrow layouts expose all module navigation, contain tables and grids, and preserve keyboard-operable forms and dialogs.
+- The authenticated admin shell is `noindex, nofollow` and is excluded from sitemap entries.
+
+### Changed
+
+- Browser data loads by active page instead of fetching every business domain after login and each mutation.
+- Shared UI tokens and primitives now follow the dark, compact operational rules in `DESIGN.md`.
+
+### Verification
+
+- `npm run check`
+- Google SEO static check
+- Playwright desktop/mobile, accessibility, request-budget, and console checks
+
 ## 0.21.0 - 2026-07-07
 
 OpenAI-compatible LLM content generation for International GEO.

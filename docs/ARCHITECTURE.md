@@ -12,14 +12,14 @@ GEO Pulse China Agent v0.21.0 is a zero-dependency Node.js application with a br
 | Mock domain data | `mock-data.mjs` | Stores seed data, local state mutation actions, API read models, delivery readiness and sanitized bundle summaries, persistence hydration, runtime backups, audit events, provider invocation logs, connector permissions, connector diagnostics, source adapter contracts, and workflow actions. |
 | Safe site crawler | `site-crawl.mjs` | Normalizes crawl targets, blocks unsafe protocols/hosts/IP ranges, validates DNS at connection time, limits redirects/time/body size, extracts homepage/robots/sitemap/llms evidence, and returns connector-shaped crawl snapshots. |
 | Provider registry | `automation-providers.mjs` | Defines keyword discovery, topic planning, and article generation provider contracts, local fallback behavior, remote execution validation, masking, and provider config persistence helpers. |
-| Prototype shell | `prototype/` | Browser admin prototype with hash routing, state store, API client, static preview mode, UI pages, and shared utilities. |
+| Prototype shell | `prototype/` | Browser admin prototype with hash routing, state store, page-scoped API plans, static preview mode, semantic accessibility enhancement, UI pages, and shared design tokens. |
 | Regression gate | `verify-mvp.mjs` | Full local verification suite for syntax, data actions, UI rendering, HTTP behavior, security checks, persistence, scheduler, audit, publishing, connectors, and source adapters. |
 | GitHub CI | `.github/workflows/check.yml` | Runs the local `npm run check` gate on pushes and pull requests targeting `main`. |
 | Documentation | `README.md`, `docs/`, `reports/` | Public usage docs, maintainer guides, release checklist, benchmark notes, and security hardening record. |
 
 ## Data Flow
 
-1. The browser prototype loads data through `prototype/src/api.js`.
+1. The browser prototype loads shared shell data plus the active page plan through `prototype/src/api.js`; navigation and mutations do not reload unrelated domains.
 2. In server mode, requests go to `server.mjs` under `/api/v1/*`.
 3. `server.mjs` delegates reads and mutations to `mock-data.mjs` and `automation-providers.mjs`.
 4. Mutations update in-memory arrays and, when persistence is enabled, write to `data/geo-pulse-state.json`.
@@ -53,6 +53,7 @@ Persistence is local JSON, not a production database.
 v0.21.0 uses built-in team access plus local-first production and delivery guardrails:
 
 - Remote access is disabled unless `GEO_ALLOW_REMOTE_ACCESS=1`.
+- Default startup binds to `127.0.0.1`; remote binding requires an explicit `GEO_HOST`.
 - Remote access requires a fixed `GEO_INTERNAL_API_KEY`.
 - `NODE_ENV=production` fails startup when `GEO_INTERNAL_API_KEY` is missing or shorter than 24 characters.
 - `NODE_ENV=production` requires `GEO_BOOTSTRAP_OWNER_PASSWORD` for first owner bootstrap.
@@ -63,6 +64,7 @@ v0.21.0 uses built-in team access plus local-first production and delivery guard
 - Provider endpoints are restricted to `mock://` and `https://`, with loopback/private/link-local targets blocked.
 - International GEO live crawl targets are restricted to `http://` and `https://`, block localhost/private/link-local/multicast/unspecified ranges, validate redirect targets, apply connection-time DNS/IP checks, enforce short timeouts, body limits, and redirect limits.
 - CSV audit export neutralizes spreadsheet formula prefixes.
+- Malformed JSON and chunked oversized bodies fail at the shared parser boundary before domain actions run.
 - Connector actions are evaluated against scoped permission metadata before visibility collection or campaign execution.
 - Connector diagnostics summarize endpoint safety, credential status, health checks, permission decisions, audit context, and recent run steps without exposing raw secrets.
 - Launch preflight summarizes readiness checks, including user auth and session security, without exposing raw API keys, secrets, full env vars, or local file contents.
@@ -107,14 +109,19 @@ Outside `/api/v1`, the server exposes deployment and GEO/SEO routes:
 - `GET /llms.txt`
 - `GET /favicon.ico`
 
+The authenticated HTML shell returns `X-Robots-Tag: noindex, nofollow`. The sitemap route remains available but excludes the admin shell; public acquisition content belongs on a separate indexable site.
+
 ## UI Architecture
 
 The UI is a dense operational admin prototype. `DESIGN.md` is the visual source of truth.
 
 - Shared helpers live in `prototype/src/utils.js` and `prototype/src/components.js`.
+- Shared data request plans live in `prototype/src/api.js`; keep each page plan limited to the data rendered or acted on by that page.
+- Shared semantic enhancement lives in `prototype/src/accessibility.js` and associates existing labels, accessible names, tab groups, and dialog focus.
 - Page modules live under `prototype/src/pages/`.
 - Hash route and selection behavior lives in `prototype/src/route-state.js` and `prototype/src/experience-utils.js`.
 - Static preview compatibility must be kept when adding new API data.
+- `prototype/styles.css` owns the dark operational tokens, compact component geometry, focus states, responsive navigation, and reduced-motion behavior defined by `DESIGN.md`.
 
 ## Extension Points
 
