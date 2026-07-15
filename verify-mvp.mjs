@@ -3741,6 +3741,16 @@ function runDesignSystemSourceChecks() {
   assert.match(css, /:focus-visible/, "Interactive controls should expose visible keyboard focus");
   assert.match(css, /prefers-reduced-motion/, "Shared motion should respect reduced-motion preferences");
   assert.match(css, /\.table-wrap\s*\{[^}]*max-width:\s*100%/s, "Tables should contain their own overflow");
+  assert.match(
+    css,
+    /\.stack-blocks\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)[^}]*min-width:\s*0/s,
+    "Stacked page blocks should constrain their grid track on narrow screens"
+  );
+  assert.match(
+    css,
+    /\.stack-blocks\s*>\s*\*\s*\{[^}]*min-width:\s*0[^}]*max-width:\s*100%/s,
+    "Stacked page children should be allowed to shrink within the viewport"
+  );
   assert.match(css, /@media \(max-width:\s*520px\)/, "Narrow phones should have a stable layout breakpoint");
   assert.doesNotMatch(css, /radial-gradient|backdrop-filter/, "Operational UI should avoid decorative glass effects");
 }

@@ -265,7 +265,14 @@ a {
 
 .stack-blocks {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 18px;
+}
+
+.stack-blocks > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .topbar {
