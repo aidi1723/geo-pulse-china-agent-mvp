@@ -71,6 +71,13 @@ Do this only when the repository owner accepts history rewriting. For establishe
 
 ## Maintenance Log
 
+### 2026-07-16 - GitHub And Documentation Alignment
+
+- Scope: audited all authoritative root and maintainer documents against v0.21 runtime behavior and the balanced optimization pass; corrected OpenAI-compatible generation, deployment image version, page-scoped loading, responsive/accessibility, noindex, roadmap, release, and prototype wording.
+- Historical policy: dated stage closeouts, product research files, and `docs/superpowers/` plans/specs remain immutable historical records unless a link or security issue requires correction.
+- Release gate: `npm run check`, static SEO, boundary-aware credential scan, Markdown local-link validation, and `git diff --check` are required before push; the remote `check` workflow must complete successfully afterward.
+- Evidence: `GITHUB_DOCUMENTATION_CLOSEOUT_2026-07-16.md` records the reviewed scope, corrected drift, GitHub commits, and CI outcome.
+
 ### 2026-07-16 - Balanced Project Audit And Optimization
 
 - Scope: hardened default binding and body parsing, corrected Compose owner-password propagation, replaced all-domain browser refreshes with page plans, restored mobile navigation and semantic forms, aligned shared CSS with `DESIGN.md`, and corrected the admin indexing boundary.

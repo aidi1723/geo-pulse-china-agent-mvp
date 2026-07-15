@@ -573,7 +573,7 @@ Run:
 
 ```bash
 npm run check
-node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .
+node $HOME/.codex/skills/google-seo/scripts/check-static-seo.mjs .
 git diff --check
 ```
 
@@ -631,7 +631,7 @@ Run fresh:
 
 ```bash
 npm run check
-node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .
+node $HOME/.codex/skills/google-seo/scripts/check-static-seo.mjs .
 rg -n -S "(sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----)" . -g '!data/**' -g '!.git/**' -g '!.worktrees/**' -g '!output/**' -g '!Gemini_Generated_Image_*.png'
 git diff --check
 git status --short

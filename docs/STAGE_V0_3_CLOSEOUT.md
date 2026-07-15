@@ -28,7 +28,7 @@ The v0.3 closeout gate is:
 
 ```bash
 npm run check
-node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .
+node $HOME/.codex/skills/google-seo/scripts/check-static-seo.mjs .
 ```
 
 ## Closing Copy

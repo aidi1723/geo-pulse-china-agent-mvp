@@ -143,7 +143,7 @@ Provider configs mask secrets. Remote providers use guarded endpoint validation 
 
 Connector outputs include masked config, latest health check, latest diagnostic, and permission metadata. Permission rows include credential status, allowed actions, dangerous actions, permission boundary, and latest audit result.
 
-Connector mutation accepts local single-user configuration fields: `is_enabled`, `status`, `endpoint`, `api_key`, `timeout_ms`, `retry_count`, and `notes`. Raw API keys are never returned. Endpoint validation allows `mock://` simulation endpoints and public `https://` endpoints, while rejecting loopback/private hosts.
+Connector mutation accepts local connector configuration fields: `is_enabled`, `status`, `endpoint`, `api_key`, `timeout_ms`, `retry_count`, and `notes`. Raw API keys are never returned. Endpoint validation allows `mock://` simulation endpoints and public `https://` endpoints, while rejecting loopback/private hosts.
 
 Connector diagnostics produce readiness scores, check rows, permission decisions, recent audit context, recent run steps, and recommended operator actions. Diagnostic output omits raw secrets.
 
@@ -178,7 +178,7 @@ Runs include structured steps, provider/connector metadata, input/output preview
 
 These routes power topic planning, article drafting, review flow, prompt lineage, and content quality traces.
 
-### Single-User Workspace And Exports
+### Workspace And Exports
 
 - `GET /workspaces/current`
 - `GET /workspace-input`
@@ -186,7 +186,7 @@ These routes power topic planning, article drafting, review flow, prompt lineage
 - `POST /exports`
 - `GET /exports/:id/download`
 
-Workspace input stores the one-user operating context. Export jobs generate local downloadable artifacts.
+Workspace input stores the controlled one-organization operating context. Export jobs generate local downloadable artifacts.
 
 ### International GEO
 
@@ -258,7 +258,7 @@ Evidence assets are local review artifacts. They are not automatically published
 - `POST /international-geo/content-generation/rewrites/generate`: editor route that creates platform rewrites from approved generated articles. When the OpenAI-compatible provider is configured it is tried first; failures fall back to `local_rules`.
 - `POST /international-geo/content-generation/rewrites/:id/review`: editor route that approves or rejects a platform rewrite with `{ "action": "approve" }` or `{ "action": "reject", "human_notes": "..." }`.
 
-The active generator is `local_rules`. OpenAI, Claude, and Gemini provider rows are reserved extension seams and are not executed in v0.19. Generated article drafts preserve source asset ids, source asset types, evidence summary, target prompt, canonical URL, review status, and `local_rules` provider provenance. Platform rewrites preserve source article id, platform mapping, rewrite type, AI visibility goal, moderation notes, canonical URL, review status, and provider provenance.
+The deterministic fallback generator is `local_rules`. When `openai_compatible` is configured and ready, `openai_compatible` is attempted first; provider failures fall back to `local_rules` and are recorded in generation provenance. Generated article drafts preserve source asset ids, source asset types, evidence summary, target prompt, canonical URL, review status, generator provider, and fallback provenance. Platform rewrites preserve source article id, platform mapping, rewrite type, AI visibility goal, moderation notes, canonical URL, review status, generator provider, and fallback provenance.
 
 Content generation boundary: v0.21 may call only the operator-configured OpenAI-compatible endpoint for article and rewrite generation. It does not publish externally, store external platform credentials, verify indexing, query ChatGPT Search/Gemini/Claude/Perplexity/Google AIO/Copilot/Bing/SERP providers, or prove AI inclusion, citation, recommendation, or external distribution.
 
@@ -317,7 +317,7 @@ Visibility mutations require an editor/admin/owner browser session or `X-GEO-API
 
 Visibility provider configs are a v0.19 foundation only. They do not query ChatGPT Search, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, Bing, SERP, indexing, or AI visibility provider APIs. Saved credentials are masked and are never returned.
 
-Visibility foundation boundary: guarded public site crawling, deterministic evidence-backed scoring, the AI visibility measurement foundation, v0.18 measured-evidence operations, and v0.19 provider dry-run diagnostics do not perform recursive crawling, browser rendering, real AI search engine querying, real SERP collection, indexing checks, automatic provider integrations, file uploads, external LLM generation, external publishing/indexing connector calls, or automatic third-party publishing.
+Visibility foundation boundary: guarded public site crawling, deterministic evidence-backed scoring, the AI visibility measurement foundation, v0.18 measured-evidence operations, and v0.19 provider dry-run diagnostics do not perform recursive crawling, browser rendering, real AI search engine querying, real SERP collection, indexing checks, automatic visibility-provider integrations, file uploads, external publishing/indexing connector calls, or automatic third-party publishing. The separate v0.21 content-generation workflow may call only its operator-configured OpenAI-compatible endpoint and does not turn those visibility workflows into live monitoring.
 
 ### Publishing
 

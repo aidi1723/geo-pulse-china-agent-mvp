@@ -1194,7 +1194,7 @@ It is not live AI search monitoring and does not query ChatGPT, Gemini, Claude, 
 
 \`\`\`bash
 npm run check
-node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .
+node $HOME/.codex/skills/google-seo/scripts/check-static-seo.mjs .
 \`\`\`
 
 Expected:
@@ -1216,7 +1216,7 @@ Run:
 
 ```bash
 npm run check
-node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .
+node $HOME/.codex/skills/google-seo/scripts/check-static-seo.mjs .
 ```
 
 Expected: `verify-mvp: OK`, 0 SEO errors, 0 SEO warnings.
@@ -1237,7 +1237,7 @@ PORT=3106 GEO_ENABLE_PERSISTENCE=0 npm run start
 Open:
 
 ```bash
-/Users/aidi/.codex/skills/playwright/scripts/playwright_cli.sh open 'http://localhost:3106/'
+$HOME/.codex/skills/playwright/scripts/playwright_cli.sh open 'http://localhost:3106/'
 ```
 
 Smoke path:
@@ -1260,7 +1260,7 @@ Run:
 
 ```bash
 npm run check
-node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .
+node $HOME/.codex/skills/google-seo/scripts/check-static-seo.mjs .
 git status --short
 ```
 

@@ -1366,7 +1366,7 @@ Run:
 
 ```bash
 npm run check
-node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .
+node $HOME/.codex/skills/google-seo/scripts/check-static-seo.mjs .
 ```
 
 Expected: `verify-mvp: OK`, SEO errors `0`, warnings `0`.
@@ -1406,7 +1406,7 @@ verify-mvp: OK
 Run:
 
 ```bash
-node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .
+node $HOME/.codex/skills/google-seo/scripts/check-static-seo.mjs .
 ```
 
 Expected:
@@ -1435,8 +1435,8 @@ GEO Pulse MVP running at http://localhost:3106
 Use:
 
 ```bash
-/Users/aidi/.codex/skills/playwright/scripts/playwright_cli.sh open 'http://localhost:3106/'
-/Users/aidi/.codex/skills/playwright/scripts/playwright_cli.sh snapshot
+$HOME/.codex/skills/playwright/scripts/playwright_cli.sh open 'http://localhost:3106/'
+$HOME/.codex/skills/playwright/scripts/playwright_cli.sh snapshot
 ```
 
 Verify snapshot includes:
@@ -1450,10 +1450,10 @@ Fill:
 
 ```bash
 # Run snapshot first, then use the username/password/button refs shown in that snapshot.
-/Users/aidi/.codex/skills/playwright/scripts/playwright_cli.sh fill <username-ref> owner
-/Users/aidi/.codex/skills/playwright/scripts/playwright_cli.sh fill <password-ref> geo-owner-change-me
-/Users/aidi/.codex/skills/playwright/scripts/playwright_cli.sh click <login-button-ref>
-/Users/aidi/.codex/skills/playwright/scripts/playwright_cli.sh snapshot
+$HOME/.codex/skills/playwright/scripts/playwright_cli.sh fill <username-ref> owner
+$HOME/.codex/skills/playwright/scripts/playwright_cli.sh fill <password-ref> geo-owner-change-me
+$HOME/.codex/skills/playwright/scripts/playwright_cli.sh click <login-button-ref>
+$HOME/.codex/skills/playwright/scripts/playwright_cli.sh snapshot
 ```
 
 Verify snapshot includes:

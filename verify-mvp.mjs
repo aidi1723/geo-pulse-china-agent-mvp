@@ -220,6 +220,9 @@ function runSingleUserSourceChecks() {
   const serverSource = fs.readFileSync("server.mjs", "utf8");
   const composeSource = fs.readFileSync("docker-compose.yml", "utf8");
   const staticSitemapSource = fs.readFileSync("prototype/sitemap.xml", "utf8");
+  const readmeSource = fs.readFileSync("README.md", "utf8");
+  const apiReferenceSource = fs.readFileSync("docs/API_REFERENCE.md", "utf8");
+  const deploymentGuideSource = fs.readFileSync("docs/PRODUCTION_DEPLOYMENT.md", "utf8");
   assert.match(
     serverSource,
     /const host = process\.env\.GEO_HOST \|\| "127\.0\.0\.1"/,
@@ -234,6 +237,23 @@ function runSingleUserSourceChecks() {
     composeSource,
     /GEO_BOOTSTRAP_OWNER_PASSWORD:\s*\$\{GEO_BOOTSTRAP_OWNER_PASSWORD:\?GEO_BOOTSTRAP_OWNER_PASSWORD is required\}/,
     "Docker Compose should pass the required production owner password"
+  );
+  assert.match(composeSource, /image:\s*geo-pulse:v0\.21\.0/, "Docker Compose image tag should match the package version");
+  assert.match(readmeSource, /STAGE_V0_21_CLOSEOUT\.md/, "README should link the current stage closeout");
+  assert.match(
+    readmeSource,
+    /PROJECT_AUDIT_OPTIMIZATION_CLOSEOUT_2026-07-16\.md/,
+    "README should link the current project audit closeout"
+  );
+  assert.match(
+    apiReferenceSource,
+    /configured and ready, `openai_compatible` is attempted first/,
+    "API reference should describe the v0.21 configurable generator behavior"
+  );
+  assert.doesNotMatch(
+    deploymentGuideSource,
+    /^- External LLM generation provider execution\.$/m,
+    "Deployment guide should not contradict the supported OpenAI-compatible generator"
   );
   assert.match(staticSitemapSource, /<urlset/, "Static sitemap should remain valid XML");
   assert.doesNotMatch(staticSitemapSource, /<url>/, "Static sitemap should exclude the noindex admin shell");

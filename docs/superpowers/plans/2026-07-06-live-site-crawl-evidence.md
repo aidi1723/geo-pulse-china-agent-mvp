@@ -1306,7 +1306,7 @@ It is not live AI recommendation monitoring and does not query ChatGPT, Gemini, 
 
 ```bash
 npm run check
-node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .
+node $HOME/.codex/skills/google-seo/scripts/check-static-seo.mjs .
 ```
 
 Expected:
@@ -1328,7 +1328,7 @@ Run:
 
 ```bash
 npm run check
-node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .
+node $HOME/.codex/skills/google-seo/scripts/check-static-seo.mjs .
 ```
 
 Expected: `verify-mvp: OK`, SEO errors 0, warnings 0.
@@ -1360,7 +1360,7 @@ PORT=3106 GEO_ENABLE_PERSISTENCE=0 npm run start
 Use:
 
 ```bash
-/Users/aidi/.codex/skills/playwright/scripts/playwright_cli.sh open http://localhost:3106 --headed
+$HOME/.codex/skills/playwright/scripts/playwright_cli.sh open http://localhost:3106 --headed
 ```
 
 Flow:
@@ -1384,7 +1384,7 @@ Run:
 
 ```bash
 npm run check
-node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .
+node $HOME/.codex/skills/google-seo/scripts/check-static-seo.mjs .
 git status --short
 ```
 

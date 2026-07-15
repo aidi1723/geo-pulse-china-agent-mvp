@@ -1,7 +1,7 @@
 services:
   geo-pulse:
     build: .
-    image: geo-pulse:v0.2
+    image: geo-pulse:v0.21.0
     restart: unless-stopped
     ports:
       - "${PORT:-3000}:3000"

@@ -33,7 +33,7 @@ The v0.2 closeout gate is:
 
 ```bash
 npm run check
-node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .
+node $HOME/.codex/skills/google-seo/scripts/check-static-seo.mjs .
 docker build -t geo-pulse:v0.2 .
 ```
 

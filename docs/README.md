@@ -28,6 +28,8 @@ This directory contains the maintainer-facing documentation for GEO Pulse China 
 - [v0.19 Stage Closeout](STAGE_V0_19_CLOSEOUT.md): production integration foundation, visibility provider configs, publishing connector configs, production readiness checks, operating boundary, verification commands, and maintainer notes.
 - [v0.20 Stage Closeout](STAGE_V0_20_CLOSEOUT.md): delivery readiness, sanitized delivery bundle, Settings delivery center, operating boundary, verification commands, and maintainer notes.
 - [v0.21 Stage Closeout](STAGE_V0_21_CLOSEOUT.md): OpenAI-compatible LLM content generation, provider controls, fallback boundary, verification commands, and maintainer notes.
+- [Project Audit And Optimization Closeout](PROJECT_AUDIT_OPTIMIZATION_CLOSEOUT_2026-07-16.md): deployment/API hardening, page-scoped loading, responsive accessibility, design alignment, SEO boundary, metrics, and verification evidence.
+- [GitHub And Documentation Alignment Closeout](GITHUB_DOCUMENTATION_CLOSEOUT_2026-07-16.md): authoritative-document audit, corrected drift, GitHub publication evidence, CI result, and final handoff state.
 - [API Reference](API_REFERENCE.md): current mock API groups, route behavior, mutation requirements, and response shape.
 - [Extension Guide](EXTENDING.md): how to add providers, connectors, source adapters, UI pages, tests, and static preview data.
 - [Maintenance Guide](MAINTENANCE.md): routine maintenance, release gate, runtime state, security defaults, and production backlog.
@@ -59,4 +61,4 @@ The root-level Chinese product documents are retained as product context:
 - `AgentCoreOS-GEO-Suite-产品拆解方案.md`
 - `AgentCoreOS-GEO-网站优化与内容方案.md`
 
-The `reports/` directory contains audit, benchmark, and security hardening notes used during MVP, v0.2, v0.3, v0.4, v0.5, v0.6, v0.7, v0.8, v0.9, v0.9.1, v0.10, v0.11, v0.12, v0.13, v0.14, v0.15, v0.16, v0.17, v0.18, v0.19, and v0.20 preparation.
+The `reports/` directory contains audit, benchmark, and security hardening notes used during MVP through v0.21 preparation. Dated stage closeouts and `docs/superpowers/` plans/specs preserve their historical scope; current operational truth lives in the root README and the maintainer guides listed above.

@@ -824,7 +824,7 @@ Create `docs/STAGE_V0_13_CLOSEOUT.md` with:
 
 - [ ] **Step 5: Run static SEO docs check**
 
-Run: `node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .`
+Run: `node $HOME/.codex/skills/google-seo/scripts/check-static-seo.mjs .`
 
 Expected: 0 errors and 0 warnings.
 

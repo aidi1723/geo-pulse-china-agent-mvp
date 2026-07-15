@@ -27,7 +27,7 @@ The v0.9.1 closeout gate is:
 
 ```bash
 npm run check
-node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .
+node $HOME/.codex/skills/google-seo/scripts/check-static-seo.mjs .
 ```
 
 Expected results:

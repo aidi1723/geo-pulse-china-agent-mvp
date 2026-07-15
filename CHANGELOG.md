@@ -13,6 +13,8 @@
 
 - Browser data loads by active page instead of fetching every business domain after login and each mutation.
 - Shared UI tokens and primitives now follow the dark, compact operational rules in `DESIGN.md`.
+- Authoritative maintainer docs now consistently describe v0.21 OpenAI-compatible generation, deployment/security defaults, page-scoped loading, responsive accessibility, the admin noindex boundary, and current roadmap/release state.
+- Docker Compose now uses the current `geo-pulse:v0.21.0` image tag.
 
 ### Verification
 

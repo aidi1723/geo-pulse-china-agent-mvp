@@ -12,7 +12,7 @@ This is a project-owner compliance note, not legal advice.
 
 ## Current Readiness
 
-Ready for GitHub publication as a v0.21.0 one-organization team-access workspace after owner review.
+Maintained publicly on GitHub as a v0.21.0 one-organization team-access workspace. Every public update must pass the local gate, privacy/secret review, and the remote `check` workflow.
 
 Verified release gate:
 
@@ -34,13 +34,16 @@ GitHub also includes a `check` workflow that runs the same command on pushes and
 - `CONTRIBUTING.md`
 - `SECURITY.md`
 - `CHANGELOG.md`
+- `DESIGN.md`
 - `docs/README.md`
 - `docs/ARCHITECTURE.md`
 - `docs/API_REFERENCE.md`
 - `docs/EXTENDING.md`
 - `docs/DEVELOPMENT.md`
 - `docs/MAINTENANCE.md`
+- `docs/PRIVACY_RELEASE_REVIEW.md`
 - `docs/ROADMAP.md`
+- `docs/PHASE_2_ROADMAP.md`
 - `docs/OPEN_SOURCE_RELEASE.md`
 - `docs/STAGE_V0_9_1_CLOSEOUT.md`
 - `docs/STAGE_V0_10_CLOSEOUT.md`
@@ -54,6 +57,9 @@ GitHub also includes a `check` workflow that runs the same command on pushes and
 - `docs/STAGE_V0_18_CLOSEOUT.md`
 - `docs/STAGE_V0_19_CLOSEOUT.md`
 - `docs/STAGE_V0_20_CLOSEOUT.md`
+- `docs/STAGE_V0_21_CLOSEOUT.md`
+- `docs/PROJECT_AUDIT_OPTIMIZATION_CLOSEOUT_2026-07-16.md`
+- `docs/GITHUB_DOCUMENTATION_CLOSEOUT_2026-07-16.md`
 - `.github/workflows/check.yml`
 
 ## Pre-Publish Checklist
@@ -69,7 +75,7 @@ GitHub also includes a `check` workflow that runs the same command on pushes and
 - Review [v0.9 Stage Closeout](STAGE_V0_9_CLOSEOUT.md), [v0.9.1 Stage Closeout](STAGE_V0_9_1_CLOSEOUT.md), [v0.10 Stage Closeout](STAGE_V0_10_CLOSEOUT.md), [v0.11 Stage Closeout](STAGE_V0_11_CLOSEOUT.md), [v0.12 Stage Closeout](STAGE_V0_12_CLOSEOUT.md), [v0.13 Stage Closeout](STAGE_V0_13_CLOSEOUT.md), [v0.14 Stage Closeout](STAGE_V0_14_CLOSEOUT.md), [v0.15 Stage Closeout](STAGE_V0_15_CLOSEOUT.md), [v0.16 Stage Closeout](STAGE_V0_16_CLOSEOUT.md), [v0.17 Stage Closeout](STAGE_V0_17_CLOSEOUT.md), [v0.18 Stage Closeout](STAGE_V0_18_CLOSEOUT.md), [v0.19 Stage Closeout](STAGE_V0_19_CLOSEOUT.md), [v0.20 Stage Closeout](STAGE_V0_20_CLOSEOUT.md), and [v0.21 Stage Closeout](STAGE_V0_21_CLOSEOUT.md) for the team-access boundary, CI gate, site GEO audit boundary, crawl evidence boundary, evidence-backed scoring boundary, AI visibility measurement boundary, evidence-asset local review boundary, publishing handoff boundary, content-generation boundary, manual measured-evidence import boundary, measured evidence operations boundary, production integration foundation boundary, delivery hardening boundary, OpenAI-compatible LLM generation boundary, and remaining SaaS/live-monitoring/publishing gaps.
 - Create a clean Git history from the intended public root.
 
-## Suggested GitHub Setup
+## Suggested Setup For A New Repository Or Fork
 
 From the repository root:
 
@@ -86,7 +92,7 @@ Then create an empty GitHub repository. GitHub will show the exact `git remote a
 git push -u origin main
 ```
 
-Do not publish until the owner has reviewed the pre-publish checklist.
+Do not publish a new repository or fork until the owner has reviewed the pre-publish checklist. For this established repository, use a normal fast-forward push after confirming `main` has not diverged from `origin/main`; do not rewrite history for routine updates.
 
 ## Recommended GitHub Settings
 

@@ -222,7 +222,7 @@ Expected: PASS.
 Run:
 
 ```bash
-node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .
+node $HOME/.codex/skills/google-seo/scripts/check-static-seo.mjs .
 ```
 
 Expected: no robots or sitemap warnings.

@@ -76,7 +76,7 @@ These are the immediate product slices. The full second-stage direction is track
 
 ## Phase 2 Direction
 
-Phase 2 should move the product from v0.20 evidence-scored audit, visibility foundation, manual measured evidence operations, local evidence-asset review workflow, local content-generation workflow, publishing handoff workflow, provider dry-run foundation, connector dry-run foundation, and delivery handoff foundation to broader measured GEO operations:
+Phase 2 should move the product from the v0.21 evidence-scored audit, visibility foundation, manual measured evidence operations, review-first OpenAI-compatible content-generation workflow, publishing handoff workflow, provider dry-run foundation, connector dry-run foundation, and delivery handoff foundation to broader measured GEO operations:
 
 - AI visibility monitoring through approved data sources, beyond v0.18 manual import/review and v0.19 dry-run provider configs.
 - External distribution connectors with manual approval gates.

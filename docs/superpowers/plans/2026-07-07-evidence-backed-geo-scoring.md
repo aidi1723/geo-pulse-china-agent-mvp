@@ -362,7 +362,7 @@ Create `docs/STAGE_V0_12_CLOSEOUT.md` with:
 
 - [x] **Step 5: Run documentation checks**
 
-Run: `node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .`
+Run: `node $HOME/.codex/skills/google-seo/scripts/check-static-seo.mjs .`
 
 Expected: exit 0 or only documented warnings unrelated to v0.12 docs.
 

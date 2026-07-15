@@ -21,7 +21,7 @@ Supported:
 - International GEO AI visibility measurement foundation with prompt sets, provider readiness, visibility runs, prompt snapshots, and `measured` / `simulated` / `unavailable` status labels.
 - International GEO manual measured visibility evidence operations with single-row import, JSON batch import, `manual_import` snapshot provenance, `measured_import` runs, readiness `manual_review` status, import ledger rows, approve/reject review state, approved-only visibility trends, and `导入测量证据` / `批量导入测量证据` / `测量证据台账` / `证据复核` / `可见度趋势` UI.
 - International GEO evidence-driven asset opportunities, local generation queue rows, generated local previews, provenance metadata, and approve/reject review state.
-- International GEO local-rule article generation from approved evidence assets, generated article review state, platform rewrite generation from approved articles, rewrite review state, and generation run records.
+- International GEO review-first article and platform rewrite generation through `local_rules` or an operator-configured OpenAI-compatible endpoint, with masked provider configuration, failure fallback, review state, and generation run provenance.
 - International GEO high-authority publishing platform list, AI recommendation-probability notes, review-only publishing package queue, deterministic package generation from approved evidence assets, and manual/local tracking records.
 - International GEO visibility provider dry-run config registry and diagnostics for ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Claude, and Copilot/Bing.
 - International GEO publishing connector dry-run config registry and diagnostics for owned site, docs, Medium, LinkedIn, YouTube, GitHub, Reddit, Quora, and directory/review workflows.
@@ -36,7 +36,7 @@ Not included:
 - OAuth/SSO and MFA.
 - Payment billing.
 - Real third-party publishing credentials.
-- External LLM generation provider execution.
+- Content-generation providers beyond the supported operator-configured OpenAI-compatible endpoint and `local_rules` fallback.
 - Real GPT, Gemini, Claude, Perplexity, Google AI Overviews, Copilot, Bing, SERP, indexing, external platform, or AI visibility monitoring APIs.
 - External provider credentials for AI/search/SERP/indexing providers.
 - CSV/file-upload measured evidence imports.
@@ -183,7 +183,7 @@ Before handoff:
 
 ```bash
 npm run check
-node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .
+node $HOME/.codex/skills/google-seo/scripts/check-static-seo.mjs .
 curl -f http://localhost:3000/healthz
 curl -f http://localhost:3000/robots.txt
 curl -f http://localhost:3000/sitemap.xml

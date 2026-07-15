@@ -64,7 +64,7 @@ npm run check
 The parent release gate should also run the static SEO scan:
 
 ```bash
-node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .
+node $HOME/.codex/skills/google-seo/scripts/check-static-seo.mjs .
 ```
 
 ## Current Launch Statement

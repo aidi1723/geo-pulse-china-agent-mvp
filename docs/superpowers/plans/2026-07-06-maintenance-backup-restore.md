@@ -160,7 +160,7 @@ Run `npm run check`. Expected: `verify-mvp: OK`.
 
 - [x] **Step 2: Run static SEO scan**
 
-Run `node /Users/aidi/.codex/skills/google-seo/scripts/check-static-seo.mjs .`. Expected: 0 errors.
+Run `node $HOME/.codex/skills/google-seo/scripts/check-static-seo.mjs .`. Expected: 0 errors.
 
 - [x] **Step 3: Run browser smoke**
 
