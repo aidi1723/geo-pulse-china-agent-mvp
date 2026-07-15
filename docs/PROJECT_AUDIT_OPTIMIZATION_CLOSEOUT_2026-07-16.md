@@ -51,6 +51,8 @@ Business routes, domain schemas, roles, persistence format, local-first integrat
 - The keyword panel exposed a named modal dialog, moved focus inside on open, and closed on Escape. Keyboard focus rendered a 2px high-contrast outline; reduced-motion emulation reduced transitions and animations to 0.01ms with one iteration.
 - Dashboard, Settings, and International GEO screenshots were visually reviewed at the acceptance viewports. No incoherent overlap or clipped page-level content was found; long tables and sub-tabs remain locally scrollable.
 - Playwright's console error and warning filters returned 0 entries. Every recorded API response returned HTTP 200.
+- The final credential-pattern scan found no boundary-valid API keys or private-key headers. The broader planned pattern produced two reviewed false positives from the seeded identifier `task-1776428087803-193-approval-owner` because its `task-` suffix contains `sk-`.
+- `git diff --check main...HEAD` returned clean, and the final branch contained only the approved implementation, documentation, and verification files.
 
 ## Safe-Agent Routing Record
 
