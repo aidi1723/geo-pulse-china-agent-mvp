@@ -51,10 +51,10 @@ Pre-push gates:
 - Repository: `https://github.com/aidi1723/geo-pulse-china-agent-mvp`
 - Branch: `main`
 - Pre-update remote state: `origin/main` was 10 commits behind local `main` with no remote-only commits.
-- Documentation-alignment commit: pending.
-- First publication push: pending.
-- GitHub Actions `check`: pending.
-- Final evidence commit and push: pending.
+- Documentation-alignment commit: `d9118f72d695e29cc0eb8b08cd8b489a8b67b068` (`docs: align v0.21 public documentation`).
+- First publication push: normal fast-forward update from `1fac795` to `d9118f7`; no force push and no history rewrite.
+- GitHub Actions `check`: success, run `29436800057` (`https://github.com/aidi1723/geo-pulse-china-agent-mvp/actions/runs/29436800057`).
+- Publication sequence: this report records the verified alignment commit and its successful remote gate. The follow-up report-only commit does not change runtime behavior or the documented product boundary and must pass the same remote gate.
 
 ## Residual Risks
 
