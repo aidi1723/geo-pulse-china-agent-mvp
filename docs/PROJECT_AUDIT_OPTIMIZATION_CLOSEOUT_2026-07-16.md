@@ -24,12 +24,13 @@ Business routes, domain schemas, roles, persistence format, local-first integrat
 
 | Metric | Before | Implemented target |
 | --- | ---: | ---: |
-| Login/dashboard API requests | 42 API requests after login, 67 total resources | 8 data-plan requests plus session, client config, and login, maximum 11 API requests |
-| Initial transfer | About 2.1 MB decoded/transferred in the audited browser session | Reduced by omitting unrelated domain responses; final browser measurement recorded in verification evidence |
-| Dashboard overflow at 390px | 120px | 0px acceptance threshold |
-| Settings overflow at 390px | 352px | 0px acceptance threshold |
-| Unlabelled Settings brand controls | 10 of 11 | 0 acceptance threshold |
-| Visible sidebar navigation at 390px | 0 | 8 mobile module controls |
+| Login/dashboard API requests | 42 API requests after login, 67 total resources | 11 API requests, 37 total resources (74% fewer API requests) |
+| Initial transfer | About 2.1 MB decoded/transferred in the audited browser session | 1,329,796 transfer bytes / 1,318,696 decoded bytes (about 37% less transfer) |
+| Dashboard overflow at 390px | 120px | 0px |
+| Settings overflow at 390px | 352px | 0px |
+| Unlabelled Settings brand controls | 10 of 11 | 0 of 11 visible controls |
+| International GEO unlabelled controls | Not audited | 0 of 97 visible controls |
+| Visible module navigation at 390px | 0 | 8 mobile module controls, exactly 1 active |
 
 ## Files Changed
 
@@ -41,10 +42,15 @@ Business routes, domain schemas, roles, persistence format, local-first integrat
 
 ## Verification Evidence
 
-- Baseline and post-change regression gate: `npm run check` returned `verify-mvp: OK`.
+- Baseline and post-change regression gate: `npm run check` returned `verify-mvp: OK`, including the narrow stacked-grid regression.
 - Google SEO static check scanned 124 files with 0 errors and 0 warnings.
 - TDD regressions cover loopback defaults, Compose secrets, malformed JSON, chunked oversized bodies, page request plans, semantic login/mobile navigation, accessibility source rules, dark design tokens, responsive containment, reduced motion, noindex headers, and sitemap exclusion.
-- Final real-browser measurements are appended before branch completion.
+- Playwright login via the password field and Enter reached the dashboard. The measured login/dashboard budget was 11 API requests and 37 total resources with no failed request.
+- At 1440x900 and 390x844, the dashboard had 0px horizontal overflow. Desktop exposed the full sidebar; mobile exposed all eight module controls with one active item.
+- At 390x844, Settings and International GEO both had 0px horizontal overflow. All 11 visible Settings controls and all 97 visible International GEO controls had programmatic names.
+- The keyword panel exposed a named modal dialog, moved focus inside on open, and closed on Escape. Keyboard focus rendered a 2px high-contrast outline; reduced-motion emulation reduced transitions and animations to 0.01ms with one iteration.
+- Dashboard, Settings, and International GEO screenshots were visually reviewed at the acceptance viewports. No incoherent overlap or clipped page-level content was found; long tables and sub-tabs remain locally scrollable.
+- Playwright's console error and warning filters returned 0 entries. Every recorded API response returned HTTP 200.
 
 ## Safe-Agent Routing Record
 
