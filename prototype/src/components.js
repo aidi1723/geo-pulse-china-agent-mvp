@@ -42,11 +42,11 @@ export function sidebarMarkup(currentPage, session = {}) {
         </div>
       </div>
       <div class="nav-group-label">导航</div>
-      <nav class="nav-list">
+      <nav class="nav-list" aria-label="主导航">
         ${navigation
           .map(
             (item) => `
-              <button class="nav-item ${currentPage === item.id ? "active" : ""}" data-nav="${item.id}">
+              <button class="nav-item ${currentPage === item.id ? "active" : ""}" data-nav="${item.id}" ${currentPage === item.id ? 'aria-current="page"' : ""}>
                 <span class="nav-icon"></span>
                 <span class="nav-copy">
                   <strong>${escapeHtml(item.label)}</strong>
@@ -71,6 +71,23 @@ export function sidebarMarkup(currentPage, session = {}) {
   `;
 }
 
+export function mobileNavigationMarkup(currentPage) {
+  return `
+    <nav class="mobile-nav" aria-label="移动端主导航">
+      ${navigation
+        .map(
+          (item) => `
+            <button class="mobile-nav-item ${currentPage === item.id ? "active" : ""}" data-nav="${item.id}" ${currentPage === item.id ? 'aria-current="page"' : ""}>
+              <span class="nav-icon" aria-hidden="true"></span>
+              <span>${escapeHtml(item.label)}</span>
+            </button>
+          `
+        )
+        .join("")}
+    </nav>
+  `;
+}
+
 export function topbarMarkup(currentPage, search) {
   const [title, subtitle] = pageMeta[currentPage];
   return `
@@ -82,8 +99,8 @@ export function topbarMarkup(currentPage, search) {
       </div>
       <div class="topbar-right">
         <label class="search">
-          <span>⌕</span>
-          <input placeholder="搜索关键词、文章、任务或内容源" value="${escapeHtml(search)}" data-search-input />
+          <span aria-hidden="true">⌕</span>
+          <input aria-label="全局搜索" placeholder="搜索关键词、文章、任务或内容源" value="${escapeHtml(search)}" data-search-input />
         </label>
         <button class="primary-btn" ${primaryActionAttrs(currentPage)}>${escapeHtml(primaryActions[currentPage])}</button>
         <div class="icon-circle">中</div>

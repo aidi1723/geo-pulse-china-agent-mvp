@@ -170,6 +170,7 @@ const syntaxTargets = [
   "prototype/app.js",
   "prototype/robots.js",
   "prototype/sitemap.js",
+  "prototype/src/accessibility.js",
   "prototype/src/api.js",
   "prototype/src/components.js",
   "prototype/src/config.js",
@@ -3631,7 +3632,47 @@ function runAuthUiChecks() {
   const loginHtml = renderAppToStringForTest(createMinimalUiStore());
   assert.match(loginHtml, /登录 GEO Pulse/, "Unauthenticated app should render the login view");
   assert.match(loginHtml, /data-action="login-session"/, "Login view should expose a login action");
+  assert.match(loginHtml, /<form[^>]+data-form="login"/, "Login should use native form semantics");
+  assert.match(loginHtml, /<label[^>]+for="login-username"/, "Login username should have a label");
+  assert.match(loginHtml, /id="login-username"/, "Login username should expose the labelled id");
+  assert.match(loginHtml, /<button[^>]+type="submit"/, "Login should expose a submit button");
   assert.doesNotMatch(loginHtml, /总览看板/, "Unauthenticated app should not render the admin dashboard");
+
+  const authenticatedHtml = renderAppToStringForTest(
+    createMinimalUiStore({
+      session: {
+        current: {
+          authenticated: true,
+          user: {
+            username: "owner",
+            display_name: "Owner",
+            role: "owner"
+          }
+        },
+        loginForm: { username: "", password: "" }
+      }
+    })
+  );
+  assert.match(authenticatedHtml, /class="mobile-nav"/, "Authenticated shell should render mobile navigation");
+  for (const item of navigation) {
+    assert.match(
+      authenticatedHtml,
+      new RegExp(`data-nav="${item.id}"`),
+      `Mobile or desktop navigation should include ${item.id}`
+    );
+  }
+  assert.match(authenticatedHtml, /aria-current="page"/, "Active navigation should expose current page state");
+  assert.match(authenticatedHtml, /aria-label="全局搜索"/, "Global search should have an accessible name");
+
+  const renderSource = fs.readFileSync("prototype/src/render.js", "utf8");
+  const accessibilitySource = fs.readFileSync("prototype/src/accessibility.js", "utf8");
+  const eventSource = fs.readFileSync("prototype/src/events.js", "utf8");
+  assert.match(renderSource, /enhanceRenderedUi/, "Rendered UI should run accessibility enhancement");
+  assert.match(accessibilitySource, /associateControlLabels/, "Accessibility helper should associate form labels");
+  assert.match(renderSource, /role="dialog"/, "App panels should use dialog semantics");
+  assert.match(renderSource, /aria-modal="true"/, "App panels should be marked modal");
+  assert.match(eventSource, /addEventListener\("submit"/, "Login should support delegated form submission");
+  assert.match(eventSource, /event\.key === "Escape"/, "Open panels should close with Escape");
 
   const settingsHtml = renderSettings({
     tabs: {

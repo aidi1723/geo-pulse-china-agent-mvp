@@ -4,6 +4,21 @@ import {
 } from "./experience-utils.js?v=20260418-3";
 
 export function bindEvents(root, store, rerender, actions) {
+  root.addEventListener("submit", async (event) => {
+    if (!event.target.matches('form[data-form="login"]')) {
+      return;
+    }
+    event.preventDefault();
+    await actions.loginSession();
+  });
+
+  root.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && store.ui.panel) {
+      store.ui.panel = "";
+      rerender();
+    }
+  });
+
   root.addEventListener("click", async (event) => {
     const navButton = event.target.closest("[data-nav]");
     if (navButton) {
@@ -544,6 +559,7 @@ export function bindEvents(root, store, rerender, actions) {
     }
 
     if (action === "login-session") {
+      event.preventDefault();
       await actions.loginSession();
       return;
     }

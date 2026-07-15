@@ -1,4 +1,5 @@
-import { errorMarkup, loadingMarkup, sidebarMarkup, topbarMarkup } from "./components.js";
+import { errorMarkup, loadingMarkup, mobileNavigationMarkup, sidebarMarkup, topbarMarkup } from "./components.js";
+import { enhanceRenderedUi } from "./accessibility.js";
 import { renderDashboard } from "./pages/dashboard.js?v=20260418-3";
 import { renderKeywords } from "./pages/keywords.js?v=20260418-3";
 import { renderContent } from "./pages/content.js?v=20260418-3";
@@ -14,6 +15,7 @@ export function renderApp(root, store) {
     typeof window !== "undefined" && window.location?.protocol === "file:";
   if (!isStaticPreview && !store.session?.current?.authenticated) {
     root.innerHTML = renderLogin(store);
+    enhanceRenderedUi(root);
     return;
   }
 
@@ -27,6 +29,7 @@ export function renderApp(root, store) {
       <main class="content-shell">
         <div class="mobile-top">
           <div class="notice">${environmentNotice}</div>
+          ${mobileNavigationMarkup(store.page)}
         </div>
         ${store.ui.notice ? `<div class="notice" style="margin-bottom: 14px">${store.ui.notice}</div>` : ""}
         ${topbarMarkup(store.page, store.search)}
@@ -37,12 +40,13 @@ export function renderApp(root, store) {
       ${renderPanel(store)}
     </div>
   `;
+  enhanceRenderedUi(root);
 }
 
 function renderLogin(store) {
   return `
     <main class="login-shell">
-      <section class="surface panel login-panel">
+      <form class="surface panel login-panel" data-form="login">
         <div class="panel-head">
           <div>
             <h1 class="page-title">登录 GEO Pulse</h1>
@@ -52,18 +56,18 @@ function renderLogin(store) {
         ${store.ui.error ? `<div class="notice" style="margin-top:14px">${escapeHtml(store.ui.error)}</div>` : ""}
         <div class="form-grid" style="margin-top:18px">
           <div class="form-field full">
-            <label>用户名</label>
-            <input data-login-field="username" value="${escapeHtml(store.session?.loginForm?.username || "")}" />
+            <label for="login-username">用户名</label>
+            <input id="login-username" autocomplete="username" data-login-field="username" value="${escapeHtml(store.session?.loginForm?.username || "")}" />
           </div>
           <div class="form-field full">
-            <label>密码</label>
-            <input type="password" data-login-field="password" value="${escapeHtml(store.session?.loginForm?.password || "")}" />
+            <label for="login-password">密码</label>
+            <input id="login-password" type="password" autocomplete="current-password" data-login-field="password" value="${escapeHtml(store.session?.loginForm?.password || "")}" />
           </div>
         </div>
         <div class="actions-row" style="margin-top:18px">
-          <button class="primary-btn" data-action="login-session">登录</button>
+          <button class="primary-btn" type="submit" data-action="login-session">登录</button>
         </div>
-      </section>
+      </form>
     </main>
   `;
 }
@@ -110,10 +114,10 @@ function renderPanel(store) {
         : store.forms.keywordJob;
 
     return `
-      <aside class="surface app-panel">
+      <aside class="surface app-panel" role="dialog" aria-modal="true" aria-labelledby="app-panel-title">
         <div class="panel-head">
           <div>
-            <h3 class="panel-title">${store.ui.panel === "expand" ? "问题裂变配置" : "问题抓取任务配置"}</h3>
+            <h3 class="panel-title" id="app-panel-title">${store.ui.panel === "expand" ? "问题裂变配置" : "问题抓取任务配置"}</h3>
             <div class="panel-note">${store.ui.panel === "expand" ? "根据种子主题自动裂变自然语言问题" : "创建一个带来源类型和种子问题的抓取任务"}</div>
           </div>
           <button class="ghost-btn" data-action="close-panel">关闭</button>
@@ -202,10 +206,10 @@ function renderPanel(store) {
     const selectedArticleIds = new Set(form.article_ids || []);
     const publishableArticles = store.data.articles.filter((item) => item.publish_status === "ready_to_publish");
     return `
-      <aside class="surface app-panel">
+      <aside class="surface app-panel" role="dialog" aria-modal="true" aria-labelledby="app-panel-title">
         <div class="panel-head">
           <div>
-            <h3 class="panel-title">创建发布任务</h3>
+            <h3 class="panel-title" id="app-panel-title">创建发布任务</h3>
             <div class="panel-note">选择渠道、发布时间和待分发文章，把内容中心里的文章推进到发布队列。</div>
           </div>
           <button class="ghost-btn" data-action="close-panel">关闭</button>

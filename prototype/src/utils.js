@@ -126,7 +126,7 @@ export function tableMarkup(headers, rows) {
 }
 
 export function subtabMarkup(active, tab, label, group) {
-  return `<button class="subtab ${active === tab ? "active" : ""}" data-tab-group="${group}" data-tab="${tab}">${escapeHtml(label)}</button>`;
+  return `<button class="subtab ${active === tab ? "active" : ""}" role="tab" aria-selected="${active === tab}" data-tab-group="${group}" data-tab="${tab}">${escapeHtml(label)}</button>`;
 }
 
 export function metricCard(label, value, note = "") {
